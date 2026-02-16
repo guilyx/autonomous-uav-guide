@@ -1,0 +1,40 @@
+# Erwin Lejeune - 2026-02-16
+#
+# Install: pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Run all: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest (fast)
+        entry: bash -c 'PYTHONPATH="" uv run pytest -x -q --no-header'
+        language: system
+        pass_filenames: false
+        files: \.(py)$
+        stages: [pre-commit]
+
+      - id: commitlint
+        name: commitlint
+        entry: bash -c 'echo "$1" | head -1 | grep -qE "^(feat|fix|refactor|docs|test|chore|ci|style|perf|build|revert)(\(.+\))?: .+" || (echo "ERROR: commit message must follow Conventional Commits format" && exit 1)' --
+        language: system
+        stages: [commit-msg]
+        always_run: true
