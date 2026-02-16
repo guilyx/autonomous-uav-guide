@@ -53,6 +53,7 @@ class TestComplementaryFilter:
 # EKF tests (with a simple linear system for validation)
 # ---------------------------------------------------------------------------
 
+
 def _linear_f(x, u, dt):
     """Simple 1D constant velocity: x = [pos, vel]."""
     return np.array([x[0] + x[1] * dt, x[1]])
