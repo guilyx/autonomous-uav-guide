@@ -5,6 +5,10 @@ Each ``draw_*`` function plots a wireframe vehicle model onto an ``Axes3D``
 and returns a list of ``matplotlib.artist.Artist`` objects so that the caller
 can remove them on the next animation frame (preventing artist accumulation).
 
+The quadrotor is drawn as a cross shape (two perpendicular arms) inspired by
+PythonRobotics (Daniel Ingram).  Geometry is specified in body-frame with
+homogeneous coordinates, transformed via a 3x4 transformation matrix.
+
 Usage inside an animation ``update`` callback::
 
     artists: list = []
@@ -18,6 +22,7 @@ Usage inside an animation ``update`` callback::
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import numpy as np
@@ -26,45 +31,42 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy.typing import NDArray
 
 # ---------------------------------------------------------------------------
-# Helper
+# Helpers
 # ---------------------------------------------------------------------------
 
 
 def clear_vehicle_artists(artists: list[Artist]) -> None:
     """Remove all artists produced by a previous ``draw_*`` call."""
-    import contextlib
-
     while artists:
         a = artists.pop()
         with contextlib.suppress(ValueError, NotImplementedError):
             a.remove()
 
 
-def _transform(
-    body_pts: NDArray[np.floating],
+def _homogeneous_transform(
     position: NDArray[np.floating],
     R: NDArray[np.floating],
 ) -> NDArray[np.floating]:
-    """Apply rotation *R* and translation *position* to body-frame points.
+    """Build a 3x4 homogeneous transformation matrix ``[R | t]``.
 
     Parameters
     ----------
-    body_pts : (3, N)
-        Columns are body-frame 3-D coordinates.
-    position : (3,)
-        World-frame position.
-    R : (3, 3)
-        Body-to-world rotation matrix.
+    position : (3,) world-frame translation.
+    R : (3, 3) body-to-world rotation matrix.
 
     Returns
     -------
-    (3, N) world-frame coordinates.
+    (3, 4) transformation matrix that maps homogeneous body-frame
+    points ``[x, y, z, 1]`` to world-frame ``[x', y', z']``.
     """
-    return R @ body_pts + position.reshape(3, 1)
+    T = np.zeros((3, 4))
+    T[:3, :3] = R
+    T[:3, 3] = position
+    return T
 
 
 # ---------------------------------------------------------------------------
-# Quadrotor
+# Quadrotor (cross-arm pattern)
 # ---------------------------------------------------------------------------
 
 
@@ -72,24 +74,27 @@ def draw_quadrotor_3d(
     ax: Axes3D,
     position: NDArray[np.floating],
     R: NDArray[np.floating],
-    arm_length: float = 0.0397,
-    scale: float = 10.0,
-    colors: tuple[str, str] | None = None,
+    size: float = 0.25,
+    arm_colors: tuple[str, str] = ("red", "blue"),
     center_color: str = "k",
-    motor_size: float = 20.0,
-    arm_lw: float = 2.0,
+    motor_size: float = 25.0,
+    arm_lw: float = 2.5,
     **_kw: Any,
 ) -> list[Artist]:
-    """Draw a quadrotor X-frame and return the created artists.
+    """Draw a quadrotor cross-frame and return the created artists.
+
+    The quadrotor is rendered as two perpendicular arms (a ``+`` shape):
+    * Arm 1: ``p1`` <-> ``p2`` along the body-x axis (``red`` by default).
+    * Arm 2: ``p3`` <-> ``p4`` along the body-y axis (``blue`` by default).
+    Motor positions are shown as dots at each tip.
 
     Parameters
     ----------
     ax : Axes3D
     position : (3,) world-frame position.
     R : (3, 3) body-to-world rotation matrix.
-    arm_length : Physical arm length (m).
-    scale : Visual scaling factor.
-    colors : Two alternating arm colours, default ``("red", "blue")``.
+    size : Half-arm length in world units.
+    arm_colors : Colours for arm 1 and arm 2.
     center_color : Colour of the centre-of-mass marker.
     motor_size : Marker size for motor dots.
     arm_lw : Line width for arm segments.
@@ -98,59 +103,65 @@ def draw_quadrotor_3d(
     -------
     List of matplotlib artists.
     """
-    if colors is None:
-        colors = ("red", "blue")
+    p1 = np.array([size, 0, 0, 1])
+    p2 = np.array([-size, 0, 0, 1])
+    p3 = np.array([0, size, 0, 1])
+    p4 = np.array([0, -size, 0, 1])
 
-    L = arm_length * scale
-    s = L / np.sqrt(2.0)
+    T = _homogeneous_transform(position, R)
+    p1w, p2w, p3w, p4w = T @ p1, T @ p2, T @ p3, T @ p4
 
-    # Body-frame motor positions (X-configuration: 45°, 135°, 225°, 315°)
-    motors_body = np.array(
-        [
-            [s, s, 0],
-            [s, -s, 0],
-            [-s, -s, 0],
-            [-s, s, 0],
-        ]
-    ).T  # (3, 4)
-
-    motors_w = _transform(motors_body, position, R)
     arts: list[Artist] = []
 
-    arm_colors = [colors[0], colors[1], colors[0], colors[1]]
-    for i in range(4):
-        (line,) = ax.plot(
-            [position[0], motors_w[0, i]],
-            [position[1], motors_w[1, i]],
-            [position[2], motors_w[2, i]],
-            color=arm_colors[i],
-            linewidth=arm_lw,
-        )
-        arts.append(line)
-        pt = ax.scatter(
-            motors_w[0, i],
-            motors_w[1, i],
-            motors_w[2, i],
-            color=arm_colors[i],
-            s=motor_size,
-            zorder=5,
-        )
-        arts.append(pt)
+    # Arm 1 (body-x)
+    (arm1,) = ax.plot(
+        [p1w[0], p2w[0]],
+        [p1w[1], p2w[1]],
+        [p1w[2], p2w[2]],
+        color=arm_colors[0],
+        linewidth=arm_lw,
+    )
+    arts.append(arm1)
+
+    # Arm 2 (body-y)
+    (arm2,) = ax.plot(
+        [p3w[0], p4w[0]],
+        [p3w[1], p4w[1]],
+        [p3w[2], p4w[2]],
+        color=arm_colors[1],
+        linewidth=arm_lw,
+    )
+    arts.append(arm2)
+
+    # Motor dots at all four tips
+    tips = np.column_stack([p1w, p2w, p3w, p4w])
+    pt = ax.scatter(
+        tips[0],
+        tips[1],
+        tips[2],
+        color="k",
+        s=motor_size,
+        zorder=5,
+        depthshade=False,
+    )
+    arts.append(pt)
 
     # Centre hub
     hub = ax.scatter(
         *position,
         color=center_color,
-        s=motor_size * 1.5,
+        s=motor_size * 0.6,
         marker="o",
         zorder=6,
+        depthshade=False,
     )
     arts.append(hub)
+
     return arts
 
 
 # ---------------------------------------------------------------------------
-# Hexarotor
+# Hexarotor (three crossing arms)
 # ---------------------------------------------------------------------------
 
 
@@ -158,57 +169,54 @@ def draw_hexarotor_3d(
     ax: Axes3D,
     position: NDArray[np.floating],
     R: NDArray[np.floating],
-    arm_length: float = 0.06,
-    scale: float = 10.0,
-    colors: tuple[str, str] | None = None,
+    size: float = 0.3,
+    arm_colors: tuple[str, str] = ("red", "blue"),
     center_color: str = "k",
-    motor_size: float = 18.0,
+    motor_size: float = 20.0,
     arm_lw: float = 2.0,
     **_kw: Any,
 ) -> list[Artist]:
-    """Draw a hexarotor frame (6 arms at 60-degree spacing).
+    """Draw a hexarotor frame (3 crossing arms at 60-degree spacing).
 
     Parameters
     ----------
-    See :func:`draw_quadrotor_3d` — same interface with 6 motors.
+    See :func:`draw_quadrotor_3d` --- same interface with 6 motors.
     """
-    if colors is None:
-        colors = ("red", "blue")
-
-    L = arm_length * scale
-    angles = np.linspace(0, 2 * np.pi, 7)[:-1]  # 0, 60, 120, …, 300 deg
-
-    motors_body = np.array([[L * np.cos(a), L * np.sin(a), 0.0] for a in angles]).T  # (3, 6)
-
-    motors_w = _transform(motors_body, position, R)
+    T = _homogeneous_transform(position, R)
+    angles = np.linspace(0, np.pi, 3, endpoint=False)
     arts: list[Artist] = []
 
-    for i in range(6):
-        c = colors[i % 2]
+    for i, a in enumerate(angles):
+        p_pos = np.array([size * np.cos(a), size * np.sin(a), 0, 1])
+        p_neg = np.array([-size * np.cos(a), -size * np.sin(a), 0, 1])
+        pw_pos, pw_neg = T @ p_pos, T @ p_neg
+        c = arm_colors[i % 2]
         (line,) = ax.plot(
-            [position[0], motors_w[0, i]],
-            [position[1], motors_w[1, i]],
-            [position[2], motors_w[2, i]],
+            [pw_pos[0], pw_neg[0]],
+            [pw_pos[1], pw_neg[1]],
+            [pw_pos[2], pw_neg[2]],
             color=c,
             linewidth=arm_lw,
         )
         arts.append(line)
         pt = ax.scatter(
-            motors_w[0, i],
-            motors_w[1, i],
-            motors_w[2, i],
-            color=c,
+            [pw_pos[0], pw_neg[0]],
+            [pw_pos[1], pw_neg[1]],
+            [pw_pos[2], pw_neg[2]],
+            color="k",
             s=motor_size,
             zorder=5,
+            depthshade=False,
         )
         arts.append(pt)
 
     hub = ax.scatter(
         *position,
         color=center_color,
-        s=motor_size * 1.5,
+        s=motor_size * 0.8,
         marker="o",
         zorder=6,
+        depthshade=False,
     )
     arts.append(hub)
     return arts
@@ -235,45 +243,41 @@ def draw_fixed_wing_3d(
     """Draw a simplified fixed-wing wireframe.
 
     Geometry (body frame, nose at +x):
-    * Fuselage: nose → tail along x.
-    * Wing: left tip → right tip centred at ~30 % from nose.
+    * Fuselage: nose -> tail along x.
+    * Wing: left tip -> right tip centred at ~30 % from nose.
     * V-tail: two lines from tail upward-left / upward-right.
-
-    Parameters
-    ----------
-    ax : Axes3D
-    position, R : pose.
-    fuselage_length, wingspan, scale : sizing.
-    body_color, wing_color, tail_color : colours.
-    lw : line width.
     """
     fl = fuselage_length * scale
     ws = wingspan * scale
 
-    nose = np.array([fl / 2, 0, 0])
-    tail = np.array([-fl / 2, 0, 0])
-    wing_l = np.array([fl * 0.05, ws / 2, 0])
-    wing_r = np.array([fl * 0.05, -ws / 2, 0])
-    tail_l = np.array([-fl / 2, ws * 0.18, ws * 0.12])
-    tail_r = np.array([-fl / 2, -ws * 0.18, ws * 0.12])
+    nose = np.array([fl / 2, 0, 0, 1])
+    tail = np.array([-fl / 2, 0, 0, 1])
+    wing_l = np.array([fl * 0.05, ws / 2, 0, 1])
+    wing_r = np.array([fl * 0.05, -ws / 2, 0, 1])
+    tail_l = np.array([-fl / 2, ws * 0.18, ws * 0.12, 1])
+    tail_r = np.array([-fl / 2, -ws * 0.18, ws * 0.12, 1])
 
-    def _line(p1: NDArray, p2: NDArray, color: str) -> Artist:
-        pts = np.column_stack([p1, p2])  # (3, 2) body
-        pw = _transform(pts, position, R)
-        (art,) = ax.plot(pw[0], pw[1], pw[2], color=color, linewidth=lw)
+    T = _homogeneous_transform(position, R)
+
+    def _line(p1_h: NDArray, p2_h: NDArray, color: str) -> Artist:
+        pw1, pw2 = T @ p1_h, T @ p2_h
+        (art,) = ax.plot(
+            [pw1[0], pw2[0]],
+            [pw1[1], pw2[1]],
+            [pw1[2], pw2[2]],
+            color=color,
+            linewidth=lw,
+        )
         return art
 
     arts: list[Artist] = []
-    # Fuselage
     arts.append(_line(nose, tail, body_color))
-    # Wings
     arts.append(_line(wing_l, wing_r, wing_color))
-    # V-tail
     arts.append(_line(tail, tail_l, tail_color))
     arts.append(_line(tail, tail_r, tail_color))
-    # Nose dot
-    nose_w = _transform(nose.reshape(3, 1), position, R).ravel()
-    pt = ax.scatter(*nose_w, color="red", s=25, zorder=6)
+
+    nose_w = T @ nose
+    pt = ax.scatter(*nose_w, color="red", s=25, zorder=6, depthshade=False)
     arts.append(pt)
     return arts
 
@@ -287,35 +291,32 @@ def draw_quadrotor_2d(
     ax: Any,
     position_xy: NDArray[np.floating],
     yaw: float,
-    arm_length: float = 0.0397,
-    scale: float = 10.0,
-    colors: tuple[str, str] | None = None,
+    size: float = 0.25,
+    arm_colors: tuple[str, str] = ("red", "blue"),
     arm_lw: float = 1.5,
     motor_size: float = 15.0,
 ) -> list[Artist]:
-    """Draw a quadrotor top-down footprint on a 2D axes."""
-    if colors is None:
-        colors = ("red", "blue")
+    """Draw a quadrotor top-down cross footprint on a 2D axes."""
+    c, s = np.cos(yaw), np.sin(yaw)
+    R2 = np.array([[c, -s], [s, c]])
 
-    L = arm_length * scale
-    s = L / np.sqrt(2.0)
-    c, sn = np.cos(yaw), np.sin(yaw)
-    R2 = np.array([[c, -sn], [sn, c]])
-
-    motors_body = np.array([[s, s], [s, -s], [-s, -s], [-s, s]])
-    motors_w = (R2 @ motors_body.T).T + position_xy
+    p1 = R2 @ np.array([size, 0]) + position_xy
+    p2 = R2 @ np.array([-size, 0]) + position_xy
+    p3 = R2 @ np.array([0, size]) + position_xy
+    p4 = R2 @ np.array([0, -size]) + position_xy
 
     arts: list[Artist] = []
-    for i in range(4):
-        col = colors[i % 2]
-        (line,) = ax.plot(
-            [position_xy[0], motors_w[i, 0]],
-            [position_xy[1], motors_w[i, 1]],
-            color=col,
-            linewidth=arm_lw,
-        )
-        arts.append(line)
-        (pt,) = ax.plot(motors_w[i, 0], motors_w[i, 1], "o", color=col, ms=motor_size / 4)
+    (arm1,) = ax.plot(
+        [p1[0], p2[0]], [p1[1], p2[1]], color=arm_colors[0], linewidth=arm_lw
+    )
+    arts.append(arm1)
+    (arm2,) = ax.plot(
+        [p3[0], p4[0]], [p3[1], p4[1]], color=arm_colors[1], linewidth=arm_lw
+    )
+    arts.append(arm2)
+
+    for p in [p1, p2, p3, p4]:
+        (pt,) = ax.plot(p[0], p[1], "ko", ms=motor_size / 4)
         arts.append(pt)
 
     (hub,) = ax.plot(*position_xy, "ko", ms=motor_size / 3)

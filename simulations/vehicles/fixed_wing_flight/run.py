@@ -14,7 +14,10 @@ import numpy as np
 from uav_sim.vehicles.fixed_wing import FixedWing
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_fixed_wing_3d
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_fixed_wing_3d,
+)
 
 
 def main() -> None:
