@@ -1,180 +1,116 @@
-# Erwin Lejeune - 2026-02-16
-
 # Autonomous Quadrotor Guide
 
 [![CI](https://github.com/guilyx/autonomous-quadrotor-guide/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/autonomous-quadrotor-guide/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://docs.astral.sh/ruff/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com/)
 
-Python sample codes and documents about Autonomous Quadrotor algorithms. This
-project can be used as a technical guide book to study the algorithms and the
-software architectures for beginners.
+A from-scratch Python library for learning autonomous quadrotor algorithms — from 6DOF dynamics and PID control to state estimation, path planning, trajectory optimisation, and multi-agent swarms. Every algorithm has a runnable simulation that produces an animated GIF.
 
-## Table of Contents
-
-- [What is this?](#what-is-this)
-- [Goal of this project](#goal-of-this-project)
-- [Requirements](#requirements)
-- [Quick start](#quick-start)
-- [Algorithm catalogue](#algorithm-catalogue)
-  - [Dynamics and models](#dynamics-and-models)
-  - [State estimation](#state-estimation)
-  - [Control](#control)
-  - [3D path planning](#3d-path-planning)
-  - [Trajectory generation](#trajectory-generation)
-  - [Trajectory tracking](#trajectory-tracking)
-  - [Swarm algorithms](#swarm-algorithms)
-- [Simulations](#simulations)
-- [Documents](#documents)
-- [Project structure](#project-structure)
-- [License](#license)
-- [Contributing](#contributing)
-- [Author](#author)
-
-## What is this?
-
-A collection of reference implementations covering the full autonomy stack for
-quadrotor UAVs: dynamics modelling, state estimation, flight control, 3D path
-planning, trajectory generation, and multi-agent swarm algorithms. Every module
-is written in Python with NumPy/SciPy so you can study, modify, and extend it
-freely.
-
-## Goal of this project
-
-Provide a single, well-tested repository that takes you from a bare quadrotor
-physics model all the way to swarm coordination, with clear documentation for
-every algorithm along the path.
-
-## Requirements
-
-- [Python 3.12+](https://www.python.org/)
-- [uv](https://docs.astral.sh/uv/) (recommended package manager)
-
-## Quick start
+## Quick Start
 
 ```bash
-# Clone
+# clone & install (requires uv)
 git clone https://github.com/guilyx/autonomous-quadrotor-guide.git
 cd autonomous-quadrotor-guide
+uv sync
 
-# Install (creates .venv automatically)
-uv sync --all-groups
+# run any simulation
+uv run python simulations/pid_hover/run.py
 
-# Run tests
+# run tests
 uv run pytest
-
-# Run a simulation
-uv run python simulations/hover_pid.py
 ```
 
-## Algorithm catalogue
-
-### Dynamics and models
-
-| Module | Description |
-|---|---|
-| `Quadrotor6DOF` | Full 12-state rigid body dynamics with Newton-Euler equations |
-| `Motor` | First-order motor dynamics with RPM limits and thrust curve |
-| `Mixer` | Control allocation: `[T, τx, τy, τz]` to individual motor forces |
-
-### State estimation
-
-| Algorithm | Description |
-|---|---|
-| Extended Kalman Filter | IMU + GPS sensor fusion for 6DOF state |
-| Unscented Kalman Filter | Sigma-point propagation for nonlinear dynamics |
-| Complementary Filter | Lightweight gyro + accelerometer attitude fusion |
-| Particle Filter | Sequential Monte Carlo state estimation |
+## Algorithms
 
 ### Control
 
-| Algorithm | Description |
-|---|---|
-| Cascaded PID | Inner attitude loop + outer position loop |
-| LQR | Linear Quadratic Regulator on linearised hover model |
-| Geometric SO(3) | Attitude control on the rotation group (Lee et al.) |
-| Model Predictive Control | Receding-horizon optimisation on linearised model |
-| Sliding Mode | Robust control with discontinuous switching surface |
-| Backstepping | Lyapunov-based recursive controller design |
+| Algorithm | Simulation | Docs |
+|-----------|-----------|------|
+| **Cascaded PID** | ![PID Hover](simulations/pid_hover/pid_hover.gif) | [docs/control/pid.md](docs/control/pid.md) |
+| **LQR** | ![LQR Hover](simulations/lqr_hover/lqr_hover.gif) | [docs/control/lqr.md](docs/control/lqr.md) |
+| **Geometric SO(3)** | ![Geometric](simulations/geometric_control/geometric_control.gif) | [docs/control/geometric.md](docs/control/geometric.md) |
 
-### 3D path planning
+### State Estimation
 
-| Algorithm | Description |
-|---|---|
-| 3D A* | Grid-based optimal search in voxel space |
-| 3D RRT | Rapidly-exploring random tree |
-| 3D RRT* | Asymptotically optimal RRT variant |
-| 3D Potential Field | Attractive/repulsive force field navigation |
+| Algorithm | Simulation | Docs |
+|-----------|-----------|------|
+| **Complementary Filter** | ![CF](simulations/complementary_filter/complementary_filter.gif) | [docs/estimation/complementary_filter.md](docs/estimation/complementary_filter.md) |
+| **Extended Kalman Filter** | ![EKF](simulations/ekf/ekf.gif) | [docs/estimation/ekf.md](docs/estimation/ekf.md) |
+| **Unscented Kalman Filter** | ![UKF](simulations/ukf/ukf.gif) | [docs/estimation/ukf.md](docs/estimation/ukf.md) |
+| **Particle Filter** | ![PF](simulations/particle_filter/particle_filter.gif) | [docs/estimation/particle_filter.md](docs/estimation/particle_filter.md) |
 
-### Trajectory generation
+### Path Planning
 
-| Algorithm | Description |
-|---|---|
-| Minimum-Snap | Mellinger & Kumar polynomial optimisation |
-| Polynomial Trajectory | Arbitrary-order polynomial waypoint interpolation |
+| Algorithm | Simulation | Docs |
+|-----------|-----------|------|
+| **A\* 3D** | ![A*](simulations/astar_3d/astar_3d.gif) | [docs/planning/astar_3d.md](docs/planning/astar_3d.md) |
+| **RRT\*** | ![RRT*](simulations/rrt_star_3d/rrt_star_3d.gif) | [docs/planning/rrt_star.md](docs/planning/rrt_star.md) |
+| **Potential Field** | ![PF3D](simulations/potential_field_3d/potential_field_3d.gif) | [docs/planning/potential_field.md](docs/planning/potential_field.md) |
 
-### Trajectory tracking
+### Trajectory Generation
 
-| Algorithm | Description |
-|---|---|
-| Feedback Linearisation | Differential flatness-based tracking |
-| MPPI | Model Predictive Path Integral sampling-based tracker |
+| Algorithm | Simulation | Docs |
+|-----------|-----------|------|
+| **Minimum-Snap** | ![MinSnap](simulations/min_snap/min_snap.gif) | [docs/trajectory/min_snap.md](docs/trajectory/min_snap.md) |
+| **Polynomial** | ![Poly](simulations/polynomial_trajectory/polynomial_trajectory.gif) | [docs/trajectory/polynomial.md](docs/trajectory/polynomial.md) |
 
-### Swarm algorithms
+### Trajectory Tracking
 
-| Algorithm | Description |
-|---|---|
-| Reynolds Flocking | Separation + alignment + cohesion rules |
-| Consensus Formation | Graph-based distributed agreement |
-| Virtual Structure | Rigid virtual body formation |
-| Leader-Follower | Single leader, multiple followers |
-| Potential-Based Swarm | Inter-agent artificial potential fields |
-| Area Coverage | Voronoi-based distributed coverage |
+| Algorithm | Simulation | Docs |
+|-----------|-----------|------|
+| **Feedback Linearisation** | ![FBL](simulations/feedback_linearisation/feedback_linearisation.gif) | [docs/tracking/feedback_linearisation.md](docs/tracking/feedback_linearisation.md) |
+| **MPPI** | ![MPPI](simulations/mppi/mppi.gif) | [docs/tracking/mppi.md](docs/tracking/mppi.md) |
 
-## Simulations
+### Swarm Algorithms
 
-| Script | Description |
-|---|---|
-| `simulations/hover_pid.py` | PID-controlled hover and step response |
-| `simulations/waypoint_tracking.py` | 3D waypoint following with geometric control |
-| `simulations/geometric_control_demo.py` | SO(3) geometric controller demo |
-| `simulations/path_planning_3d.py` | RRT* planning through obstacle field |
-| `simulations/min_snap_demo.py` | Minimum-snap trajectory through waypoints |
-| `simulations/swarm_flocking.py` | Reynolds flocking with N quadrotors |
-| `simulations/leader_follower_demo.py` | Leader-follower formation flight |
+| Algorithm | Simulation | Docs |
+|-----------|-----------|------|
+| **Reynolds Flocking** | ![Flock](simulations/reynolds_flocking/reynolds_flocking.gif) | [docs/swarm/reynolds_flocking.md](docs/swarm/reynolds_flocking.md) |
+| **Consensus Formation** | ![Consensus](simulations/consensus_formation/consensus_formation.gif) | [docs/swarm/consensus_formation.md](docs/swarm/consensus_formation.md) |
+| **Virtual Structure** | ![VS](simulations/virtual_structure/virtual_structure.gif) | [docs/swarm/virtual_structure.md](docs/swarm/virtual_structure.md) |
+| **Leader-Follower** | ![LF](simulations/leader_follower/leader_follower.gif) | [docs/swarm/leader_follower.md](docs/swarm/leader_follower.md) |
+| **Potential-Based Swarm** | ![PS](simulations/potential_swarm/potential_swarm.gif) | [docs/swarm/potential_swarm.md](docs/swarm/potential_swarm.md) |
+| **Voronoi Coverage** | ![VC](simulations/voronoi_coverage/voronoi_coverage.gif) | [docs/swarm/voronoi_coverage.md](docs/swarm/voronoi_coverage.md) |
 
-## Documents
+### Models & Infrastructure
 
-Detailed algorithm references are in the `docs/` directory:
+| Component | Docs |
+|-----------|------|
+| 6DOF Quadrotor Dynamics | [docs/models/quadrotor.md](docs/models/quadrotor.md) |
+| Motor Model | [docs/models/motor.md](docs/models/motor.md) |
+| Control Allocation Mixer | [docs/models/mixer.md](docs/models/mixer.md) |
 
-- [Algorithm catalogue and roadmap](docs/algorithms.md)
-- [Quadrotor dynamics](docs/dynamics.md)
-- [Control theory](docs/control.md)
-- [3D path planning](docs/planning.md)
-- [Swarm algorithms](docs/swarm.md)
-
-## Project structure
+## Project Structure
 
 ```
 src/quadrotor_sim/
-├── models/          # 6DOF dynamics, motor, control mixer
-├── estimation/      # EKF, UKF, complementary filter, particle filter
-├── control/         # PID, LQR, geometric, MPC, sliding mode, backstepping
-├── planning/        # A*3D, RRT3D, RRT*3D, potential field
-├── tracking/        # feedback linearisation, MPPI
-├── swarm/           # flocking, consensus, virtual structure, leader-follower, coverage
-└── visualization/   # 3D plotting and animation helpers
-simulations/         # Runnable demo scripts
-tests/               # pytest test suite
-docs/                # Algorithm documentation
+├── models/              # Quadrotor dynamics, motors, mixer
+├── control/             # PID, LQR, Geometric
+├── estimation/          # Complementary, EKF, UKF, Particle
+├── planning/            # A*, RRT*, Potential Field, Min-Snap, Polynomial
+├── tracking/            # Feedback Linearisation, MPPI
+├── swarm/               # Reynolds, Consensus, Virtual Structure, Leader-Follower, Potential, Coverage
+└── visualization/       # SimAnimator for GIF generation
+
+simulations/
+├── pid_hover/           # Each algorithm has its own folder
+│   ├── run.py           # Runnable simulation script
+│   └── pid_hover.gif    # Generated animation
+├── lqr_hover/
+│   └── ...
+└── ...
+
+docs/                    # One doc per algorithm: theory, reference, API
+tests/                   # Comprehensive unit tests
 ```
-
-## License
-
-MIT
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Author
+## License
 
-[Erwin Lejeune](https://github.com/guilyx)
+[MIT](LICENSE) — Erwin Lejeune, 2026.
