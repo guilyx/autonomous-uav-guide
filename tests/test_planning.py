@@ -3,9 +3,9 @@
 
 import numpy as np
 
-from quadrotor_sim.planning.astar_3d import AStar3D
-from quadrotor_sim.planning.potential_field_3d import PotentialField3D
-from quadrotor_sim.planning.rrt_3d import RRT3D, RRTStar3D
+from uav_sim.path_planning.astar_3d import AStar3D
+from uav_sim.path_planning.potential_field_3d import PotentialField3D
+from uav_sim.path_planning.rrt_3d import RRT3D, RRTStar3D
 
 # ---------------------------------------------------------------------------
 # A* 3D
