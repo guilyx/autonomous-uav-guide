@@ -64,11 +64,11 @@ class Tiltrotor(UAVBase):
         cth, _ = np.cos(theta), np.sin(theta)
 
         ct, st = np.cos(tilt), np.sin(tilt)
-        thrust_body = np.array([T * st, 0.0, -T * ct])
+        thrust_body = np.array([T * st, 0.0, T * ct])
 
-        from uav_sim.vehicles.multirotor.quadrotor import euler_to_rotation_matrix
+        from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
-        R = euler_to_rotation_matrix(phi, theta, state[5])
+        R = Quadrotor.rotation_matrix(phi, theta, state[5])
         f_thrust = R @ thrust_body
 
         Va = np.sqrt(vx**2 + vy**2 + vz**2) + 1e-6

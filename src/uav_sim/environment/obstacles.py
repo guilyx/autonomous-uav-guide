@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
@@ -33,7 +33,7 @@ class Obstacle(ABC):
 class SphereObstacle(Obstacle):
     """Sphere obstacle defined by centre and radius."""
 
-    centre: NDArray[np.floating] = np.zeros(3)
+    centre: NDArray[np.floating] = field(default_factory=lambda: np.zeros(3))
     radius: float = 1.0
 
     def contains(self, point: NDArray[np.floating]) -> bool:
@@ -50,8 +50,8 @@ class SphereObstacle(Obstacle):
 class BoxObstacle(Obstacle):
     """Axis-aligned box obstacle."""
 
-    min_corner: NDArray[np.floating] = np.zeros(3)
-    max_corner: NDArray[np.floating] = np.ones(3)
+    min_corner: NDArray[np.floating] = field(default_factory=lambda: np.zeros(3))
+    max_corner: NDArray[np.floating] = field(default_factory=lambda: np.ones(3))
 
     def contains(self, point: NDArray[np.floating]) -> bool:
         return bool(
@@ -70,7 +70,7 @@ class BoxObstacle(Obstacle):
 class CylinderObstacle(Obstacle):
     """Vertical cylinder obstacle."""
 
-    centre: NDArray[np.floating] = np.zeros(3)
+    centre: NDArray[np.floating] = field(default_factory=lambda: np.zeros(3))
     radius: float = 1.0
     height: float = 5.0
 
