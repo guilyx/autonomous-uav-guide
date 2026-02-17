@@ -22,7 +22,10 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.trajectory_tracking.mppi import MPPITracker
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
 
@@ -37,7 +40,9 @@ def _dyn(x, u, dt):
 def _cost(x, _u, ref):
     if ref is None:
         return 0.0
-    return float(np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2))
+    return float(
+        np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2)
+    )
 
 
 def main() -> None:
@@ -139,7 +144,10 @@ def main() -> None:
     ax_vel.set_xlabel("Time [s]", fontsize=8)
     ax_vel.set_ylabel("Vel [m/s]", fontsize=8)
     ax_vel.grid(True, alpha=0.3)
-    lv = [ax_vel.plot([], [], f"C{j}-", lw=1, label=f"v{lb}")[0] for j, lb in enumerate(lbl)]
+    lv = [
+        ax_vel.plot([], [], f"C{j}-", lw=1, label=f"v{lb}")[0]
+        for j, lb in enumerate(lbl)
+    ]
     ax_vel.legend(fontsize=6, ncol=3, loc="upper right")
     ax_vel.tick_params(labelsize=7)
 
@@ -169,7 +177,9 @@ def main() -> None:
             fly_dot.set_3d_properties([flight_pos_arr[k, 2]])
             clear_vehicle_artists(vehicle_arts)
             R = Quadrotor.rotation_matrix(*flight_euler_arr[k])
-            vehicle_arts.extend(draw_quadrotor_3d(ax3d, flight_pos_arr[k], R, scale=30.0))
+            vehicle_arts.extend(
+                draw_quadrotor_3d(ax3d, flight_pos_arr[k], R, size=0.15)
+            )
             title.set_text("Phase 2: Quadrotor Executing MPPI Trajectory")
 
     anim.animate(update, total)

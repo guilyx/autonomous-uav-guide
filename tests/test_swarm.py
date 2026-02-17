@@ -92,7 +92,9 @@ class TestLeaderFollower:
     def test_output_shape(self):
         offsets = np.array([[2, 0, 0], [-2, 0, 0], [0, 2, 0.0]])
         lf = LeaderFollower(offsets)
-        forces = lf.compute_forces(np.zeros(3), np.zeros(3), np.zeros((3, 3)), np.zeros((3, 3)))
+        forces = lf.compute_forces(
+            np.zeros(3), np.zeros(3), np.zeros((3, 3)), np.zeros((3, 3))
+        )
         assert forces.shape == (3, 3)
 
     def test_follower_attracted_to_offset(self):
@@ -100,7 +102,9 @@ class TestLeaderFollower:
         lf = LeaderFollower(offsets, kp=5.0)
         leader_pos = np.array([0, 0, 0.0])
         follower_pos = np.array([[0, 0, 0.0]])
-        forces = lf.compute_forces(leader_pos, np.zeros(3), follower_pos, np.zeros((1, 3)))
+        forces = lf.compute_forces(
+            leader_pos, np.zeros(3), follower_pos, np.zeros((1, 3))
+        )
         # Follower at origin, desired at [2,0,0] → force in +x.
         assert forces[0, 0] > 0
 

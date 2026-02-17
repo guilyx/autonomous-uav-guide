@@ -2,7 +2,8 @@
 """3-D A* path planning: two-phase visualisation.
 
 Phase 1 — Algorithm: node-by-node exploration with open/closed sets.
-Phase 2 — Platform: quadrotor flying the planned path with full dynamics.
+Phase 2 — Platform: quadrotor executing takeoff -> pure-pursuit along A* path
+           -> loiter -> landing with full dynamics.
 
 Reference: P. E. Hart et al., "A Formal Basis for the Heuristic Determination
 of Minimum Cost Paths," IEEE TSSC, 1968. DOI: 10.1109/TSSC.1968.300136
@@ -14,10 +15,15 @@ from pathlib import Path
 
 import numpy as np
 
+from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 
 def main() -> None:
@@ -32,7 +38,7 @@ def main() -> None:
     explored_order: list[tuple[int, int, int]] = []
 
     def instrumented_plan(s, g):
-        """Monkey-patch to record explored nodes."""
+        """A* with exploration recording."""
         import heapq
 
         open_set: list[tuple[float, tuple]] = []
@@ -57,7 +63,7 @@ def main() -> None:
                 return path[::-1]
             for dx, dy, dz in dirs:
                 nb = (current[0] + dx, current[1] + dy, current[2] + dz)
-                if not (0 <= nb[0] < size and 0 <= nb[1] < size and 0 <= nb[2] < size):
+                if not all(0 <= nb[j] < size for j in range(3)):
                     continue
                 if grid[nb]:
                     continue
@@ -75,22 +81,24 @@ def main() -> None:
         return
     path_pts = np.array(path_nodes, dtype=float)
 
-    # ── Phase 2: fly quadrotor along path ─────────────────────────────────
+    # ── Phase 2: fly mission (takeoff -> pure-pursuit -> loiter -> land) ──
     quad = Quadrotor()
-    quad.reset(position=path_pts[0])
+    quad.reset(position=np.array([0.0, 0.0, 0.0]))
     ctrl = CascadedPIDController()
-    dt = 0.005
-    steps_per_wp = 80
-    flight_positions: list[np.ndarray] = []
-    flight_eulers: list[np.ndarray] = []
-    for wp in path_pts[::3]:
-        for _ in range(steps_per_wp):
-            s = quad.state
-            flight_positions.append(s[:3].copy())
-            flight_eulers.append(s[3:6].copy())
-            quad.step(ctrl.compute(s, wp, dt=dt), dt)
-    flight_pos = np.array(flight_positions)
-    flight_euler = np.array(flight_eulers)
+    pursuit = PurePursuit3D(lookahead=2.0, waypoint_threshold=1.0, adaptive=True)
+
+    states = fly_mission(
+        quad,
+        ctrl,
+        path_pts[::3],
+        cruise_alt=float(path_pts[0, 2]),
+        dt=0.005,
+        pursuit=pursuit,
+        takeoff_duration=2.0,
+        landing_duration=2.0,
+        loiter_duration=0.5,
+    )
+    flight_pos = states[:, :3]
 
     # ── Animation: Phase 1 (explore) + Phase 2 (fly) ─────────────────────
     explore_step = max(1, len(explored_order) // 100)
@@ -118,13 +126,13 @@ def main() -> None:
     explore_scat = ax.scatter([], [], [], c="cyan", s=2, alpha=0.3)
     (path_line,) = ax.plot([], [], [], "b-", lw=2.5, alpha=0.0)
     (flight_trail,) = ax.plot([], [], [], "orange", lw=1.8)
-    (quad_dot,) = ax.plot([], [], [], "ko", ms=7)
     title = ax.set_title("Phase 1: A* Exploration")
 
     explored_arr = np.array(explored_order)
     vehicle_arts: list = []
 
     def update(f):
+        clear_vehicle_artists(vehicle_arts)
         if f < n_explore:
             k = explore_frames[f]
             pts = explored_arr[: k + 1]
@@ -140,12 +148,9 @@ def main() -> None:
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             flight_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
             flight_trail.set_3d_properties(flight_pos[:k, 2])
-            quad_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
-            quad_dot.set_3d_properties([flight_pos[k, 2]])
-            clear_vehicle_artists(vehicle_arts)
-            R = Quadrotor.rotation_matrix(*flight_euler[k])
-            vehicle_arts.extend(draw_quadrotor_3d(ax, flight_pos[k], R, scale=80.0))
-            title.set_text("Phase 2: Quadrotor Following Path")
+            R = Quadrotor.rotation_matrix(*states[k, 3:6])
+            vehicle_arts.extend(draw_quadrotor_3d(ax, flight_pos[k], R, size=0.8))
+            title.set_text("Phase 2: Quadrotor Following A* Path")
 
     anim.animate(update, total_frames)
     anim.save()

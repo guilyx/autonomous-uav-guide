@@ -38,7 +38,9 @@ def main() -> None:
     obs_radius = 1.5
     for cx, cy in obstacles_info:
         world.add_obstacle(
-            SphereObstacle(centre=np.array([float(cx), float(cy), 0.0]), radius=obs_radius)
+            SphereObstacle(
+                centre=np.array([float(cx), float(cy), 0.0]), radius=obs_radius
+            )
         )
 
     quad = Quadrotor()
@@ -46,7 +48,9 @@ def main() -> None:
     ctrl = CascadedPIDController()
     lidar = Lidar2D(num_beams=36, max_range=10.0, noise_std=0.05, seed=42)
 
-    grid = OccupancyGrid(resolution=1.0, bounds_min=np.zeros(3), bounds_max=np.full(3, 20.0))
+    grid = OccupancyGrid(
+        resolution=1.0, bounds_min=np.zeros(3), bounds_max=np.full(3, 20.0)
+    )
     mapper = OccupancyMapper(grid)
 
     waypoints = [np.array([10.0, 10.0, 2.0]), np.array([18.0, 18.0, 2.0])]
@@ -63,7 +67,10 @@ def main() -> None:
     for i in range(steps):
         states_arr[i] = quad.state
         target = waypoints[wp_idx]
-        if np.linalg.norm(quad.state[:3] - target) < 1.0 and wp_idx < len(waypoints) - 1:
+        if (
+            np.linalg.norm(quad.state[:3] - target) < 1.0
+            and wp_idx < len(waypoints) - 1
+        ):
             wp_idx += 1
         u = ctrl.compute(quad.state, target, dt=dt)
         quad.step(u, dt)
@@ -107,7 +114,9 @@ def main() -> None:
         vmax=1,
     )
     for obs in world.obstacles:
-        circle = plt.Circle(obs.centre[:2], obs.radius, color="red", alpha=0.25, lw=1.5, fill=False)
+        circle = plt.Circle(
+            obs.centre[:2], obs.radius, color="red", alpha=0.25, lw=1.5, fill=False
+        )
         ax2d.add_patch(circle)
     ax2d.set_xlabel("X [m]")
     ax2d.set_ylabel("Y [m]")
@@ -135,7 +144,7 @@ def main() -> None:
         dot3d.set_3d_properties([pos[k, 2]])
         clear_vehicle_artists(veh3d)
         R = Quadrotor.rotation_matrix(*states_arr[k, 3:6])
-        veh3d.extend(draw_quadrotor_3d(ax3d, pos[k], R, scale=30.0))
+        veh3d.extend(draw_quadrotor_3d(ax3d, pos[k], R, size=0.5))
 
         # Lidar beams in 3D (from most recent scan up to this time)
         clear_vehicle_artists(beam_arts)
@@ -162,7 +171,7 @@ def main() -> None:
         trail2d.set_data(pos[:k, 0], pos[:k, 1])
         dot2d.set_data([pos[k, 0]], [pos[k, 1]])
         clear_vehicle_artists(veh2d)
-        veh2d.extend(draw_quadrotor_2d(ax2d, pos[k, :2], states_arr[k, 5], scale=40.0))
+        veh2d.extend(draw_quadrotor_2d(ax2d, pos[k, :2], states_arr[k, 5], size=0.5))
 
     anim.animate(update, len(grids_record))
     anim.save()

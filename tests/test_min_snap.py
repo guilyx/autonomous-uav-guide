@@ -21,11 +21,17 @@ class TestPolynomialTrajectory:
 
         # Check start of first segment.
         for d in range(3):
-            assert pytest.approx(traj._poly_eval(coeffs[d][0], 0.0), abs=1e-6) == waypoints[0, d]
+            assert (
+                pytest.approx(traj._poly_eval(coeffs[d][0], 0.0), abs=1e-6)
+                == waypoints[0, d]
+            )
 
         # Check end of first segment = waypoint 1.
         for d in range(3):
-            assert pytest.approx(traj._poly_eval(coeffs[d][0], 1.0), abs=1e-6) == waypoints[1, d]
+            assert (
+                pytest.approx(traj._poly_eval(coeffs[d][0], 1.0), abs=1e-6)
+                == waypoints[1, d]
+            )
 
     def test_evaluate_produces_correct_shape(self):
         traj = PolynomialTrajectory()

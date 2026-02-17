@@ -14,7 +14,10 @@ import numpy as np
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.vehicles.vtol import Tiltrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 
 def main() -> None:
@@ -78,7 +81,7 @@ def main() -> None:
         dot.set_3d_properties([positions[k, 2]])
         clear_vehicle_artists(vehicle_arts)
         R = Quadrotor.rotation_matrix(*eulers[k])
-        vehicle_arts.extend(draw_quadrotor_3d(ax, positions[k], R, scale=15.0))
+        vehicle_arts.extend(draw_quadrotor_3d(ax, positions[k], R, size=0.2))
 
     anim.animate(update, len(idx))
     anim.save()
