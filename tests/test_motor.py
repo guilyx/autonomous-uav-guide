@@ -3,7 +3,7 @@
 
 import pytest
 
-from quadrotor_sim.models.motor import Motor
+from uav_sim.vehicles.components.motor import Motor
 
 
 @pytest.fixture

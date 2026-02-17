@@ -4,10 +4,10 @@
 import numpy as np
 import pytest
 
-from quadrotor_sim.estimation.complementary_filter import ComplementaryFilter
-from quadrotor_sim.estimation.ekf import ExtendedKalmanFilter
-from quadrotor_sim.estimation.particle_filter import ParticleFilter
-from quadrotor_sim.estimation.ukf import UnscentedKalmanFilter
+from uav_sim.estimation.complementary_filter import ComplementaryFilter
+from uav_sim.estimation.ekf import ExtendedKalmanFilter
+from uav_sim.estimation.particle_filter import ParticleFilter
+from uav_sim.estimation.ukf import UnscentedKalmanFilter
 
 # ---------------------------------------------------------------------------
 # Complementary filter

@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from quadrotor_sim.models.mixer import Mixer
+from uav_sim.vehicles.components.mixer import Mixer
 
 
 @pytest.fixture
