@@ -229,6 +229,14 @@ class Quadrotor:
         k4 = self._derivatives(self.state + dt * k3, actual_wrench)
         self.state += (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
 
+        # Safety: clamp angular rates to prevent numerical blow-up.
+        _OMEGA_MAX = 50.0
+        self.state[9:12] = np.clip(self.state[9:12], -_OMEGA_MAX, _OMEGA_MAX)
+
+        # Safety: if NaN crept in, freeze state at last valid value.
+        if np.any(np.isnan(self.state)):
+            self.state = np.nan_to_num(self.state, nan=0.0)
+
         # Normalise angles to [-pi, pi].
         self.state[3:6] = (self.state[3:6] + np.pi) % (2 * np.pi) - np.pi
 

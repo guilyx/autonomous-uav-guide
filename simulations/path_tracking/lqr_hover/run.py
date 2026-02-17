@@ -19,6 +19,7 @@ import numpy as np
 from uav_sim.path_tracking.lqr_controller import LQRController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
 
 matplotlib.use("Agg")
 
@@ -112,12 +113,17 @@ def main() -> None:
     ax_ctrl.legend(fontsize=6, ncol=2, loc="upper right")
     ax_ctrl.tick_params(labelsize=7)
 
+    vehicle_arts: list = []
+
     def update(f):
         k = idx[f]
         trail3d.set_data(pos[:k, 0], pos[:k, 1])
         trail3d.set_3d_properties(pos[:k, 2])
         dot3d.set_data([pos[k, 0]], [pos[k, 1]])
         dot3d.set_3d_properties([pos[k, 2]])
+        clear_vehicle_artists(vehicle_arts)
+        R = Quadrotor.rotation_matrix(*states[k, 3:6])
+        vehicle_arts.extend(draw_quadrotor_3d(ax3d, pos[k], R, scale=30.0))
         lex.set_data(times[:k], pos_err[:k, 0])
         ley.set_data(times[:k], pos_err[:k, 1])
         lez.set_data(times[:k], pos_err[:k, 2])

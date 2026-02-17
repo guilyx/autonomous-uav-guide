@@ -20,6 +20,7 @@ from uav_sim.path_planning.potential_field_3d import PotentialField3D
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
 
 matplotlib.use("Agg")
 
@@ -51,15 +52,19 @@ def main() -> None:
     quad.reset(position=path_pts[0])
     ctrl = CascadedPIDController()
     dt = 0.005
-    flight_pos = []
+    flight_pos_list: list[np.ndarray] = []
+    flight_euler_list: list[np.ndarray] = []
     for wp in path_pts[::2]:
         for _ in range(60):
-            p = quad.state[:3].copy()
+            s = quad.state
+            p = s[:3].copy()
             if np.any(np.isnan(p)) or np.any(np.abs(p) > 100):
                 break
-            flight_pos.append(p)
-            quad.step(ctrl.compute(quad.state, wp, dt=dt), dt)
-    flight_pos = np.array(flight_pos) if flight_pos else path_pts[:1]
+            flight_pos_list.append(p)
+            flight_euler_list.append(s[3:6].copy())
+            quad.step(ctrl.compute(s, wp, dt=dt), dt)
+    flight_pos = np.array(flight_pos_list) if flight_pos_list else path_pts[:1]
+    flight_euler = np.array(flight_euler_list) if flight_euler_list else np.zeros((1, 3))
 
     # ── Animation ─────────────────────────────────────────────────────────
     n_plan = len(path_pts)
@@ -93,12 +98,14 @@ def main() -> None:
     (fly_trail,) = ax.plot([], [], [], "orange", lw=1.8)
     (fly_dot,) = ax.plot([], [], [], "ko", ms=7)
     title = ax.set_title("Phase 1: Potential Field Descent")
+    vehicle_arts: list = []
 
     def update(f):
         nonlocal quiver_artists
         for q in quiver_artists:
             q.remove()
         quiver_artists.clear()
+        clear_vehicle_artists(vehicle_arts)
 
         if f < n_pf:
             k = plan_frames[f]
@@ -132,6 +139,8 @@ def main() -> None:
             fly_trail.set_3d_properties(flight_pos[:k, 2])
             fly_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
             fly_dot.set_3d_properties([flight_pos[k, 2]])
+            R = Quadrotor.rotation_matrix(*flight_euler[k])
+            vehicle_arts.extend(draw_quadrotor_3d(ax, flight_pos[k], R, scale=30.0))
             title.set_text("Phase 2: Quadrotor Following Path")
 
     anim.animate(update, total)
