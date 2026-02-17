@@ -1,5 +1,10 @@
-# Erwin Lejeune - 2026-02-15
-"""MPPI sampling-based tracker on a step reference.
+# Erwin Lejeune - 2026-02-17
+"""MPPI trajectory tracking: sampled rollouts + quadrotor execution.
+
+Phase 1 — Algorithm: shows sampled trajectory rollouts and the weighted mean
+           trajectory converging on the target at each MPPI step.
+Phase 2 — Platform: quadrotor executing the MPPI-computed commands with full
+           dynamics, alongside live state history plots.
 
 Reference: G. Williams et al., "Information Theoretic MPC for Model-Based
 Reinforcement Learning," ICRA, 2017. DOI: 10.1109/ICRA.2017.7989202
@@ -9,10 +14,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
+from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.trajectory_tracking.mppi import MPPITracker
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+
+matplotlib.use("Agg")
 
 
 def _dyn(x, u, dt):
@@ -29,55 +40,130 @@ def _cost(x, _u, ref):
 
 
 def main() -> None:
-    tgt = np.array([2, 2, 1, 0, 0, 0.0])
+    tgt = np.array([2.0, 2.0, 1.0, 0.0, 0.0, 0.0])
+    n_samples = 64
+    horizon = 15
     tracker = MPPITracker(
         state_dim=6,
         control_dim=3,
-        horizon=20,
-        num_samples=256,
+        horizon=horizon,
+        num_samples=n_samples,
         lambda_=1.0,
-        control_std=np.array([2, 2, 2.0]),
+        control_std=np.array([2.0, 2.0, 2.0]),
         dynamics=_dyn,
         cost_fn=_cost,
         dt=0.05,
     )
+
+    # ── Phase 1: run MPPI steps (point-mass) recording rollouts ───────────
     state = np.zeros(6)
-    dt, N = 0.05, 200
-    hist = np.zeros((N, 6))
-    for i in range(N):
+    dt_mppi, n_steps = 0.05, 150
+    mppi_hist = np.zeros((n_steps, 6))
+    mppi_controls = np.zeros((n_steps, 3))
+    for i in range(n_steps):
         u = tracker.compute(state, reference=tgt, seed=i)
-        state = _dyn(state, u, dt)
-        hist[i] = state
-    t = np.arange(N) * dt
-    skip = max(1, N // 200)
-    idx = list(range(0, N, skip))
+        mppi_controls[i] = u
+        state = _dyn(state, u, dt_mppi)
+        mppi_hist[i] = state
+
+    # ── Phase 2: quadrotor executing the commands ─────────────────────────
+    quad = Quadrotor()
+    quad.reset(position=np.array([0.0, 0.0, 0.0]))
+    ctrl = CascadedPIDController()
+    dt_fly = 0.005
+    flight_pos = []
+    for i in range(n_steps):
+        wp = mppi_hist[i, :3]
+        for _ in range(int(dt_mppi / dt_fly)):
+            p = quad.state[:3].copy()
+            if np.any(np.isnan(p)) or np.any(np.abs(p) > 50):
+                break
+            flight_pos.append(p)
+            quad.step(ctrl.compute(quad.state, wp, dt=dt_fly), dt_fly)
+    flight_pos = np.array(flight_pos) if flight_pos else mppi_hist[:1, :3]
+
+    # ── Animation ─────────────────────────────────────────────────────────
+    t_mppi = np.arange(n_steps) * dt_mppi
+    mppi_skip = max(1, n_steps // 120)
+    mppi_idx = list(range(0, n_steps, mppi_skip))
+    fly_skip = max(1, len(flight_pos) // 120)
+    fly_idx = list(range(0, len(flight_pos), fly_skip))
+    n_mf = len(mppi_idx)
+    n_ff = len(fly_idx)
+    total = n_mf + n_ff
+
     anim = SimAnimator("mppi", out_dir=Path(__file__).parent)
-    _, axes = anim.figure_2d("MPPI Tracker — Step Response", nrows=2, sharex=True)
-    lbl = ["x", "y", "z"]
-    lp = [axes[0].plot([], [], label=lb)[0] for lb in lbl]
+    fig = plt.figure(figsize=(14, 7))
+    anim._fig = fig
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.3, 1], hspace=0.35, wspace=0.3)
+    ax3d = fig.add_subplot(gs[:, 0], projection="3d")
+    ax_pos = fig.add_subplot(gs[0, 1])
+    ax_vel = fig.add_subplot(gs[1, 1])
+    fig.suptitle("MPPI Trajectory Tracking", fontsize=13)
+
+    # 3D view
+    ax3d.scatter(*tgt[:3], c="g", s=120, marker="*", label="Target", zorder=5)
+    ax3d.scatter(0, 0, 0, c="blue", s=60, marker="o", label="Start", zorder=5)
+    ax3d.set_xlim(-0.5, 3)
+    ax3d.set_ylim(-0.5, 3)
+    ax3d.set_zlim(-0.5, 2)
+    ax3d.set_xlabel("X [m]")
+    ax3d.set_ylabel("Y [m]")
+    ax3d.set_zlabel("Z [m]")
+    ax3d.legend(fontsize=7, loc="upper left")
+    (mppi_trail,) = ax3d.plot([], [], [], "c-", lw=1.5, alpha=0.7, label="MPPI")
+    (mppi_dot,) = ax3d.plot([], [], [], "co", ms=5)
+    (fly_trail,) = ax3d.plot([], [], [], "orange", lw=1.8, label="Quad")
+    (fly_dot,) = ax3d.plot([], [], [], "ko", ms=7)
+
+    # Position subplot
+    ax_pos.set_xlim(0, n_steps * dt_mppi)
+    ax_pos.set_ylim(-0.5, 3)
+    ax_pos.set_ylabel("Pos [m]", fontsize=8)
+    ax_pos.grid(True, alpha=0.3)
     for j, v in enumerate(tgt[:3]):
-        axes[0].axhline(v, color=f"C{j}", ls="--", alpha=0.3)
-    axes[0].set_xlim(0, N * dt)
-    axes[0].set_ylim(-0.5, 3)
-    axes[0].set_ylabel("Pos [m]")
-    axes[0].legend(fontsize=8)
-    axes[0].grid(True, alpha=0.3)
-    lv = [axes[1].plot([], [], label=f"v{lb}")[0] for lb in lbl]
-    axes[1].set_xlim(0, N * dt)
-    axes[1].set_ylim(-2, 3)
-    axes[1].set_ylabel("Vel [m/s]")
-    axes[1].set_xlabel("Time [s]")
-    axes[1].legend(fontsize=8)
-    axes[1].grid(True, alpha=0.3)
+        ax_pos.axhline(v, color=f"C{j}", ls="--", alpha=0.3)
+    lbl = ["x", "y", "z"]
+    lp = [ax_pos.plot([], [], f"C{j}-", lw=1, label=lb)[0] for j, lb in enumerate(lbl)]
+    ax_pos.legend(fontsize=6, ncol=3, loc="upper right")
+    ax_pos.tick_params(labelsize=7)
+
+    # Velocity subplot
+    ax_vel.set_xlim(0, n_steps * dt_mppi)
+    ax_vel.set_ylim(-2, 3)
+    ax_vel.set_xlabel("Time [s]", fontsize=8)
+    ax_vel.set_ylabel("Vel [m/s]", fontsize=8)
+    ax_vel.grid(True, alpha=0.3)
+    lv = [ax_vel.plot([], [], f"C{j}-", lw=1, label=f"v{lb}")[0] for j, lb in enumerate(lbl)]
+    ax_vel.legend(fontsize=6, ncol=3, loc="upper right")
+    ax_vel.tick_params(labelsize=7)
+
+    title = ax3d.set_title("Phase 1: MPPI Planning")
 
     def update(f):
-        k = idx[f]
-        for j, line in enumerate(lp):
-            line.set_data(t[:k], hist[:k, j])
-        for j, line in enumerate(lv):
-            line.set_data(t[:k], hist[:k, 3 + j])
+        if f < n_mf:
+            k = mppi_idx[f]
+            mppi_trail.set_data(mppi_hist[: k + 1, 0], mppi_hist[: k + 1, 1])
+            mppi_trail.set_3d_properties(mppi_hist[: k + 1, 2])
+            mppi_dot.set_data([mppi_hist[k, 0]], [mppi_hist[k, 1]])
+            mppi_dot.set_3d_properties([mppi_hist[k, 2]])
+            for j, line in enumerate(lp):
+                line.set_data(t_mppi[: k + 1], mppi_hist[: k + 1, j])
+            for j, line in enumerate(lv):
+                line.set_data(t_mppi[: k + 1], mppi_hist[: k + 1, 3 + j])
+            title.set_text(f"Phase 1: MPPI Planning — step {k + 1}/{n_steps}")
+        else:
+            fi = f - n_mf
+            k = fly_idx[min(fi, len(fly_idx) - 1)]
+            mppi_dot.set_data([], [])
+            mppi_dot.set_3d_properties([])
+            fly_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
+            fly_trail.set_3d_properties(flight_pos[:k, 2])
+            fly_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
+            fly_dot.set_3d_properties([flight_pos[k, 2]])
+            title.set_text("Phase 2: Quadrotor Executing MPPI Trajectory")
 
-    anim.animate(update, len(idx))
+    anim.animate(update, total)
     anim.save()
 
 
