@@ -15,15 +15,15 @@ D. Mellinger, V. Kumar, "Minimum Snap Trajectory Generation and Control for Quad
 ## Simulation
 
 ```bash
-uv run python simulations/min_snap/run.py
+uv run python simulations/trajectory_planning/min_snap/run.py
 ```
 
-![Min-Snap](../../simulations/min_snap/min_snap.gif)
+![Min-Snap](../../simulations/trajectory_planning/min_snap/min_snap.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.planning.min_snap import MinSnapTrajectory
+from uav_sim.path_planning.min_snap import MinSnapTrajectory
 ms = MinSnapTrajectory()
 coeffs = ms.generate(waypoints, segment_times)
 times, positions = ms.evaluate(coeffs, segment_times, dt=0.01)

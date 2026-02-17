@@ -15,15 +15,15 @@ T. Lee, M. Leok, N. H. McClamroch, "Geometric Tracking Control of a Quadrotor UA
 ## Simulation
 
 ```bash
-uv run python simulations/geometric_control/run.py
+uv run python simulations/path_tracking/geometric_control/run.py
 ```
 
-![Geometric Control](../../simulations/geometric_control/geometric_control.gif)
+![Geometric Control](../../simulations/path_tracking/geometric_control/geometric_control.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.control.geometric_controller import GeometricController
+from uav_sim.path_tracking.geometric_controller import GeometricController
 ctrl = GeometricController()
 wrench = ctrl.compute(state_12, target_position_3)
 ```

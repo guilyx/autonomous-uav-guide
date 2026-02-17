@@ -17,15 +17,15 @@ M. S. Arulampalam, S. Maskell, N. Gordon, T. Clapp, "A Tutorial on Particle Filt
 ## Simulation
 
 ```bash
-uv run python simulations/particle_filter/run.py
+uv run python simulations/estimation/particle_filter/run.py
 ```
 
-![Particle Filter](../../simulations/particle_filter/particle_filter.gif)
+![Particle Filter](../../simulations/estimation/particle_filter/particle_filter.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.estimation.particle_filter import ParticleFilter
+from uav_sim.estimation.particle_filter import ParticleFilter
 pf = ParticleFilter(state_dim=2, num_particles=300, f=f, likelihood=lik)
 pf.predict(u, dt); pf.update(z)
 estimate = pf.estimate

@@ -16,15 +16,15 @@ Near radius: $r = \gamma \left(\frac{\log n}{n}\right)^{1/3}$
 ## Simulation
 
 ```bash
-uv run python simulations/rrt_star_3d/run.py
+uv run python simulations/path_planning/rrt_star_3d/run.py
 ```
 
-![RRT* 3D](../../simulations/rrt_star_3d/rrt_star_3d.gif)
+![RRT* 3D](../../simulations/path_planning/rrt_star_3d/rrt_star_3d.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.planning.rrt_3d import RRTStar3D
+from uav_sim.path_planning.rrt_3d import RRTStar3D
 planner = RRTStar3D(bounds_min, bounds_max, obstacles, step_size=1.0)
 path = planner.plan(start, goal)
 ```

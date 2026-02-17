@@ -15,15 +15,15 @@ G. Williams, N. Wagener, B. Goldfain, P. Drews, J. M. Rehg, B. Boots, E. A. Theo
 ## Simulation
 
 ```bash
-uv run python simulations/mppi/run.py
+uv run python simulations/trajectory_tracking/mppi/run.py
 ```
 
-![MPPI](../../simulations/mppi/mppi.gif)
+![MPPI](../../simulations/trajectory_tracking/mppi/mppi.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.tracking.mppi import MPPITracker
+from uav_sim.trajectory_tracking.mppi import MPPITracker
 tracker = MPPITracker(state_dim=6, control_dim=3, dynamics=dyn, cost_fn=cost)
 u = tracker.compute(state, reference=target)
 ```

@@ -25,7 +25,7 @@ R. Mahony, V. Kumar, P. Corke, "Multirotor Aerial Vehicles: Modelling, Estimatio
 ## API
 
 ```python
-from quadrotor_sim.models.quadrotor import Quadrotor
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
 quad = Quadrotor()
 quad.reset(position=np.array([0.0, 0.0, 0.0]))

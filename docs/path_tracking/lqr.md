@@ -15,15 +15,15 @@ B. D. O. Anderson, J. B. Moore, "Optimal Control: Linear Quadratic Methods," Pre
 ## Simulation
 
 ```bash
-uv run python simulations/lqr_hover/run.py
+uv run python simulations/path_tracking/lqr_hover/run.py
 ```
 
-![LQR Hover](../../simulations/lqr_hover/lqr_hover.gif)
+![LQR Hover](../../simulations/path_tracking/lqr_hover/lqr_hover.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.control.lqr_controller import LQRController
+from uav_sim.path_tracking.lqr_controller import LQRController
 ctrl = LQRController(mass=0.027, gravity=9.81)
 wrench = ctrl.compute(state_12, target_state_12)
 ```
