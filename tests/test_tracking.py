@@ -80,7 +80,9 @@ class TestMPPI:
             cost_fn=_simple_cost,
             dt=0.1,
         )
-        u = mppi.compute(np.array([0, 0, 0, 0.0]), reference=np.array([1, 1, 0, 0.0]), seed=42)
+        u = mppi.compute(
+            np.array([0, 0, 0, 0.0]), reference=np.array([1, 1, 0, 0.0]), seed=42
+        )
         assert u.shape == (2,)
 
     def test_drives_towards_target(self):
