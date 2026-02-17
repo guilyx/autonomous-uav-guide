@@ -15,15 +15,15 @@ D. Mellinger, V. Kumar, "Minimum Snap Trajectory Generation and Control for Quad
 ## Simulation
 
 ```bash
-uv run python simulations/feedback_linearisation/run.py
+uv run python simulations/trajectory_tracking/feedback_linearisation/run.py
 ```
 
-![Feedback Linearisation](../../simulations/feedback_linearisation/feedback_linearisation.gif)
+![Feedback Linearisation](../../simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.tracking.feedback_linearisation import FeedbackLinearisationTracker
+from uav_sim.trajectory_tracking.feedback_linearisation import FeedbackLinearisationTracker
 tracker = FeedbackLinearisationTracker(mass=0.027)
 wrench = tracker.compute(state, ref_pos, ref_vel, ref_acc)
 ```

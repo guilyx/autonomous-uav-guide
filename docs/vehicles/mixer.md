@@ -15,7 +15,7 @@ R. Mahony, V. Kumar, P. Corke, "Multirotor Aerial Vehicles," IEEE RAM, 2012. [DO
 ## API
 
 ```python
-from quadrotor_sim.models.mixer import Mixer
+from uav_sim.vehicles.multirotor.mixer import Mixer
 mixer = Mixer(arm_length=0.0397, k_thrust=1e-8, k_torque=1e-10, config="x")
 motor_forces = mixer.mix(wrench)
 ```

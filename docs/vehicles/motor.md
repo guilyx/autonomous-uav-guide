@@ -17,7 +17,7 @@ R. Mahony, V. Kumar, P. Corke, "Multirotor Aerial Vehicles," IEEE RAM, 2012. [DO
 ## API
 
 ```python
-from quadrotor_sim.models.motor import Motor
+from uav_sim.vehicles.multirotor.motor import Motor
 
 motor = Motor()
 motor.step(omega_cmd, dt)

@@ -15,15 +15,15 @@ C. Richter, A. Bry, N. Roy, "Polynomial Trajectory Planning for Aggressive Quadr
 ## Simulation
 
 ```bash
-uv run python simulations/polynomial_trajectory/run.py
+uv run python simulations/trajectory_planning/polynomial_trajectory/run.py
 ```
 
-![Polynomial Trajectory](../../simulations/polynomial_trajectory/polynomial_trajectory.gif)
+![Polynomial Trajectory](../../simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.planning.polynomial_trajectory import PolynomialTrajectory
+from uav_sim.path_planning.polynomial_trajectory import PolynomialTrajectory
 poly = PolynomialTrajectory(order=5)
 coeffs = poly.generate(waypoints, segment_times)
 times, positions = poly.evaluate(coeffs, segment_times, dt=0.01)

@@ -15,15 +15,15 @@ L. R. G. Carrillo, A. E. D. López, R. Lozano, C. Pégard, "Quad Rotorcraft Cont
 ## Simulation
 
 ```bash
-uv run python simulations/pid_hover/run.py
+uv run python simulations/path_tracking/pid_hover/run.py
 ```
 
-![PID Hover](../../simulations/pid_hover/pid_hover.gif)
+![PID Hover](../../simulations/path_tracking/pid_hover/pid_hover.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.control.pid_controller import CascadedPIDController
+from uav_sim.path_tracking.pid_controller import CascadedPIDController
 ctrl = CascadedPIDController()
 wrench = ctrl.compute(state, target_position, dt=0.002)
 ```

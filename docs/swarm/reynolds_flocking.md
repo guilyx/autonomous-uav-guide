@@ -17,15 +17,15 @@ C. W. Reynolds, "Flocks, Herds and Schools: A Distributed Behavioral Model," SIG
 ## Simulation
 
 ```bash
-uv run python simulations/reynolds_flocking/run.py
+uv run python simulations/swarm/reynolds_flocking/run.py
 ```
 
-![Reynolds Flocking](../../simulations/reynolds_flocking/reynolds_flocking.gif)
+![Reynolds Flocking](../../simulations/swarm/reynolds_flocking/reynolds_flocking.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.swarm.reynolds_flocking import ReynoldsFlocking
+from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
 flock = ReynoldsFlocking()
 forces = flock.compute_forces(positions, velocities)  # (N,3) each
 ```

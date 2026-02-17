@@ -15,15 +15,15 @@ R. Mahony, T. Hamel, J.-M. Pflimlin, "Nonlinear Complementary Filters on the Spe
 ## Simulation
 
 ```bash
-uv run python simulations/complementary_filter/run.py
+uv run python simulations/estimation/complementary_filter/run.py
 ```
 
-![Complementary Filter](../../simulations/complementary_filter/complementary_filter.gif)
+![Complementary Filter](../../simulations/estimation/complementary_filter/complementary_filter.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.estimation.complementary_filter import ComplementaryFilter
+from uav_sim.estimation.complementary_filter import ComplementaryFilter
 cf = ComplementaryFilter(alpha=0.98)
 roll, pitch = cf.update(gyro_3, accel_3, dt)
 ```

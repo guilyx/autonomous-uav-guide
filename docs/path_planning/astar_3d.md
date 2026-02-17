@@ -11,15 +11,15 @@ P. E. Hart, N. J. Nilsson, B. Raphael, "A Formal Basis for the Heuristic Determi
 ## Simulation
 
 ```bash
-uv run python simulations/astar_3d/run.py
+uv run python simulations/path_planning/astar_3d/run.py
 ```
 
-![A* 3D](../../simulations/astar_3d/astar_3d.gif)
+![A* 3D](../../simulations/path_planning/astar_3d/astar_3d.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.planning.astar_3d import AStar3D
+from uav_sim.path_planning.astar_3d import AStar3D
 planner = AStar3D(occupancy_grid)
 path = planner.plan(start_tuple, goal_tuple)
 ```

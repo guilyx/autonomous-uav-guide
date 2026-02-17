@@ -17,15 +17,15 @@ O. Khatib, "Real-Time Obstacle Avoidance for Manipulators and Mobile Robots," IJ
 ## Simulation
 
 ```bash
-uv run python simulations/potential_field_3d/run.py
+uv run python simulations/path_planning/potential_field_3d/run.py
 ```
 
-![Potential Field 3D](../../simulations/potential_field_3d/potential_field_3d.gif)
+![Potential Field 3D](../../simulations/path_planning/potential_field_3d/potential_field_3d.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.planning.potential_field_3d import PotentialField3D
+from uav_sim.path_planning.potential_field_3d import PotentialField3D
 planner = PotentialField3D(zeta=1.0, eta=100.0, rho0=2.0)
 path = planner.plan(start, goal, obstacles)
 ```

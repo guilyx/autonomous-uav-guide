@@ -18,15 +18,15 @@ S. Thrun, W. Burgard, D. Fox, "Probabilistic Robotics," MIT Press, 2005, Chapter
 ## Simulation
 
 ```bash
-uv run python simulations/ekf/run.py
+uv run python simulations/estimation/ekf/run.py
 ```
 
-![EKF](../../simulations/ekf/ekf.gif)
+![EKF](../../simulations/estimation/ekf/ekf.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.estimation.ekf import ExtendedKalmanFilter
+from uav_sim.estimation.ekf import ExtendedKalmanFilter
 ekf = ExtendedKalmanFilter(state_dim=2, meas_dim=1, f=f, h=h, F_jac=F, H_jac=H)
 ekf.predict(u, dt); ekf.update(z)
 ```

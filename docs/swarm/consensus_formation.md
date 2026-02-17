@@ -15,15 +15,15 @@ R. Olfati-Saber, R. M. Murray, "Consensus Problems in Networks of Agents with Sw
 ## Simulation
 
 ```bash
-uv run python simulations/consensus_formation/run.py
+uv run python simulations/swarm/consensus_formation/run.py
 ```
 
-![Consensus Formation](../../simulations/consensus_formation/consensus_formation.gif)
+![Consensus Formation](../../simulations/swarm/consensus_formation/consensus_formation.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.swarm.consensus_formation import ConsensusFormation
+from uav_sim.swarm.consensus_formation import ConsensusFormation
 ctrl = ConsensusFormation(adjacency=A, offsets=offsets, gain=1.5)
 forces = ctrl.compute_forces(positions)
 ```
