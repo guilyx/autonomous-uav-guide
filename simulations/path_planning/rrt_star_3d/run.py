@@ -1,5 +1,8 @@
-# Erwin Lejeune - 2026-02-15
-"""RRT* 3-D path planning through spherical obstacles — animated tree growth.
+# Erwin Lejeune - 2026-02-17
+"""RRT* 3D: two-phase visualisation.
+
+Phase 1 — Algorithm: tree growing node by node, edges drawn incrementally.
+Phase 2 — Platform: quadrotor flying the optimised path.
 
 Reference: S. Karaman, E. Frazzoli, "Sampling-based Algorithms for Optimal
 Motion Planning," IJRR, 2011. DOI: 10.1177/0278364911406761
@@ -9,17 +12,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.path_planning.rrt_3d import RRTStar3D
+from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+
+matplotlib.use("Agg")
 
 
 def main() -> None:
     obs = [
-        (np.array([3, 3, 3.0]), 1.5),
-        (np.array([7, 5, 4.0]), 1.0),
-        (np.array([5, 8, 6.0]), 1.2),
+        (np.array([3.0, 3.0, 3.0]), 1.5),
+        (np.array([7.0, 5.0, 4.0]), 1.0),
+        (np.array([5.0, 8.0, 6.0]), 1.2),
     ]
     planner = RRTStar3D(
         bounds_min=np.zeros(3),
@@ -31,36 +40,99 @@ def main() -> None:
         goal_bias=0.15,
         gamma=8.0,
     )
-    start, goal = np.zeros(3), np.array([9, 9, 9.0])
+    start, goal = np.zeros(3), np.array([9.0, 9.0, 9.0])
     path = planner.plan(start, goal, seed=42)
     if path is None:
         print("No path found!")
         return
-    pts = np.array(path)
-    skip = max(1, len(pts) // 100)
-    idx = list(range(0, len(pts), skip))
+
+    tree_nodes = np.array(planner.nodes)
+    tree_parents = planner.parents
+    path_pts = np.array(path)
+
+    # ── Phase 2: quadrotor following path ─────────────────────────────────
+    quad = Quadrotor()
+    quad.reset(position=path_pts[0])
+    ctrl = CascadedPIDController()
+    dt = 0.005
+    flight_pos = []
+    for wp in path_pts:
+        for _ in range(80):
+            p = quad.state[:3].copy()
+            if np.any(np.isnan(p)) or np.any(np.abs(p) > 50):
+                break
+            flight_pos.append(p)
+            quad.step(ctrl.compute(quad.state, wp, dt=dt), dt)
+    flight_pos = np.array(flight_pos) if flight_pos else path_pts[:1]
+
+    # ── Animation setup ───────────────────────────────────────────────────
+    n_tree = len(tree_nodes)
+    tree_step = max(1, n_tree // 100)
+    tree_frames = list(range(0, n_tree, tree_step))
+    fly_step = max(1, len(flight_pos) // 100)
+    fly_frames = list(range(0, len(flight_pos), fly_step))
+    n_tf = len(tree_frames)
+    n_ff = len(fly_frames)
+    total = n_tf + n_ff
+
     anim = SimAnimator("rrt_star_3d", out_dir=Path(__file__).parent)
-    _, ax = anim.figure_3d("RRT* 3D Path Planning")
+    fig = plt.figure(figsize=(10, 7))
+    anim._fig = fig
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel("X [m]")
+    ax.set_ylabel("Y [m]")
+    ax.set_zlabel("Z [m]")
     for c, r in obs:
         anim.draw_sphere(ax, c, r)
-    ax.scatter(*start, c="green", s=100, marker="^", label="Start", zorder=5)
-    ax.scatter(*goal, c="red", s=100, marker="v", label="Goal", zorder=5)
-    ax.plot(pts[:, 0], pts[:, 1], pts[:, 2], "b--", lw=1, alpha=0.3, label="Path")
+    ax.scatter(*start, c="green", s=120, marker="^", label="Start", zorder=5)
+    ax.scatter(*goal, c="red", s=120, marker="v", label="Goal", zorder=5)
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 10)
     ax.set_zlim(0, 10)
-    ax.legend(fontsize=7)
-    (trail,) = ax.plot([], [], [], "b-", lw=2.5)
-    (dot,) = ax.plot([], [], [], "ko", ms=5)
+    ax.legend(fontsize=7, loc="upper left")
+
+    tree_lines: list = []
+    (path_line,) = ax.plot([], [], [], "b-", lw=2.5, alpha=0.0)
+    (fly_trail,) = ax.plot([], [], [], "orange", lw=1.8)
+    (fly_dot,) = ax.plot([], [], [], "ko", ms=7)
+    title = ax.set_title("Phase 1: RRT* Tree Growing")
 
     def update(f):
-        k = idx[f]
-        trail.set_data(pts[:k, 0], pts[:k, 1])
-        trail.set_3d_properties(pts[:k, 2])
-        dot.set_data([pts[k, 0]], [pts[k, 1]])
-        dot.set_3d_properties([pts[k, 2]])
+        nonlocal tree_lines
+        if f < n_tf:
+            k = tree_frames[f]
+            for tl in tree_lines:
+                tl.remove()
+            tree_lines.clear()
+            for i in range(1, k + 1):
+                if i < len(tree_parents):
+                    pi = tree_parents[i]
+                    if pi >= 0:
+                        (ln,) = ax.plot(
+                            [tree_nodes[pi, 0], tree_nodes[i, 0]],
+                            [tree_nodes[pi, 1], tree_nodes[i, 1]],
+                            [tree_nodes[pi, 2], tree_nodes[i, 2]],
+                            "c-",
+                            lw=0.3,
+                            alpha=0.4,
+                        )
+                        tree_lines.append(ln)
+            pct = int(100 * (f + 1) / n_tf)
+            title.set_text(f"Phase 1: RRT* Tree — {pct}% ({k + 1} nodes)")
+        else:
+            if f == n_tf:
+                path_line.set_alpha(1.0)
+                path_line.set_data(path_pts[:, 0], path_pts[:, 1])
+                path_line.set_3d_properties(path_pts[:, 2])
+            fi = f - n_tf
+            k = fly_frames[min(fi, len(fly_frames) - 1)]
+            fly_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
+            fly_trail.set_3d_properties(flight_pos[:k, 2])
+            fly_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
+            fly_dot.set_3d_properties([flight_pos[k, 2]])
+            title.set_text("Phase 2: Quadrotor Following Path")
 
-    anim.animate(update, len(idx))
+    anim.animate(update, total)
     anim.save()
 
 
