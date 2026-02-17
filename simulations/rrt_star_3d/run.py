@@ -16,7 +16,11 @@ from quadrotor_sim.visualization import SimAnimator
 
 
 def main() -> None:
-    obs = [(np.array([3, 3, 3.0]), 1.5), (np.array([7, 5, 4.0]), 1.0), (np.array([5, 8, 6.0]), 1.2)]
+    obs = [
+        (np.array([3, 3, 3.0]), 1.5),
+        (np.array([7, 5, 4.0]), 1.0),
+        (np.array([5, 8, 6.0]), 1.2),
+    ]
     planner = RRTStar3D(
         bounds_min=np.zeros(3),
         bounds_max=np.full(3, 10),

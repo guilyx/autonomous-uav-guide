@@ -27,7 +27,11 @@ def main() -> None:
     dt, N = 0.05, 200
     rng = np.random.default_rng(42)
     pf = ParticleFilter(
-        state_dim=2, num_particles=300, f=_f_single, likelihood=_likelihood, process_noise_std=0.3
+        state_dim=2,
+        num_particles=300,
+        f=_f_single,
+        likelihood=_likelihood,
+        process_noise_std=0.3,
     )
     pf.reset(np.array([0.0, 1.0]), spread=1.0)
     xt = np.array([0.0, 1.0])

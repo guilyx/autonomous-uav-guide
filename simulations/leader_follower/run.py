@@ -39,7 +39,14 @@ def main() -> None:
     _, ax = anim.figure_3d("Leader-Follower Formation")
     sc = ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c="steelblue", s=40)
     sc_leader = ax.scatter(
-        [pos[0, 0]], [pos[0, 1]], [pos[0, 2]], c="red", s=80, marker="D", label="Leader", zorder=5
+        [pos[0, 0]],
+        [pos[0, 1]],
+        [pos[0, 2]],
+        c="red",
+        s=80,
+        marker="D",
+        label="Leader",
+        zorder=5,
     )
     ax.legend(fontsize=8)
     all_p = np.concatenate(snap)
