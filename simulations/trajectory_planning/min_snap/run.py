@@ -21,6 +21,7 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.trajectory_planning.min_snap import MinSnapTrajectory
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
 
 matplotlib.use("Agg")
 
@@ -37,16 +38,20 @@ def main() -> None:
     quad.reset(position=wps[0].astype(float))
     ctrl = CascadedPIDController()
     dt_fly = 0.005
-    flight_pos = []
+    flight_pos_list: list[np.ndarray] = []
+    flight_euler_list: list[np.ndarray] = []
     wp_step = max(1, len(traj_pts) // 120)
     for wp in traj_pts[::wp_step]:
         for _ in range(30):
-            p = quad.state[:3].copy()
+            s = quad.state
+            p = s[:3].copy()
             if np.any(np.isnan(p)) or np.any(np.abs(p) > 50):
                 break
-            flight_pos.append(p)
-            quad.step(ctrl.compute(quad.state, wp, dt=dt_fly), dt_fly)
-    flight_pos = np.array(flight_pos) if flight_pos else traj_pts[:1]
+            flight_pos_list.append(p)
+            flight_euler_list.append(s[3:6].copy())
+            quad.step(ctrl.compute(s, wp, dt=dt_fly), dt_fly)
+    flight_pos = np.array(flight_pos_list) if flight_pos_list else traj_pts[:1]
+    flight_euler = np.array(flight_euler_list) if flight_euler_list else np.zeros((1, 3))
 
     # ── Animation ─────────────────────────────────────────────────────────
     n_traj = len(traj_pts)
@@ -96,8 +101,10 @@ def main() -> None:
     (dot2d,) = ax2d.plot([], [], "ko", ms=5)
 
     title = ax3d.set_title("Phase 1: Trajectory Generation")
+    vehicle_arts: list = []
 
     def update(f):
+        clear_vehicle_artists(vehicle_arts)
         if f < n_tf:
             k = traj_frames[f]
             traj_line.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
@@ -119,6 +126,8 @@ def main() -> None:
             fly_dot.set_3d_properties([flight_pos[k, 2]])
             fly2d.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
             dot2d.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
+            R = Quadrotor.rotation_matrix(*flight_euler[k])
+            vehicle_arts.extend(draw_quadrotor_3d(ax3d, flight_pos[k], R, scale=30.0))
             title.set_text("Phase 2: Quadrotor Flying Trajectory")
 
     anim.animate(update, total)

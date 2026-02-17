@@ -17,6 +17,7 @@ import numpy as np
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
 
 
 def main() -> None:
@@ -80,12 +81,16 @@ def main() -> None:
     ctrl = CascadedPIDController()
     dt = 0.005
     steps_per_wp = 80
-    flight_positions = []
+    flight_positions: list[np.ndarray] = []
+    flight_eulers: list[np.ndarray] = []
     for wp in path_pts[::3]:
         for _ in range(steps_per_wp):
-            flight_positions.append(quad.state[:3].copy())
-            quad.step(ctrl.compute(quad.state, wp, dt=dt), dt)
+            s = quad.state
+            flight_positions.append(s[:3].copy())
+            flight_eulers.append(s[3:6].copy())
+            quad.step(ctrl.compute(s, wp, dt=dt), dt)
     flight_pos = np.array(flight_positions)
+    flight_euler = np.array(flight_eulers)
 
     # ── Animation: Phase 1 (explore) + Phase 2 (fly) ─────────────────────
     explore_step = max(1, len(explored_order) // 100)
@@ -117,6 +122,7 @@ def main() -> None:
     title = ax.set_title("Phase 1: A* Exploration")
 
     explored_arr = np.array(explored_order)
+    vehicle_arts: list = []
 
     def update(f):
         if f < n_explore:
@@ -136,6 +142,9 @@ def main() -> None:
             flight_trail.set_3d_properties(flight_pos[:k, 2])
             quad_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
             quad_dot.set_3d_properties([flight_pos[k, 2]])
+            clear_vehicle_artists(vehicle_arts)
+            R = Quadrotor.rotation_matrix(*flight_euler[k])
+            vehicle_arts.extend(draw_quadrotor_3d(ax, flight_pos[k], R, scale=80.0))
             title.set_text("Phase 2: Quadrotor Following Path")
 
     anim.animate(update, total_frames)
