@@ -31,9 +31,7 @@ class FixedWingParams(UAVParams):
     Cma: float = -0.38
     rho_air: float = 1.225
     mass: float = 13.5
-    inertia: NDArray[np.floating] = field(
-        default_factory=lambda: np.diag([0.8244, 1.135, 1.759])
-    )
+    inertia: NDArray[np.floating] = field(default_factory=lambda: np.diag([0.8244, 1.135, 1.759]))
 
 
 class FixedWing(UAVBase):
@@ -67,11 +65,7 @@ class FixedWing(UAVBase):
         L_aero = qbar * CL
         D_aero = qbar * CD
 
-        fx = (
-            -D_aero * np.cos(alpha)
-            + L_aero * np.sin(alpha)
-            + control[3] * p.mass * p.gravity
-        )
+        fx = -D_aero * np.cos(alpha) + L_aero * np.sin(alpha) + control[3] * p.mass * p.gravity
         fz = -D_aero * np.sin(alpha) - L_aero * np.cos(alpha)
 
         cphi, sphi = np.cos(phi), np.sin(phi)

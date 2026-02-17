@@ -54,9 +54,7 @@ class BoxObstacle(Obstacle):
     max_corner: NDArray[np.floating] = field(default_factory=lambda: np.ones(3))
 
     def contains(self, point: NDArray[np.floating]) -> bool:
-        return bool(
-            np.all(point >= self.min_corner) and np.all(point <= self.max_corner)
-        )
+        return bool(np.all(point >= self.min_corner) and np.all(point <= self.max_corner))
 
     def distance(self, point: NDArray[np.floating]) -> float:
         clamped = np.clip(point, self.min_corner, self.max_corner)
@@ -86,9 +84,7 @@ class CylinderObstacle(Obstacle):
         return max(dxy, dz_lo, dz_hi)
 
     def bounding_box(self):
-        lo = np.array(
-            [self.centre[0] - self.radius, self.centre[1] - self.radius, self.centre[2]]
-        )
+        lo = np.array([self.centre[0] - self.radius, self.centre[1] - self.radius, self.centre[2]])
         hi = np.array(
             [
                 self.centre[0] + self.radius,

@@ -56,12 +56,8 @@ class ComplementaryFilter:
         accel_pitch = np.arctan2(-accel[0], np.sqrt(accel[1] ** 2 + accel[2] ** 2))
 
         # Integrate gyro rates.
-        self.roll = (
-            self.alpha * (self.roll + gyro[0] * dt) + (1.0 - self.alpha) * accel_roll
-        )
-        self.pitch = (
-            self.alpha * (self.pitch + gyro[1] * dt) + (1.0 - self.alpha) * accel_pitch
-        )
+        self.roll = self.alpha * (self.roll + gyro[0] * dt) + (1.0 - self.alpha) * accel_roll
+        self.pitch = self.alpha * (self.pitch + gyro[1] * dt) + (1.0 - self.alpha) * accel_pitch
 
         return self.roll, self.pitch
 

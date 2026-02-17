@@ -82,9 +82,7 @@ class RRT3D:
 
         return None
 
-    def _sample(
-        self, goal: NDArray[np.floating], rng: np.random.Generator
-    ) -> NDArray[np.floating]:
+    def _sample(self, goal: NDArray[np.floating], rng: np.random.Generator) -> NDArray[np.floating]:
         if rng.random() < self.goal_bias:
             return goal.copy()
         return rng.uniform(self.bounds_min, self.bounds_max)
@@ -102,9 +100,7 @@ class RRT3D:
             return q_to.copy()
         return q_from + direction / dist * self.step_size
 
-    def _collision_free(
-        self, q_from: NDArray[np.floating], q_to: NDArray[np.floating]
-    ) -> bool:
+    def _collision_free(self, q_from: NDArray[np.floating], q_to: NDArray[np.floating]) -> bool:
         """Check if line segment is free of sphere obstacles."""
         for centre, radius in self.obstacles:
             centre = np.asarray(centre, dtype=np.float64)
@@ -166,9 +162,7 @@ class RRTStar3D(RRT3D):
 
             # Choose best parent.
             best_parent = idx_near
-            best_cost = self.costs[idx_near] + np.linalg.norm(
-                q_new - self.nodes[idx_near]
-            )
+            best_cost = self.costs[idx_near] + np.linalg.norm(q_new - self.nodes[idx_near])
             for ni in near_idxs:
                 new_cost = self.costs[ni] + np.linalg.norm(q_new - self.nodes[ni])
                 if new_cost < best_cost and self._collision_free(self.nodes[ni], q_new):
@@ -183,9 +177,7 @@ class RRTStar3D(RRT3D):
             # Rewire.
             for ni in near_idxs:
                 new_cost = best_cost + np.linalg.norm(self.nodes[ni] - q_new)
-                if new_cost < self.costs[ni] and self._collision_free(
-                    q_new, self.nodes[ni]
-                ):
+                if new_cost < self.costs[ni] and self._collision_free(q_new, self.nodes[ni]):
                     self.parents[ni] = new_idx
                     self.costs[ni] = float(new_cost)
 
@@ -204,6 +196,4 @@ class RRTStar3D(RRT3D):
             return []
         radius = self.gamma * (np.log(n + 1) / (n + 1)) ** (1.0 / 3.0)
         radius = max(radius, self.step_size)
-        return [
-            i for i, node in enumerate(self.nodes) if np.linalg.norm(node - q) < radius
-        ]
+        return [i for i, node in enumerate(self.nodes) if np.linalg.norm(node - q) < radius]

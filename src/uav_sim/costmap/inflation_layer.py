@@ -25,9 +25,7 @@ class InflationLayer:
         Exponential decay factor: ``cost = exp(-cost_scaling * d)``.
     """
 
-    def __init__(
-        self, inflation_radius: float = 2.0, cost_scaling: float = 2.0
-    ) -> None:
+    def __init__(self, inflation_radius: float = 2.0, cost_scaling: float = 2.0) -> None:
         self.inflation_radius = inflation_radius
         self.cost_scaling = cost_scaling
 

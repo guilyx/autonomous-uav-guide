@@ -44,13 +44,9 @@ class LayeredCostmap:
         """Recompute the composite costmap from all layers."""
         self._composite = self.grid.grid.astype(np.float32).copy()
         if self.inflation is not None:
-            self._composite = np.maximum(
-                self._composite, self.inflation.apply(self.grid)
-            )
+            self._composite = np.maximum(self._composite, self.inflation.apply(self.grid))
         if self.social is not None and world is not None:
-            self._composite = np.maximum(
-                self._composite, self.social.apply(self.grid, world)
-            )
+            self._composite = np.maximum(self._composite, self.social.apply(self.grid, world))
         return self._composite
 
     @property

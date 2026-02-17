@@ -66,9 +66,7 @@ class CascadedPIDConfig:
     pos_y: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=1.2, kd=3.5))
     pos_z: PIDGains = field(default_factory=lambda: PIDGains(kp=10.0, ki=5.0, kd=5.0))
     att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=3.5))
-    att_theta: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=3.5)
-    )
+    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=3.5))
     att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=1.0, kd=3.0))
     mass: float = 0.027
     gravity: float = 9.81

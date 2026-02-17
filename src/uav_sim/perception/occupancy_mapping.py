@@ -48,10 +48,7 @@ class OccupancyMapper:
                 d = step_i * self.grid.resolution
                 pt = position[:2] + direction * d
                 cell = self.grid.world_to_cell(np.append(pt, 0))[:2]
-                if all(
-                    0 <= c < s
-                    for c, s in zip(cell, self._log_odds.shape[:2], strict=True)
-                ):
+                if all(0 <= c < s for c, s in zip(cell, self._log_odds.shape[:2], strict=True)):
                     if d < r - self.grid.resolution:
                         self._log_odds[cell] += self.l_free - self.l0
                     elif abs(d - r) < self.grid.resolution and r < max_range:

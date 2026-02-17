@@ -17,9 +17,7 @@ from uav_sim.visualization import SimAnimator
 
 def main() -> None:
     obs = [(np.array([4, 4, 4.0]), 1.5), (np.array([7, 3, 6.0]), 1.0)]
-    planner = PotentialField3D(
-        zeta=1.0, eta=80.0, rho0=3.0, step_size=0.3, max_iter=500
-    )
+    planner = PotentialField3D(zeta=1.0, eta=80.0, rho0=3.0, step_size=0.3, max_iter=500)
     start, goal = np.zeros(3), np.array([9, 9, 9.0])
     pts = np.array(planner.plan(start, goal, obs))
     skip = max(1, len(pts) // 150)

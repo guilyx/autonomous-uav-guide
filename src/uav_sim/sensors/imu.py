@@ -37,9 +37,7 @@ class IMU(Sensor):
     def sense(self, state: NDArray[np.floating], world=None) -> NDArray[np.floating]:
         accel_true = state[6:9] if len(state) >= 9 else np.zeros(3)
         gyro_true = state[9:12] if len(state) >= 12 else np.zeros(3)
-        accel = (
-            accel_true + self._accel_bias + self._rng.normal(0, self.accel_noise_std, 3)
-        )
+        accel = accel_true + self._accel_bias + self._rng.normal(0, self.accel_noise_std, 3)
         gyro = gyro_true + self._gyro_bias + self._rng.normal(0, self.gyro_noise_std, 3)
         self._last_measurement = np.concatenate([accel, gyro])
         return self._last_measurement

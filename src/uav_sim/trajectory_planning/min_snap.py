@@ -179,9 +179,7 @@ class MinSnapTrajectory:
             for t in ts:
                 pos = np.array(
                     [
-                        float(
-                            sum(coeffs[d][k, i] * t**i for i in range(self.NUM_COEFFS))
-                        )
+                        float(sum(coeffs[d][k, i] * t**i for i in range(self.NUM_COEFFS)))
                         for d in range(dim)
                     ]
                 )

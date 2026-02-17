@@ -48,9 +48,7 @@ class ParticleFilter:
         spread: float = 0.1,
     ) -> None:
         """Initialise particles around x0 with Gaussian spread."""
-        self.particles = np.random.default_rng().normal(
-            loc=x0, scale=spread, size=(self.N, self.n)
-        )
+        self.particles = np.random.default_rng().normal(loc=x0, scale=spread, size=(self.N, self.n))
         self.weights = np.ones(self.N) / self.N
 
     def predict(self, u: NDArray[np.floating], dt: float) -> NDArray[np.floating]:

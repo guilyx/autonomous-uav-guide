@@ -25,9 +25,7 @@ def _dyn(x, u, dt):
 def _cost(x, _u, ref):
     if ref is None:
         return 0.0
-    return float(
-        np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2)
-    )
+    return float(np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2))
 
 
 def main() -> None:

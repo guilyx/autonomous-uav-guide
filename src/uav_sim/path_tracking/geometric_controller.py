@@ -88,9 +88,7 @@ class GeometricController:
         # --- Position control ---
         e_pos = pos - target_pos
         e_vel = vel - target_vel
-        F_des = (
-            -c.kx * e_pos - c.kv * e_vel + c.mass * c.gravity * e3 + c.mass * target_acc
-        )
+        F_des = -c.kx * e_pos - c.kv * e_vel + c.mass * c.gravity * e3 + c.mass * target_acc
 
         # Thrust magnitude.
         T = float(F_des @ R @ e3)

@@ -66,9 +66,7 @@ class PotentialField3D:
         for _ in range(self.max_iter):
             if np.linalg.norm(pos - goal) < self.goal_tol:
                 break
-            force = self._attractive_force(pos, goal) + self._repulsive_force(
-                pos, obstacles
-            )
+            force = self._attractive_force(pos, goal) + self._repulsive_force(pos, obstacles)
             norm = np.linalg.norm(force)
             if norm < 1e-8:
                 # Local minimum escape: random perturbation.
@@ -99,7 +97,5 @@ class PotentialField3D:
             rho = max(dist - radius, 1e-6)
             if rho < self.rho0:
                 grad = diff / (dist + 1e-12)
-                force += (
-                    self.eta * (1.0 / rho - 1.0 / self.rho0) * (1.0 / rho**2) * grad
-                )
+                force += self.eta * (1.0 / rho - 1.0 / self.rho0) * (1.0 / rho**2) * grad
         return force

@@ -41,9 +41,7 @@ class FeedbackLinearisationTracker:
         self.kd = np.atleast_1d(np.asarray(kd, dtype=np.float64))
         self.mass = mass
         self.gravity = gravity
-        self.inertia = (
-            inertia if inertia is not None else np.diag([1.4e-5, 1.4e-5, 2.17e-5])
-        )
+        self.inertia = inertia if inertia is not None else np.diag([1.4e-5, 1.4e-5, 2.17e-5])
 
     def compute(
         self,

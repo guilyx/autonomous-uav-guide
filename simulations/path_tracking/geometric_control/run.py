@@ -35,9 +35,7 @@ def main() -> None:
     skip = max(1, steps // 200)
     idx = list(range(0, steps, skip))
     anim = SimAnimator("geometric_control", out_dir=Path(__file__).parent)
-    _, axes = anim.figure_2d(
-        "Geometric SO(3) — Attitude Recovery", nrows=2, sharex=True
-    )
+    _, axes = anim.figure_2d("Geometric SO(3) — Attitude Recovery", nrows=2, sharex=True)
     labels_e = ["roll", "pitch", "yaw"]
     le = [axes[0].plot([], [], label=lb)[0] for lb in labels_e]
     axes[0].set_xlim(0, dur)

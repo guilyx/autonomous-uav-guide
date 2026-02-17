@@ -33,9 +33,7 @@ def main() -> None:
     idx = list(range(0, len(pos), skip))
     anim = SimAnimator("waypoint_tracking", out_dir=Path(__file__).parent)
     _, ax = anim.figure_3d("Waypoint Tracking (Geometric)")
-    ax.scatter(
-        wps[:, 0], wps[:, 1], wps[:, 2], c="r", s=60, marker="D", label="WP", zorder=5
-    )
+    ax.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="r", s=60, marker="D", label="WP", zorder=5)
     (trail,) = ax.plot([], [], [], "b-", lw=1.2, alpha=0.7)
     (dot,) = ax.plot([], [], [], "ko", ms=5)
     ax.set_xlim(-0.3, 1.3)

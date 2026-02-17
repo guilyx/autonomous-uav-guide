@@ -97,8 +97,6 @@ class PotentialSwarm:
                     diff = positions[i] - centre
                     dist = np.linalg.norm(diff) - radius
                     if dist < self.obs_range and dist > 1e-6:
-                        forces[i] += (
-                            self.obs_gain / dist**2 * diff / np.linalg.norm(diff)
-                        )
+                        forces[i] += self.obs_gain / dist**2 * diff / np.linalg.norm(diff)
 
         return forces

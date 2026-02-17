@@ -25,9 +25,7 @@ def main() -> None:
     idx = list(range(0, len(pos), skip))
     anim = SimAnimator("polynomial_trajectory", out_dir=Path(__file__).parent)
     _, ax = anim.figure_3d("Polynomial Trajectory (quintic)")
-    ax.scatter(
-        wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=60, marker="D", zorder=5, label="WP"
-    )
+    ax.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=60, marker="D", zorder=5, label="WP")
     (trail,) = ax.plot([], [], [], "b-", lw=1.5)
     (dot,) = ax.plot([], [], [], "ko", ms=5)
     ax.set_xlim(-0.5, 8)

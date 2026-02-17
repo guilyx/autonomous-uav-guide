@@ -77,15 +77,10 @@ class MPPITracker:
             Control input for the current time step.
         """
         if self.dynamics is None or self.cost_fn is None:
-            raise RuntimeError(
-                "dynamics and cost_fn must be set before calling compute."
-            )
+            raise RuntimeError("dynamics and cost_fn must be set before calling compute.")
 
         rng = np.random.default_rng(seed)
-        noise = (
-            rng.normal(0, 1, (self.K, self.horizon, self.control_dim))
-            * self.control_std
-        )
+        noise = rng.normal(0, 1, (self.K, self.horizon, self.control_dim)) * self.control_std
         costs = np.zeros(self.K)
 
         for k in range(self.K):

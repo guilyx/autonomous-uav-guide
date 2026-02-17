@@ -34,9 +34,7 @@ def main() -> None:
         obs = obs[np.random.default_rng(0).choice(len(obs), 500, replace=False)]
     ax.scatter(obs[:, 0], obs[:, 1], obs[:, 2], c="red", alpha=0.08, s=8)
     ax.scatter(0, 0, 0, c="green", s=100, marker="^", label="Start", zorder=5)
-    ax.scatter(
-        size - 1, size - 1, size - 1, c="red", s=100, marker="v", label="Goal", zorder=5
-    )
+    ax.scatter(size - 1, size - 1, size - 1, c="red", s=100, marker="v", label="Goal", zorder=5)
     ax.set_xlim(0, size)
     ax.set_ylim(0, size)
     ax.set_zlim(0, size)

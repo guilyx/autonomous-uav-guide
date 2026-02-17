@@ -20,9 +20,7 @@ class TiltrotorParams(UAVParams):
     """Physical parameters for a tilt-rotor VTOL."""
 
     mass: float = 5.0
-    inertia: NDArray[np.floating] = field(
-        default_factory=lambda: np.diag([0.1, 0.1, 0.15])
-    )
+    inertia: NDArray[np.floating] = field(default_factory=lambda: np.diag([0.1, 0.1, 0.15]))
     num_rotors: int = 4
     arm_length: float = 0.3
     wing_area: float = 0.4

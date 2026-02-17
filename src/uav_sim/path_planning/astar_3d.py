@@ -70,11 +70,7 @@ class AStar3D:
             for d in self._NEIGHBOURS:
                 nb = (current[0] + d[0], current[1] + d[1], current[2] + d[2])
 
-                if not (
-                    0 <= nb[0] < shape[0]
-                    and 0 <= nb[1] < shape[1]
-                    and 0 <= nb[2] < shape[2]
-                ):
+                if not (0 <= nb[0] < shape[0] and 0 <= nb[1] < shape[1] and 0 <= nb[2] < shape[2]):
                     continue
                 if self.grid[nb]:
                     continue

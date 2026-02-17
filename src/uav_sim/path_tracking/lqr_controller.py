@@ -41,9 +41,7 @@ class LQRController:
     ) -> None:
         self.mass = mass
         self.gravity = gravity
-        self.inertia = (
-            inertia if inertia is not None else np.diag([1.4e-5, 1.4e-5, 2.17e-5])
-        )
+        self.inertia = inertia if inertia is not None else np.diag([1.4e-5, 1.4e-5, 2.17e-5])
 
         # Build linearised A, B matrices.
         self.A, self.B = self._linearise()

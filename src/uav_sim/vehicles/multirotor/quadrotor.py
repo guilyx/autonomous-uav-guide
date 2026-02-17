@@ -162,9 +162,7 @@ class Quadrotor:
 
         # Rotational dynamics (body frame).
         tau_b = np.array([tau_x, tau_y, tau_z])
-        omega_dot = np.linalg.solve(
-            inertia, tau_b - np.cross(omega_b, inertia @ omega_b)
-        )
+        omega_dot = np.linalg.solve(inertia, tau_b - np.cross(omega_b, inertia @ omega_b))
 
         # Euler angle kinematics.
         cp, sp = np.cos(phi), np.sin(phi)

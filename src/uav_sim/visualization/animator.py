@@ -100,9 +100,7 @@ class SimAnimator:
         """
         if figsize is None:
             figsize = (_DEFAULT_FIGSIZE_2D[0], max(4, 2.5 * nrows))
-        fig, axes = plt.subplots(
-            nrows, 1, figsize=figsize, sharex=sharex, squeeze=False
-        )
+        fig, axes = plt.subplots(nrows, 1, figsize=figsize, sharex=sharex, squeeze=False)
         axes = axes.ravel()
         if title:
             fig.suptitle(title)

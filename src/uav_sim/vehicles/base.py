@@ -20,9 +20,7 @@ class UAVParams:
 
     mass: float = 1.0
     gravity: float = 9.81
-    inertia: NDArray[np.floating] = field(
-        default_factory=lambda: np.diag([0.01, 0.01, 0.02])
-    )
+    inertia: NDArray[np.floating] = field(default_factory=lambda: np.diag([0.01, 0.01, 0.02]))
     drag_coeffs: NDArray[np.floating] = field(default_factory=lambda: np.zeros(3))
 
 

@@ -45,9 +45,7 @@ class World:
     # ── queries ───────────────────────────────────────────────────────────
 
     def in_bounds(self, point: NDArray[np.floating]) -> bool:
-        return bool(
-            np.all(point >= self.bounds_min) and np.all(point <= self.bounds_max)
-        )
+        return bool(np.all(point >= self.bounds_min) and np.all(point <= self.bounds_max))
 
     def is_free(self, point: NDArray[np.floating]) -> bool:
         """Return True if *point* is inside bounds and outside all obstacles."""
