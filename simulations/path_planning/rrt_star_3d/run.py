@@ -2,7 +2,7 @@
 """RRT* 3D: two-phase visualisation.
 
 Phase 1 — Algorithm: tree growing node by node, edges drawn incrementally.
-Phase 2 — Platform: quadrotor flying the optimised path.
+Phase 2 — Platform: quadrotor takeoff -> pure-pursuit along path -> land.
 
 Reference: S. Karaman, E. Frazzoli, "Sampling-based Algorithms for Optimal
 Motion Planning," IJRR, 2011. DOI: 10.1177/0278364911406761
@@ -17,9 +17,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.path_planning.rrt_3d import RRTStar3D
+from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
 
@@ -50,20 +56,23 @@ def main() -> None:
     tree_parents = planner.parents
     path_pts = np.array(path)
 
-    # ── Phase 2: quadrotor following path ─────────────────────────────────
+    # ── Phase 2: fly mission via pure pursuit ─────────────────────────────
     quad = Quadrotor()
-    quad.reset(position=path_pts[0])
+    quad.reset(position=np.array([0.0, 0.0, 0.0]))
     ctrl = CascadedPIDController()
-    dt = 0.005
-    flight_pos = []
-    for wp in path_pts:
-        for _ in range(80):
-            p = quad.state[:3].copy()
-            if np.any(np.isnan(p)) or np.any(np.abs(p) > 50):
-                break
-            flight_pos.append(p)
-            quad.step(ctrl.compute(quad.state, wp, dt=dt), dt)
-    flight_pos = np.array(flight_pos) if flight_pos else path_pts[:1]
+    pursuit = PurePursuit3D(lookahead=2.0, waypoint_threshold=1.0, adaptive=True)
+    flight_states = fly_mission(
+        quad,
+        ctrl,
+        path_pts,
+        cruise_alt=float(path_pts[0, 2]),
+        dt=0.005,
+        pursuit=pursuit,
+        takeoff_duration=2.0,
+        landing_duration=2.0,
+        loiter_duration=0.5,
+    )
+    flight_pos = flight_states[:, :3]
 
     # ── Animation setup ───────────────────────────────────────────────────
     n_tree = len(tree_nodes)
@@ -94,29 +103,29 @@ def main() -> None:
     tree_lines: list = []
     (path_line,) = ax.plot([], [], [], "b-", lw=2.5, alpha=0.0)
     (fly_trail,) = ax.plot([], [], [], "orange", lw=1.8)
-    (fly_dot,) = ax.plot([], [], [], "ko", ms=7)
     title = ax.set_title("Phase 1: RRT* Tree Growing")
+    vehicle_arts: list = []
 
     def update(f):
         nonlocal tree_lines
+        clear_vehicle_artists(vehicle_arts)
         if f < n_tf:
             k = tree_frames[f]
             for tl in tree_lines:
                 tl.remove()
             tree_lines.clear()
             for i in range(1, k + 1):
-                if i < len(tree_parents):
+                if i < len(tree_parents) and tree_parents[i] >= 0:
                     pi = tree_parents[i]
-                    if pi >= 0:
-                        (ln,) = ax.plot(
-                            [tree_nodes[pi, 0], tree_nodes[i, 0]],
-                            [tree_nodes[pi, 1], tree_nodes[i, 1]],
-                            [tree_nodes[pi, 2], tree_nodes[i, 2]],
-                            "c-",
-                            lw=0.3,
-                            alpha=0.4,
-                        )
-                        tree_lines.append(ln)
+                    (ln,) = ax.plot(
+                        [tree_nodes[pi, 0], tree_nodes[i, 0]],
+                        [tree_nodes[pi, 1], tree_nodes[i, 1]],
+                        [tree_nodes[pi, 2], tree_nodes[i, 2]],
+                        "c-",
+                        lw=0.3,
+                        alpha=0.4,
+                    )
+                    tree_lines.append(ln)
             pct = int(100 * (f + 1) / n_tf)
             title.set_text(f"Phase 1: RRT* Tree — {pct}% ({k + 1} nodes)")
         else:
@@ -128,9 +137,9 @@ def main() -> None:
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             fly_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
             fly_trail.set_3d_properties(flight_pos[:k, 2])
-            fly_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
-            fly_dot.set_3d_properties([flight_pos[k, 2]])
-            title.set_text("Phase 2: Quadrotor Following Path")
+            R = Quadrotor.rotation_matrix(*flight_states[k, 3:6])
+            vehicle_arts.extend(draw_quadrotor_3d(ax, flight_pos[k], R, size=0.6))
+            title.set_text("Phase 2: Quadrotor Following RRT* Path")
 
     anim.animate(update, total)
     anim.save()

@@ -21,6 +21,10 @@ from uav_sim.trajectory_tracking.feedback_linearisation import (
 )
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
 
@@ -102,12 +106,17 @@ def main() -> None:
     ax_att.legend(fontsize=6, ncol=3, loc="upper right")
     ax_att.tick_params(labelsize=7)
 
+    vehicle_arts: list = []
+
     def update(f):
         k = idx[f]
         trail3d.set_data(pos[:k, 0], pos[:k, 1])
         trail3d.set_3d_properties(pos[:k, 2])
         dot3d.set_data([pos[k, 0]], [pos[k, 1]])
         dot3d.set_3d_properties([pos[k, 2]])
+        clear_vehicle_artists(vehicle_arts)
+        R = Quadrotor.rotation_matrix(*states[k, 3:6])
+        vehicle_arts.extend(draw_quadrotor_3d(ax3d, pos[k], R, size=0.15))
         ref_dot.set_data([refs[k, 0]], [refs[k, 1]])
         ref_dot.set_3d_properties([refs[k, 2]])
         lex.set_data(times[:k], track_err[:k, 0])

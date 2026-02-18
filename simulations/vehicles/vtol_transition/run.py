@@ -11,8 +11,13 @@ from pathlib import Path
 
 import numpy as np
 
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.vehicles.vtol import Tiltrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 
 def main() -> None:
@@ -24,6 +29,7 @@ def main() -> None:
     dt, duration = 0.005, 20.0
     steps = int(duration / dt)
     positions = np.zeros((steps, 3))
+    eulers = np.zeros((steps, 3))
     tilt_angles = np.zeros(steps)
 
     g = vtol.vtol_params.gravity
@@ -31,6 +37,7 @@ def main() -> None:
 
     for i in range(steps):
         positions[i] = vtol.state[:3]
+        eulers[i] = vtol.state[3:6]
         t = i * dt
         T = m * g * 1.02
         if t < 5:
@@ -64,6 +71,7 @@ def main() -> None:
 
     skip = max(1, len(positions) // 200)
     idx = list(range(0, len(positions), skip))
+    vehicle_arts: list = []
 
     def update(f):
         k = idx[min(f, len(idx) - 1)]
@@ -71,6 +79,9 @@ def main() -> None:
         trail.set_3d_properties(positions[:k, 2])
         dot.set_data([positions[k, 0]], [positions[k, 1]])
         dot.set_3d_properties([positions[k, 2]])
+        clear_vehicle_artists(vehicle_arts)
+        R = Quadrotor.rotation_matrix(*eulers[k])
+        vehicle_arts.extend(draw_quadrotor_3d(ax, positions[k], R, size=0.2))
 
     anim.animate(update, len(idx))
     anim.save()

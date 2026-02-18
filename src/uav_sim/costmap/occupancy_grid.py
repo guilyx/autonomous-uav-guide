@@ -80,3 +80,90 @@ class OccupancyGrid:
             if not world.is_free(pt3):
                 self._grid[idx] = 1.0
             it.iternext()
+
+    # ------------------------------------------------------------------
+    # Visualisation helpers
+    # ------------------------------------------------------------------
+
+    def visualize_3d(
+        self,
+        ax: object,
+        *,
+        cmap: str = "hot_r",
+        alpha: float = 0.35,
+        z_height: float = 0.0,
+        stride: int = 2,
+    ) -> None:
+        """Render the 2-D occupancy grid as a coloured floor surface on an Axes3D.
+
+        Parameters
+        ----------
+        ax:
+            A ``mpl_toolkits.mplot3d.Axes3D`` instance.
+        cmap:
+            Matplotlib colourmap name applied to cell values.
+        alpha:
+            Surface transparency.
+        z_height:
+            Z-level to place the surface.
+        stride:
+            Row/column stride for ``plot_surface`` (lower = more detail).
+        """
+        import matplotlib.pyplot as plt  # deferred to keep module lightweight
+
+        g = self._grid
+        if g.ndim != 2:
+            g = g.max(axis=2) if g.ndim == 3 else g
+
+        cm = plt.get_cmap(cmap)
+        nx, ny = g.shape
+        xg = np.linspace(float(self.bounds_min[0]), float(self.bounds_max[0]), nx + 1)
+        yg = np.linspace(float(self.bounds_min[1]), float(self.bounds_max[1]), ny + 1)
+        xm, ym = np.meshgrid(xg, yg, indexing="ij")
+        zz = np.full_like(xm, z_height)
+
+        face_colors = cm(g[..., np.newaxis].repeat(1, axis=2))[:, :, 0]
+        ax.plot_surface(
+            xm,
+            ym,
+            zz,
+            facecolors=face_colors,
+            alpha=alpha,
+            rstride=stride,
+            cstride=stride,
+            linewidth=0,
+            antialiased=False,
+        )
+
+    def visualize_2d(
+        self,
+        ax: object,
+        *,
+        cmap: str = "Greys",
+        vmin: float = 0.0,
+        vmax: float = 1.0,
+        alpha: float = 1.0,
+    ) -> object:
+        """Render the 2-D occupancy grid as an image on a 2D axes.
+
+        Returns the ``AxesImage`` so callers can call ``set_data`` for animation.
+        """
+        g = self._grid
+        if g.ndim != 2:
+            g = g.max(axis=2) if g.ndim == 3 else g
+
+        extent = [
+            float(self.bounds_min[0]),
+            float(self.bounds_max[0]),
+            float(self.bounds_min[1]),
+            float(self.bounds_max[1]),
+        ]
+        return ax.imshow(
+            g.T,
+            origin="lower",
+            extent=extent,
+            cmap=cmap,
+            vmin=vmin,
+            vmax=vmax,
+            alpha=alpha,
+        )
