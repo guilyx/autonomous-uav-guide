@@ -116,3 +116,31 @@ class TestCascadedPIDController:
         ctrl.compute(state, np.zeros(3), dt=0.01)
         ctrl.reset()
         assert ctrl.pid_z.integral == 0.0
+
+    def test_max_tilt_clamps_extreme_targets(self):
+        """Large position error should not produce roll/pitch beyond max_tilt."""
+        ctrl = CascadedPIDController()
+        state = np.zeros(12)
+        state[2] = 1.0
+        # Target 100m away → would produce extreme angle without clamping
+        target = np.array([100.0, 100.0, 1.0])
+        wrench = ctrl.compute(state, target, dt=0.01)
+        # Thrust should be capped (not blow up)
+        hover_T = ctrl.config.mass * ctrl.config.gravity
+        assert wrench[0] <= hover_T * ctrl.config.max_thrust_ratio + 1e-6
+        assert wrench[0] >= 0.0
+
+    def test_large_error_stable_closed_loop(self):
+        """With tilt clamping, a large target should not cause NaN or flip."""
+        quad = Quadrotor()
+        quad.reset(position=np.array([0.0, 0.0, 1.0]))
+        ctrl = CascadedPIDController()
+        target = np.array([10.0, 10.0, 1.0])
+
+        dt = 0.005
+        for _ in range(2000):
+            wrench = ctrl.compute(quad.state, target, dt=dt)
+            quad.step(wrench, dt)
+
+        assert not np.any(np.isnan(quad.state))
+        assert np.all(np.abs(quad.state[:3]) < 500)

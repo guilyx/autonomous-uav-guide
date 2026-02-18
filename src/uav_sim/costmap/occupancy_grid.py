@@ -59,7 +59,9 @@ class OccupancyGrid:
         return tuple(np.clip(idx, 0, np.array(self._grid.shape) - 1))
 
     def cell_to_world(self, cell: tuple[int, ...]) -> NDArray[np.floating]:
-        return self.bounds_min[: len(cell)] + np.array(cell) * self.resolution + self.resolution / 2
+        return (
+            self.bounds_min[: len(cell)] + np.array(cell) * self.resolution + self.resolution / 2
+        )
 
     def set_occupied(self, point: NDArray[np.floating], value: float = 1.0) -> None:
         self._grid[self.world_to_cell(point)] = value

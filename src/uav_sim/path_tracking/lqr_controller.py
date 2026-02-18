@@ -41,16 +41,16 @@ class LQRController:
     ) -> None:
         self.mass = mass
         self.gravity = gravity
-        self.inertia = inertia if inertia is not None else np.diag([1.4e-5, 1.4e-5, 2.17e-5])
+        self.inertia = inertia if inertia is not None else np.diag([1.66e-5, 1.66e-5, 2.96e-5])
 
         # Build linearised A, B matrices.
         self.A, self.B = self._linearise()
 
-        # Default cost matrices.
+        # Default cost matrices tuned for Crazyflie-class airframe.
         if Q is None:
             Q = np.diag([10, 10, 20, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.1])
         if R is None:
-            R = np.diag([1, 10, 10, 10])
+            R = np.diag([0.5, 500, 500, 500])
 
         self.Q = Q
         self.R = R
@@ -109,5 +109,7 @@ class LQRController:
             target_state = np.zeros(12)
         error = state - target_state
         wrench = self.hover_wrench - self.K @ error
-        wrench[0] = max(0.0, wrench[0])
+        wrench[0] = float(np.clip(wrench[0], 0.0, self.mass * self.gravity * 2.5))
+        max_torque = 1e-4
+        wrench[1:] = np.clip(wrench[1:], -max_torque, max_torque)
         return wrench

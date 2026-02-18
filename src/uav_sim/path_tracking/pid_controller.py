@@ -21,19 +21,22 @@ class PIDGains:
     ki: float = 0.0
     kd: float = 0.0
     integral_limit: float = 1.0
+    output_limit: float = 0.0  # <=0 means unlimited
 
 
 class PIDAxis:
-    """Single-axis PID controller with anti-windup clamping."""
+    """Single-axis PID controller with anti-windup and output clamping."""
 
     def __init__(self, gains: PIDGains) -> None:
         self.gains = gains
         self.integral: float = 0.0
         self.prev_error: float = 0.0
+        self._first_call = True
 
     def reset(self) -> None:
         self.integral = 0.0
         self.prev_error = 0.0
+        self._first_call = True
 
     def compute(self, error: float, dt: float) -> float:
         """Compute PID output for one time step.
@@ -48,9 +51,20 @@ class PIDAxis:
         g = self.gains
         self.integral += error * dt
         self.integral = np.clip(self.integral, -g.integral_limit, g.integral_limit)
-        derivative = (error - self.prev_error) / dt if dt > 0 else 0.0
+
+        if self._first_call:
+            derivative = 0.0
+            self._first_call = False
+        elif dt > 0:
+            derivative = (error - self.prev_error) / dt
+        else:
+            derivative = 0.0
         self.prev_error = error
-        return g.kp * error + g.ki * self.integral + g.kd * derivative
+
+        out = g.kp * error + g.ki * self.integral + g.kd * derivative
+        if g.output_limit > 0:
+            out = float(np.clip(out, -g.output_limit, g.output_limit))
+        return out
 
 
 @dataclass
@@ -62,14 +76,22 @@ class CascadedPIDConfig:
     outputs body torques.
     """
 
-    pos_x: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=1.2, kd=3.5))
-    pos_y: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=1.2, kd=3.5))
-    pos_z: PIDGains = field(default_factory=lambda: PIDGains(kp=10.0, ki=5.0, kd=5.0))
-    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=3.5))
-    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=3.5))
-    att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=1.0, kd=3.0))
+    pos_x: PIDGains = field(
+        default_factory=lambda: PIDGains(kp=6.0, ki=0.5, kd=4.0, output_limit=3.0)
+    )
+    pos_y: PIDGains = field(
+        default_factory=lambda: PIDGains(kp=6.0, ki=0.5, kd=4.0, output_limit=3.0)
+    )
+    pos_z: PIDGains = field(
+        default_factory=lambda: PIDGains(kp=10.0, ki=3.0, kd=5.0, output_limit=6.0)
+    )
+    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=0.004, ki=0.0, kd=0.0009))
+    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=0.004, ki=0.0, kd=0.0009))
+    att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=0.006, ki=0.001, kd=0.001))
     mass: float = 0.027
     gravity: float = 9.81
+    max_tilt: float = 0.26  # ~15°, prevents extreme manoeuvres
+    max_thrust_ratio: float = 2.5  # max thrust as multiple of hover thrust
 
 
 class CascadedPIDController:
@@ -135,8 +157,9 @@ class CascadedPIDController:
         az_des = self.pid_z.compute(ez, dt)
 
         # Total thrust (along body z-axis).
+        hover_T = c.mass * c.gravity
         T = c.mass * (az_des + c.gravity) / (np.cos(phi) * np.cos(theta) + 1e-6)
-        T = max(0.0, T)
+        T = float(np.clip(T, 0.0, hover_T * c.max_thrust_ratio))
 
         # Desired roll and pitch from desired accelerations.
         phi_des = np.arcsin(
@@ -155,6 +178,9 @@ class CascadedPIDController:
                 1.0,
             )
         )
+
+        phi_des = float(np.clip(phi_des, -c.max_tilt, c.max_tilt))
+        theta_des = float(np.clip(theta_des, -c.max_tilt, c.max_tilt))
 
         # --- Inner loop: attitude PID → body torques ---
         e_phi = phi_des - phi
