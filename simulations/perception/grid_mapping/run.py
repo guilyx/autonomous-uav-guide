@@ -57,16 +57,15 @@ def _lawnmower_path(
 
 def main() -> None:
     rng = np.random.default_rng(42)
-    world_size = 20.0
-    cruise_alt = 2.0
+    world_size = 10.0
+    cruise_alt = 1.0
 
     # Ground-truth obstacles (circles in 2D)
     obstacles = [
-        (np.array([5.0, 5.0]), 1.5),
-        (np.array([12.0, 8.0]), 2.0),
-        (np.array([7.0, 15.0]), 1.2),
-        (np.array([15.0, 14.0]), 1.8),
-        (np.array([3.0, 12.0]), 1.0),
+        (np.array([3.0, 3.0]), 0.8),
+        (np.array([6.0, 4.0]), 1.0),
+        (np.array([4.0, 7.0]), 0.7),
+        (np.array([7.5, 7.5]), 0.9),
     ]
 
     # Occupancy grid
@@ -76,22 +75,20 @@ def main() -> None:
         bounds_max=np.array([world_size, world_size, 0.0]),
     )
     mapper = OccupancyMapper(grid)
-    lidar = Lidar2D(max_range=6.0, num_beams=36, noise_std=0.05, seed=42)
+    lidar = Lidar2D(max_range=4.0, num_beams=36, noise_std=0.05, seed=42)
 
     # ── Generate flight path ──────────────────────────────────────────────
     path_3d = _lawnmower_path(
-        1.0, world_size - 1.0, 1.0, world_size - 1.0, spacing=4.0, altitude=cruise_alt
+        0.5, world_size - 0.5, 0.5, world_size - 0.5, spacing=2.0, altitude=cruise_alt
     )
 
     quad = Quadrotor()
-    quad.reset(position=np.array([1.0, 1.0, cruise_alt]))
+    quad.reset(position=np.array([0.5, 0.5, cruise_alt]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=2.0, waypoint_threshold=1.0, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=0.8, waypoint_threshold=0.3, adaptive=True)
 
     states_list: list[np.ndarray] = []
-    fly_path(
-        quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=40.0, states=states_list
-    )
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=60.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
     # ── Build map incrementally and record snapshots ──────────────────────
@@ -146,8 +143,8 @@ def main() -> None:
 
     # Scene panel
     ax_scene.set_aspect("equal")
-    ax_scene.set_xlim(0, world_size)
-    ax_scene.set_ylim(0, world_size)
+    ax_scene.set_xlim(-0.5, world_size + 0.5)
+    ax_scene.set_ylim(-0.5, world_size + 0.5)
     ax_scene.set_xlabel("X [m]")
     ax_scene.set_ylabel("Y [m]")
     ax_scene.grid(True, alpha=0.15)
@@ -161,8 +158,8 @@ def main() -> None:
 
     # Map panel
     ax_map.set_aspect("equal")
-    ax_map.set_xlim(0, world_size)
-    ax_map.set_ylim(0, world_size)
+    ax_map.set_xlim(-0.5, world_size + 0.5)
+    ax_map.set_ylim(-0.5, world_size + 0.5)
     ax_map.set_xlabel("X [m]")
     ax_map.set_ylabel("Y [m]")
     ax_map.set_title("Occupancy Grid", fontsize=10)
@@ -197,9 +194,7 @@ def main() -> None:
         angles_k = np.linspace(0, 2 * np.pi, lidar.num_beams, endpoint=False) + yaw_k
         for j in range(lidar.num_beams):
             end = sp + sr[j] * np.array([np.cos(angles_k[j]), np.sin(angles_k[j])])
-            (rl,) = ax_scene.plot(
-                [sp[0], end[0]], [sp[1], end[1]], "g-", lw=0.3, alpha=0.3
-            )
+            (rl,) = ax_scene.plot([sp[0], end[0]], [sp[1], end[1]], "g-", lw=0.3, alpha=0.3)
             ray_lines.append(rl)
 
         # Vehicle

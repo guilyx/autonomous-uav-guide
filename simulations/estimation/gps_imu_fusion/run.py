@@ -43,10 +43,10 @@ def main() -> None:
     rng = np.random.default_rng(42)
 
     # ── Figure-8 flight path ──────────────────────────────────────────────
-    n_wp = 100
+    n_wp = 60
     t_wp = np.linspace(0, 2 * np.pi, n_wp, endpoint=False)
-    radius = 4.0
-    cruise_alt = 2.0
+    radius = 2.0
+    cruise_alt = 1.0
     path_3d = np.column_stack(
         [
             radius * np.sin(t_wp),
@@ -58,11 +58,9 @@ def main() -> None:
     quad = Quadrotor()
     quad.reset(position=np.array([0.0, 0.0, cruise_alt]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=1.0, waypoint_threshold=0.3, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=0.5, waypoint_threshold=0.2, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(
-        quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=25.0, states=states_list
-    )
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=40.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     n_steps = len(flight_states)
     dt = 0.005
@@ -193,9 +191,7 @@ def main() -> None:
         ell.angle = angle
 
         clear_vehicle_artists(vehicle_arts)
-        vehicle_arts.extend(
-            draw_quadrotor_2d(ax_map, true_xy[k], flight_states[k, 5], size=0.25)
-        )
+        vehicle_arts.extend(draw_quadrotor_2d(ax_map, true_xy[k], flight_states[k, 5], size=0.25))
 
     anim.animate(update, n_frames)
     anim.save()

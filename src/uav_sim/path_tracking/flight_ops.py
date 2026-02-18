@@ -18,10 +18,25 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
+_MAX_CMD_DIST = 0.3  # metres — maximum effective distance to the target sent to PID
+
 
 def _is_sane(state: NDArray) -> bool:
     """Return False if state has NaN or is wildly out of range."""
     return bool(not np.any(np.isnan(state[:3])) and np.all(np.abs(state[:3]) < 500))
+
+
+def _limit_target(pos: NDArray, target: NDArray, max_dist: float = _MAX_CMD_DIST) -> NDArray:
+    """Clamp effective target to *max_dist* from current position.
+
+    Prevents the low-level PID from seeing large position errors that would
+    cause extreme roll/pitch commands on lightweight airframes.
+    """
+    delta = target - pos
+    dist = float(np.linalg.norm(delta))
+    if dist <= max_dist or dist < 1e-8:
+        return target
+    return pos + delta * (max_dist / dist)
 
 
 def takeoff(
@@ -42,7 +57,8 @@ def takeoff(
         if not _is_sane(quad.state):
             break
         states.append(quad.state.copy())
-        quad.step(ctrl.compute(quad.state, target, dt=dt), dt)
+        cmd = _limit_target(quad.state[:3], target)
+        quad.step(ctrl.compute(quad.state, cmd, dt=dt), dt)
     return states
 
 
@@ -66,7 +82,8 @@ def landing(
         states.append(quad.state.copy())
         if quad.state[2] < ground_z + 0.05:
             break
-        quad.step(ctrl.compute(quad.state, target, dt=dt), dt)
+        cmd = _limit_target(quad.state[:3], target)
+        quad.step(ctrl.compute(quad.state, cmd, dt=dt), dt)
     return states
 
 
@@ -86,7 +103,8 @@ def loiter(
         if not _is_sane(quad.state):
             break
         states.append(quad.state.copy())
-        quad.step(ctrl.compute(quad.state, position, dt=dt), dt)
+        cmd = _limit_target(quad.state[:3], position)
+        quad.step(ctrl.compute(quad.state, cmd, dt=dt), dt)
     return states
 
 
@@ -126,7 +144,8 @@ def fly_path(
             break
         vel = s[6:9] if len(s) >= 9 else None
         target = pursuit.compute_target(s[:3], path, velocity=vel)
-        quad.step(ctrl.compute(s, target, dt=dt), dt)
+        cmd = _limit_target(s[:3], target)
+        quad.step(ctrl.compute(s, cmd, dt=dt), dt)
     return states
 
 

@@ -31,17 +31,19 @@ class FeedbackLinearisationTracker:
 
     def __init__(
         self,
-        kp: float | NDArray[np.floating] = 6.0,
-        kd: float | NDArray[np.floating] = 4.0,
+        kp: float | NDArray[np.floating] = 4.0,
+        kd: float | NDArray[np.floating] = 2.8,
         mass: float = 0.027,
         gravity: float = 9.81,
         inertia: NDArray[np.floating] | None = None,
+        max_acc: float = 3.0,
     ) -> None:
         self.kp = np.atleast_1d(np.asarray(kp, dtype=np.float64))
         self.kd = np.atleast_1d(np.asarray(kd, dtype=np.float64))
         self.mass = mass
         self.gravity = gravity
-        self.inertia = inertia if inertia is not None else np.diag([1.4e-5, 1.4e-5, 2.17e-5])
+        self.max_acc = max_acc
+        self.inertia = inertia if inertia is not None else np.diag([1.66e-5, 1.66e-5, 2.96e-5])
 
     def compute(
         self,
@@ -80,11 +82,16 @@ class FeedbackLinearisationTracker:
         a_des = ref_acc - self.kp * e_pos - self.kd * e_vel
         a_des[2] += self.gravity
 
+        # Clamp horizontal acceleration
+        a_horiz = np.linalg.norm(a_des[:2])
+        if a_horiz > self.max_acc:
+            a_des[:2] *= self.max_acc / a_horiz
+
         # Thrust.
         R = Quadrotor.rotation_matrix(*euler)
         e3 = np.array([0.0, 0.0, 1.0])
         T = float(self.mass * a_des @ R @ e3)
-        T = max(0.0, T)
+        T = float(np.clip(T, 0.0, self.mass * self.gravity * 2.5))
 
         # Desired attitude from a_des.
         a_norm = np.linalg.norm(a_des)
@@ -98,10 +105,10 @@ class FeedbackLinearisationTracker:
         b1d = np.cross(b2d, b3d)
         Rd = np.column_stack([b1d, b2d, b3d])
 
-        # SO(3) attitude error → torques.
+        # SO(3) attitude error → torques (gains for Crazyflie inertia).
         eR = 0.5 * self._vee(Rd.T @ R - R.T @ Rd)
-        kR = 8.0
-        kw = 1.5
+        kR = 0.005
+        kw = 0.002
         tau = -kR * eR - kw * omega + np.cross(omega, self.inertia @ omega)
 
         return np.array([T, tau[0], tau[1], tau[2]])

@@ -18,6 +18,7 @@ import numpy as np
 
 from uav_sim.path_planning.potential_field_3d import PotentialField3D
 from uav_sim.path_tracking.flight_ops import fly_mission
+from uav_sim.path_tracking.path_smoothing import smooth_path_3d
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -52,16 +53,19 @@ def main() -> None:
         f_rep = planner._repulsive_force(pt, obstacles)
         forces[i] = f_att + f_rep
 
+    # Smooth the potential-field path for flyable tracking
+    flight_path = smooth_path_3d(path_pts, epsilon=0.3, min_spacing=0.3)
+
     # ── Phase 2: fly mission via pure pursuit ─────────────────────────────
     quad = Quadrotor()
     quad.reset(position=np.array([start[0], start[1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=1.5, waypoint_threshold=0.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=1.0, waypoint_threshold=0.4, adaptive=True)
     flight_states = fly_mission(
         quad,
         ctrl,
-        path_pts,
-        cruise_alt=float(path_pts[0, 2]),
+        flight_path,
+        cruise_alt=float(flight_path[0, 2]),
         dt=0.005,
         pursuit=pursuit,
         takeoff_duration=2.0,

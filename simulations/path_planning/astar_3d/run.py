@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from uav_sim.path_tracking.flight_ops import fly_mission
+from uav_sim.path_tracking.path_smoothing import smooth_path_3d
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -81,6 +82,9 @@ def main() -> None:
         return
     path_pts = np.array(path_nodes, dtype=float)
 
+    # Smooth the raw A* path: prune zigzags, then resample evenly
+    flight_path = smooth_path_3d(path_pts, epsilon=1.5, min_spacing=1.0)
+
     # ── Phase 2: fly mission (takeoff -> pure-pursuit -> loiter -> land) ──
     quad = Quadrotor()
     quad.reset(position=np.array([0.0, 0.0, 0.0]))
@@ -90,8 +94,8 @@ def main() -> None:
     states = fly_mission(
         quad,
         ctrl,
-        path_pts[::3],
-        cruise_alt=float(path_pts[0, 2]),
+        flight_path,
+        cruise_alt=float(flight_path[0, 2]),
         dt=0.005,
         pursuit=pursuit,
         takeoff_duration=2.0,

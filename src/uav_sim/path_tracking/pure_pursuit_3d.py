@@ -35,8 +35,8 @@ class PurePursuit3D:
 
     def __init__(
         self,
-        lookahead: float = 1.0,
-        waypoint_threshold: float = 0.5,
+        lookahead: float = 5.0,
+        waypoint_threshold: float = 0.2,
         speed: float = 1.0,
         *,
         adaptive: bool = True,
@@ -80,10 +80,7 @@ class PurePursuit3D:
 
         # Advance segment index when close to current waypoint
         while self._idx < n - 1:
-            if (
-                float(np.linalg.norm(position - path[self._idx]))
-                < self.waypoint_threshold
-            ):
+            if float(np.linalg.norm(position - path[self._idx])) < self.waypoint_threshold:
                 self._idx += 1
             else:
                 break

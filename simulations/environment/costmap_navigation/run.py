@@ -24,6 +24,7 @@ from uav_sim.costmap import InflationLayer, LayeredCostmap, OccupancyGrid
 from uav_sim.environment import World
 from uav_sim.environment.buildings import add_city_grid
 from uav_sim.path_tracking.flight_ops import fly_mission
+from uav_sim.path_tracking.path_smoothing import smooth_path_3d
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor import Quadrotor
@@ -105,12 +106,12 @@ def main() -> None:
         return
 
     cruise_alt = 15.0
-    step = max(1, len(cell_path) // 40)
-    path_3d = np.array(
-        [[c[0] + 0.5, c[1] + 0.5, cruise_alt] for c in cell_path[::step]]
-    )
-    if np.linalg.norm(path_3d[-1, :2] - goal_xy) > 1.0:
-        path_3d = np.vstack([path_3d, [goal_xy[0], goal_xy[1], cruise_alt]])
+    raw_path_3d = np.array([[c[0] + 0.5, c[1] + 0.5, cruise_alt] for c in cell_path])
+    if np.linalg.norm(raw_path_3d[-1, :2] - goal_xy) > 1.0:
+        raw_path_3d = np.vstack([raw_path_3d, [goal_xy[0], goal_xy[1], cruise_alt]])
+
+    # Smooth the A* cell path: prune zigzags, resample for flyability
+    path_3d = smooth_path_3d(raw_path_3d, epsilon=2.0, min_spacing=2.0)
 
     # ── Fly mission ────────────────────────────────────────────────────────
     quad = Quadrotor()

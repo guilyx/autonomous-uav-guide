@@ -59,26 +59,26 @@ def _range_bearing(rx: float, ry: float, ryaw: float, lx: float, ly: float):
 def main() -> None:
     rng = np.random.default_rng(42)
 
-    # True landmark positions
+    # True landmark positions (scaled to match smaller flight radius)
     landmarks = np.array(
         [
-            [4, 4],
-            [-4, 4],
-            [-4, -4],
-            [4, -4],
-            [6, 0],
-            [0, 6],
-            [-6, 0],
-            [0, -6],
+            [2, 2],
+            [-2, 2],
+            [-2, -2],
+            [2, -2],
+            [3, 0],
+            [0, 3],
+            [-3, 0],
+            [0, -3],
         ],
         dtype=float,
     )[:_N_LM]
 
-    # ── Generate flight path (circle at altitude 2) ───────────────────────
-    n_wp = 80
-    angles = np.linspace(0, 2 * np.pi, n_wp, endpoint=False)
-    radius = 5.0
-    cruise_alt = 2.0
+    # ── Generate flight path (arc 0→270° at altitude 1, open-ended) ─────
+    radius = 2.0
+    cruise_alt = 1.0
+    n_wp = 40
+    angles = np.linspace(0, 1.5 * np.pi, n_wp)
     path_3d = np.column_stack(
         [
             radius * np.cos(angles),
@@ -90,11 +90,9 @@ def main() -> None:
     quad = Quadrotor()
     quad.reset(position=np.array([radius, 0.0, cruise_alt]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=1.5, waypoint_threshold=0.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=0.5, waypoint_threshold=0.2, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(
-        quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=25.0, states=states_list
-    )
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=60.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
     # ── Run EKF-SLAM over the recorded trajectory ─────────────────────────
@@ -130,9 +128,7 @@ def main() -> None:
             F[0, 2] = -u[0] * np.sin(yaw) * dt
             F[1, 2] = u[0] * np.cos(yaw) * dt
             Q = np.zeros((full_dim, full_dim))
-            Q[:3, :3] = np.diag(
-                [ODOM_V_STD**2 * dt, ODOM_V_STD**2 * dt, ODOM_W_STD**2 * dt]
-            )
+            Q[:3, :3] = np.diag([ODOM_V_STD**2 * dt, ODOM_V_STD**2 * dt, ODOM_W_STD**2 * dt])
             sigma = F @ sigma @ F.T + Q
 
         # Update with landmark observations
@@ -140,7 +136,7 @@ def main() -> None:
             r_true, b_true = _range_bearing(
                 true_xy[0], true_xy[1], true_yaw, landmarks[j, 0], landmarks[j, 1]
             )
-            if r_true > 8.0:
+            if r_true > 5.0:
                 continue
             r_meas = r_true + rng.normal(0, RANGE_STD)
             b_meas = b_true + rng.normal(0, BEARING_STD)
@@ -194,8 +190,8 @@ def main() -> None:
     anim._fig = fig
     ax = fig.add_subplot(111)
     ax.set_aspect("equal")
-    ax.set_xlim(-9, 9)
-    ax.set_ylim(-9, 9)
+    ax.set_xlim(-5, 5)
+    ax.set_ylim(-5, 5)
     ax.set_xlabel("X [m]")
     ax.set_ylabel("Y [m]")
     ax.grid(True, alpha=0.2)
@@ -213,9 +209,7 @@ def main() -> None:
     (true_trail,) = ax.plot([], [], "k-", lw=1.0, alpha=0.5, label="True path")
     (est_trail,) = ax.plot([], [], "b-", lw=1.0, alpha=0.8, label="EKF estimate")
 
-    lm_scats = ax.scatter(
-        [], [], c="blue", s=60, marker="D", zorder=8, label="Est. LMs"
-    )
+    lm_scats = ax.scatter([], [], c="blue", s=60, marker="D", zorder=8, label="Est. LMs")
     ellipses: list[Ellipse] = []
     for _ in range(_N_LM):
         e = Ellipse((0, 0), 0, 0, fill=False, color="blue", lw=0.8, ls="--", alpha=0.5)

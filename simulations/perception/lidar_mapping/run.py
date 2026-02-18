@@ -18,7 +18,9 @@ import numpy as np
 
 from uav_sim.costmap import OccupancyGrid
 from uav_sim.environment import SphereObstacle, World
+from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.perception import OccupancyMapper
 from uav_sim.sensors.lidar import Lidar2D
 from uav_sim.vehicles.multirotor import Quadrotor
@@ -33,51 +35,56 @@ matplotlib.use("Agg")
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, 20.0))
-    obstacles_info = [(5, 10), (10, 5), (15, 12), (8, 16)]
-    obs_radius = 1.5
+    world_size = 10.0
+    cruise_alt = 1.5
+    world = World(bounds_min=np.zeros(3), bounds_max=np.array([world_size, world_size, 5.0]))
+    obstacles_info = [(3, 5), (5, 3), (7, 6), (4, 8)]
+    obs_radius = 0.8
     for cx, cy in obstacles_info:
         world.add_obstacle(
-            SphereObstacle(
-                centre=np.array([float(cx), float(cy), 0.0]), radius=obs_radius
-            )
+            SphereObstacle(centre=np.array([float(cx), float(cy), 0.0]), radius=obs_radius)
         )
 
     quad = Quadrotor()
-    quad.reset(position=np.array([1.0, 1.0, 2.0]))
+    quad.reset(position=np.array([0.5, 0.5, cruise_alt]))
     ctrl = CascadedPIDController()
-    lidar = Lidar2D(num_beams=36, max_range=10.0, noise_std=0.05, seed=42)
+    lidar = Lidar2D(num_beams=36, max_range=5.0, noise_std=0.05, seed=42)
 
     grid = OccupancyGrid(
-        resolution=1.0, bounds_min=np.zeros(3), bounds_max=np.full(3, 20.0)
+        resolution=0.5,
+        bounds_min=np.zeros(3),
+        bounds_max=np.array([world_size, world_size, 0.0]),
     )
     mapper = OccupancyMapper(grid)
 
-    waypoints = [np.array([10.0, 10.0, 2.0]), np.array([18.0, 18.0, 2.0])]
-    dt, duration = 0.01, 6.0
-    steps = int(duration / dt)
-    wp_idx = 0
+    # Fly a smooth multi-waypoint path through the scene
+    path_3d = np.array(
+        [
+            [0.5, 0.5, cruise_alt],
+            [5.0, 1.0, cruise_alt],
+            [9.0, 3.0, cruise_alt],
+            [9.0, 7.0, cruise_alt],
+            [5.0, 9.0, cruise_alt],
+            [1.0, 7.0, cruise_alt],
+            [1.0, 4.0, cruise_alt],
+        ]
+    )
+    pursuit = PurePursuit3D(lookahead=0.8, waypoint_threshold=0.3, adaptive=True)
+    states_list: list[np.ndarray] = []
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=50.0, states=states_list)
+    states_arr = np.array(states_list) if states_list else np.zeros((1, 12))
 
-    states_arr = np.zeros((steps, 12))
+    steps = len(states_arr)
     grids_record: list[np.ndarray] = []
     ranges_record: list[tuple[np.ndarray, np.ndarray]] = []
-    scan_every = 20
+    scan_every = max(1, steps // 80)
     record_every = max(1, steps // 100)
 
     for i in range(steps):
-        states_arr[i] = quad.state
-        target = waypoints[wp_idx]
-        if (
-            np.linalg.norm(quad.state[:3] - target) < 1.0
-            and wp_idx < len(waypoints) - 1
-        ):
-            wp_idx += 1
-        u = ctrl.compute(quad.state, target, dt=dt)
-        quad.step(u, dt)
         if i % scan_every == 0:
-            ranges = lidar.sense(quad.state, world)
-            mapper.update(quad.state[:3], ranges, lidar.angles, lidar.max_range)
-            ranges_record.append((quad.state[:3].copy(), ranges.copy()))
+            ranges = lidar.sense(states_arr[i], world)
+            mapper.update(states_arr[i, :3], ranges, lidar.angles, lidar.max_range)
+            ranges_record.append((states_arr[i, :3].copy(), ranges.copy()))
         if i % record_every == 0:
             grids_record.append(grid.grid.copy())
 
@@ -95,9 +102,9 @@ def main() -> None:
     # ── 3D panel: obstacles + quadrotor + lidar beams ──────────────────────
     for obs in world.obstacles:
         anim.draw_sphere(ax3d, obs.centre, obs.radius, color="red", alpha=0.2)
-    ax3d.set_xlim(0, 20)
-    ax3d.set_ylim(0, 20)
-    ax3d.set_zlim(0, 8)
+    ax3d.set_xlim(0, world_size)
+    ax3d.set_ylim(0, world_size)
+    ax3d.set_zlim(0, 4)
     ax3d.set_xlabel("X [m]")
     ax3d.set_ylabel("Y [m]")
     ax3d.set_zlabel("Z [m]")
@@ -105,10 +112,12 @@ def main() -> None:
     (dot3d,) = ax3d.plot([], [], [], "go", ms=5)
 
     # ── 2D panel: evolving occupancy grid ──────────────────────────────────
+    grid_snap = grids_record[0]
+    im_data = grid_snap[:, :, 0].T if grid_snap.ndim == 3 else grid_snap.T
     im = ax2d.imshow(
-        grids_record[0].T,
+        im_data,
         origin="lower",
-        extent=[0, 20, 0, 20],
+        extent=[0, world_size, 0, world_size],
         cmap="Greys",
         vmin=0,
         vmax=1,
@@ -134,7 +143,8 @@ def main() -> None:
 
     def update(f):
         gi = min(f, len(grids_record) - 1)
-        im.set_data(grids_record[gi].T)
+        snap = grids_record[gi]
+        im.set_data(snap[:, :, 0].T if snap.ndim == 3 else snap.T)
         k = idx_map[min(f, len(idx_map) - 1)]
 
         # 3D

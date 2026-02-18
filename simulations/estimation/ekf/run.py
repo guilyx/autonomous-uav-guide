@@ -107,16 +107,12 @@ def main() -> None:
     (meas_scat,) = ax_map.plot([], [], "r.", ms=3, alpha=0.3, label="GPS")
     (true_dot,) = ax_map.plot([], [], "ko", ms=6)
     (est_dot,) = ax_map.plot([], [], "bs", ms=5)
-    ellipse_patch = Ellipse(
-        (0, 0), 0, 0, angle=0, fill=False, color="blue", lw=1.5, ls="--"
-    )
+    ellipse_patch = Ellipse((0, 0), 0, 0, angle=0, fill=False, color="blue", lw=1.5, ls="--")
     ax_map.add_patch(ellipse_patch)
     ax_map.legend(fontsize=7, loc="upper left")
 
     # Error subplot
-    err = np.sqrt(
-        (true_xy[:, 0] - est_xy[:, 0]) ** 2 + (true_xy[:, 1] - est_xy[:, 1]) ** 2
-    )
+    err = np.sqrt((true_xy[:, 0] - est_xy[:, 0]) ** 2 + (true_xy[:, 1] - est_xy[:, 1]) ** 2)
     ax_err.set_xlim(0, duration)
     ax_err.set_ylim(0, max(1.0, err.max() * 1.1))
     ax_err.set_ylabel("Position Error [m]", fontsize=8)
@@ -157,9 +153,7 @@ def main() -> None:
         err_line.set_data(times[:k], err[:k])
         cov_line.set_data(times[:k], cov_trace[:k])
         clear_vehicle_artists(vehicle_arts)
-        vehicle_arts.extend(
-            draw_quadrotor_2d(ax_map, true_xy[k], yaw_hist[k], size=0.3)
-        )
+        vehicle_arts.extend(draw_quadrotor_2d(ax_map, true_xy[k], yaw_hist[k], size=0.3))
 
     anim.animate(update, n_frames)
     anim.save()

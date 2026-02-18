@@ -72,9 +72,7 @@ def main() -> None:
     ax2d = fig.add_subplot(gs[1])
     fig.suptitle("Minimum-Snap Trajectory", fontsize=13)
 
-    ax3d.scatter(
-        wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=80, marker="D", zorder=5, label="WP"
-    )
+    ax3d.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=80, marker="D", zorder=5, label="WP")
     for i, wp in enumerate(wps):
         ax3d.text(wp[0], wp[1], wp[2] + 0.15, f"WP{i}", fontsize=7, ha="center")
     ax3d.set_xlim(-0.5, 9)
@@ -112,9 +110,7 @@ def main() -> None:
             traj_dot.set_3d_properties([traj_pts[k, 2]])
             traj2d.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
             seg = min(int(k / (n_traj / len(seg_times))), len(seg_times) - 1)
-            title.set_text(
-                f"Phase 1: Min-Snap Generation — segment {seg + 1}/{len(seg_times)}"
-            )
+            title.set_text(f"Phase 1: Min-Snap Generation — segment {seg + 1}/{len(seg_times)}")
         else:
             traj_dot.set_data([], [])
             traj_dot.set_3d_properties([])
