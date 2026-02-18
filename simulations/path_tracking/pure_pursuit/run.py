@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
 """Pure Pursuit 3D path tracking: 3-panel demonstration.
 
-Demonstrates the adaptive pure-pursuit controller following a pre-defined
-waypoint path through an urban environment.  The carrot (look-ahead) point
-is visualised on all three views.
+Plans an obstacle-aware path with A*, then demonstrates the adaptive
+pure-pursuit controller following it through an urban environment.
+The carrot (look-ahead) point is visualised on all three views.
 
 Reference: R. C. Coulter, "Implementation of the Pure Pursuit Path
 Tracking Algorithm," CMU-RI-TR-92-01, 1992.
@@ -17,6 +17,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.flight_ops import fly_path, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -28,6 +29,8 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
+START = np.array([3.0, 3.0, CRUISE_ALT])
+GOAL = np.array([27.0, 27.0, CRUISE_ALT])
 
 
 def main() -> None:
@@ -37,26 +40,19 @@ def main() -> None:
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=17)
 
-    waypoints = np.array(
-        [
-            [3.0, 3.0, CRUISE_ALT],
-            [12.0, 5.0, CRUISE_ALT + 2],
-            [18.0, 14.0, CRUISE_ALT],
-            [25.0, 10.0, CRUISE_ALT + 3],
-            [27.0, 20.0, CRUISE_ALT],
-            [20.0, 27.0, CRUISE_ALT + 1],
-        ]
-    )
+    waypoints = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
+    if waypoints is None:
+        print("No path found!")
+        return
 
     quad = Quadrotor()
-    quad.reset(position=np.array([3.0, 3.0, 0.0]))
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
 
-    # Takeoff then follow path
     states: list[np.ndarray] = []
     takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
-    fly_path(quad, ctrl, waypoints, dt=0.005, pursuit=pursuit, timeout=40.0, states=states)
+    fly_path(quad, ctrl, waypoints, dt=0.005, pursuit=pursuit, timeout=60.0, states=states)
 
     all_states = np.array(states) if states else np.zeros((1, 12))
     pos = all_states[:, :3]
@@ -79,12 +75,8 @@ def main() -> None:
 
     viz = ThreePanelViz(title="Pure Pursuit 3D — Carrot Tracking", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
-    viz.draw_path(waypoints, color="red", lw=1.0, alpha=0.4, label="Path")
-
-    for i, wp in enumerate(waypoints):
-        viz.ax3d.scatter(*wp, c="red", s=50, marker="D", zorder=5)
-        viz.ax_top.plot(wp[0], wp[1], "rD", ms=5)
-        viz.ax_side.plot(wp[0], wp[2], "rD", ms=5)
+    viz.draw_path(waypoints, color="blue", lw=1.0, alpha=0.4, label="A* Path")
+    viz.mark_start_goal(START, GOAL)
 
     trail = viz.create_trail_artists()
     (carrot_3d,) = viz.ax3d.plot([], [], [], "m*", ms=12, zorder=6, label="Carrot")
@@ -99,7 +91,6 @@ def main() -> None:
         k = idx[f]
         viz.update_trail(trail, pos, k)
         viz.update_vehicle(pos[k], all_states[k, 3:6], size=1.5)
-        # Update carrot
         cp = carrot_points[k]
         carrot_3d.set_data([cp[0]], [cp[1]])
         carrot_3d.set_3d_properties([cp[2]])

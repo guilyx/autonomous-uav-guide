@@ -18,6 +18,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment.obstacles import BoxObstacle
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -32,6 +33,14 @@ WORLD_SIZE = 30.0
 START = np.array([3.0, 3.0, 12.0, 0.0, 0.0, 0.0])
 GOAL = np.array([27.0, 27.0, 12.0, 0.0, 0.0, 0.0])
 
+_OBS_SPHERES: list[tuple[np.ndarray, float]] = []
+
+
+def _box_to_sphere(b: BoxObstacle) -> tuple[np.ndarray, float]:
+    centre = (b.min_corner + b.max_corner) / 2
+    radius = float(np.linalg.norm(b.max_corner - b.min_corner)) / 2
+    return (centre, radius)
+
 
 def _dyn(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
     pos, vel = x[:3], x[3:6]
@@ -43,39 +52,51 @@ def _dyn(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
 def _cost(x: np.ndarray, _u: np.ndarray, ref: np.ndarray | None) -> float:
     if ref is None:
         return 0.0
-    return float(np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2))
+    goal_cost = float(np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2))
+    obs_cost = 0.0
+    for c, r in _OBS_SPHERES:
+        dist = float(np.linalg.norm(x[:3] - c))
+        if dist < r + 1.0:
+            obs_cost += 1e4 * max(0.0, r + 1.0 - dist) ** 2
+    return goal_cost + obs_cost
 
 
 def main() -> None:
+    global _OBS_SPHERES  # noqa: PLW0603
     world = World(
         bounds_min=np.zeros(3),
         bounds_max=np.full(3, WORLD_SIZE),
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=14)
+    _OBS_SPHERES = [_box_to_sphere(b) for b in buildings]
 
     tracker = MPPITracker(
         state_dim=6,
         control_dim=3,
         horizon=20,
-        num_samples=128,
-        lambda_=0.5,
+        num_samples=256,
+        lambda_=0.3,
         control_std=np.array([1.5, 1.5, 0.8]),
         dynamics=_dyn,
         cost_fn=_cost,
         dt=0.1,
     )
 
-    # Phase 1: point-mass MPPI planning
+    # Phase 1: point-mass MPPI planning towards goal
     state = START.copy()
-    dt_mppi, n_steps = 0.1, 200
-    mppi_hist = np.zeros((n_steps, 6))
-    for i in range(n_steps):
+    dt_mppi = 0.1
+    max_steps = 400
+    mppi_hist: list[np.ndarray] = []
+    for i in range(max_steps):
         u = tracker.compute(state, reference=GOAL, seed=i)
         state = _dyn(state, u, dt_mppi)
-        mppi_hist[i] = state
+        mppi_hist.append(state.copy())
+        if np.linalg.norm(state[:3] - GOAL[:3]) < 1.5:
+            break
 
-    # Extract the planned path (positions only)
-    mppi_path = mppi_hist[:, :3]
+    mppi_arr = np.array(mppi_hist)
+    mppi_path = mppi_arr[:, :3]
+    n_steps = len(mppi_path)
 
     # Phase 2: quadrotor follows MPPI path using pure pursuit
     quad = Quadrotor()

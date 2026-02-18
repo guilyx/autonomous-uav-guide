@@ -1,8 +1,8 @@
 # Erwin Lejeune - 2026-02-15
 """Flight operations demo: 3-panel visualisation of a full mission.
 
-Demonstrates the complete flight-ops pipeline: takeoff -> fly path ->
-loiter -> land, using the standardised primitives from ``flight_ops``.
+Plans an obstacle-aware path via A*, then demonstrates the complete
+flight-ops pipeline: takeoff -> fly path -> loiter -> land.
 
 Reference: Generic multirotor operation sequence.
 """
@@ -15,6 +15,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.flight_ops import (
     fly_path,
     landing,
@@ -31,6 +32,8 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 14.0
+START = np.array([4.0, 4.0, CRUISE_ALT])
+GOAL = np.array([26.0, 26.0, CRUISE_ALT])
 
 
 def main() -> None:
@@ -40,19 +43,15 @@ def main() -> None:
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=55)
 
-    mission_path = np.array(
-        [
-            [4.0, 4.0, CRUISE_ALT],
-            [15.0, 4.0, CRUISE_ALT],
-            [15.0, 15.0, CRUISE_ALT + 4],
-            [26.0, 15.0, CRUISE_ALT],
-            [26.0, 26.0, CRUISE_ALT],
-        ]
-    )
+    mission_path = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
+    if mission_path is None:
+        print("No path found!")
+        return
+
     loiter_pos = mission_path[-1].copy()
 
     quad = Quadrotor()
-    quad.reset(position=np.array([4.0, 4.0, 0.0]))
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
 
@@ -62,7 +61,7 @@ def main() -> None:
     takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
     phase_ends.append((len(states), "Takeoff"))
 
-    fly_path(quad, ctrl, mission_path, dt=0.005, pursuit=pursuit, timeout=40.0, states=states)
+    fly_path(quad, ctrl, mission_path, dt=0.005, pursuit=pursuit, timeout=60.0, states=states)
     phase_ends.append((len(states), "Fly Path"))
 
     loiter(quad, ctrl, loiter_pos, dt=0.005, duration=3.0, states=states)
@@ -81,12 +80,8 @@ def main() -> None:
 
     viz = ThreePanelViz(title="Flight Operations Demo — Full Mission", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
-    viz.draw_path(mission_path, color="red", lw=1.0, alpha=0.4, label="Mission")
-
-    for i, wp in enumerate(mission_path):
-        viz.ax3d.scatter(*wp, c="red", s=40, marker="D", zorder=5)
-        viz.ax_top.plot(wp[0], wp[1], "rD", ms=4)
-        viz.ax_side.plot(wp[0], wp[2], "rD", ms=4)
+    viz.draw_path(mission_path, color="blue", lw=1.0, alpha=0.4, label="A* Path")
+    viz.mark_start_goal(START, GOAL)
 
     trail = viz.create_trail_artists()
     title = viz.ax3d.set_title("Takeoff")

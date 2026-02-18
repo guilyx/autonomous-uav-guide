@@ -1,7 +1,8 @@
 # Erwin Lejeune - 2026-02-15
 """Minimum-snap trajectory: 3-panel, two-phase visualisation.
 
-Phase 1 — Algorithm: incremental spline construction through waypoints.
+Phase 1 — Algorithm: A* plans obstacle-aware waypoints, then min-snap
+           generates smooth trajectory segments through them.
 Phase 2 — Platform: quadrotor takeoff -> pure-pursuit trajectory -> land.
 
 Reference: D. Mellinger, V. Kumar, "Minimum Snap Trajectory Generation and
@@ -16,7 +17,9 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.flight_ops import fly_mission
+from uav_sim.path_tracking.path_smoothing import rdp_simplify
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.trajectory_planning.min_snap import MinSnapTrajectory
@@ -28,6 +31,8 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
+START = np.array([3.0, 3.0, CRUISE_ALT])
+GOAL = np.array([27.0, 27.0, CRUISE_ALT])
 
 
 def main() -> None:
@@ -37,17 +42,20 @@ def main() -> None:
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=44)
 
-    wps = np.array(
-        [
-            [3, 3, CRUISE_ALT],
-            [10, 5, CRUISE_ALT + 3],
-            [18, 12, CRUISE_ALT],
-            [24, 18, CRUISE_ALT + 2],
-            [27, 27, CRUISE_ALT],
-        ],
-        dtype=float,
-    )
-    seg_times = np.array([3.0, 3.0, 3.0, 3.0])
+    planned = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
+    if planned is None:
+        print("No path found!")
+        return
+
+    # Reduce waypoints for min-snap (it needs a small number of knot points)
+    wps = rdp_simplify(planned, epsilon=3.0)
+    if len(wps) < 2:
+        wps = planned[:: max(1, len(planned) // 5)]
+    # Ensure start and goal are exact
+    wps[0] = START.copy()
+    wps[-1] = GOAL.copy()
+
+    seg_times = np.full(len(wps) - 1, 3.0)
 
     ms = MinSnapTrajectory()
     coeffs = ms.generate(wps, seg_times)
@@ -55,7 +63,7 @@ def main() -> None:
 
     # Phase 2: fly
     quad = Quadrotor()
-    quad.reset(position=np.array([wps[0, 0], wps[0, 1], 0.0]))
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     flight_states = fly_mission(
@@ -83,6 +91,7 @@ def main() -> None:
 
     viz = ThreePanelViz(title="Minimum-Snap Trajectory", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
+    viz.mark_start_goal(START, GOAL)
 
     viz.ax3d.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=80, marker="D", zorder=5)
     for i, wp in enumerate(wps):

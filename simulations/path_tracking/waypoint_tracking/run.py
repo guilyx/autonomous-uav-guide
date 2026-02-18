@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
 """Waypoint tracking with Pure Pursuit + PID: 3-panel live simulation.
 
-The drone takes off, then follows a sequence of waypoints using pure
-pursuit for the carrot point and cascaded PID for low-level control.
-This is the recommended pattern for all path-tracking simulations.
+Plans an obstacle-aware path via A*, then the drone takes off and
+follows the full sequence of waypoints using pure pursuit for the
+carrot point and cascaded PID for low-level control.
 
 Reference: R. C. Coulter, "Implementation of the Pure Pursuit Path
 Tracking Algorithm," CMU-RI-TR-92-01, 1992.
@@ -17,6 +17,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -28,6 +29,8 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 15.0
+START = np.array([3.0, 3.0, CRUISE_ALT])
+GOAL = np.array([27.0, 27.0, CRUISE_ALT])
 
 
 def main() -> None:
@@ -37,19 +40,13 @@ def main() -> None:
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=9)
 
-    waypoints = np.array(
-        [
-            [3.0, 3.0, CRUISE_ALT],
-            [10.0, 3.0, CRUISE_ALT],
-            [10.0, 15.0, CRUISE_ALT + 3],
-            [20.0, 15.0, CRUISE_ALT],
-            [20.0, 25.0, CRUISE_ALT + 2],
-            [27.0, 27.0, CRUISE_ALT],
-        ]
-    )
+    waypoints = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
+    if waypoints is None:
+        print("No path found!")
+        return
 
     quad = Quadrotor()
-    quad.reset(position=np.array([3.0, 3.0, 0.0]))
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
 
@@ -73,16 +70,8 @@ def main() -> None:
 
     viz = ThreePanelViz(title="Waypoint Tracking (Pure Pursuit + PID)", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
-    viz.draw_path(waypoints, color="red", lw=1.0, alpha=0.5, label="Waypoints")
-
-    # waypoint markers
-    viz.ax3d.scatter(
-        waypoints[:, 0], waypoints[:, 1], waypoints[:, 2], c="red", s=60, marker="D", zorder=5
-    )
-    for i, wp in enumerate(waypoints):
-        viz.ax3d.text(wp[0], wp[1], wp[2] + 1.0, f"WP{i}", fontsize=7, ha="center")
-        viz.ax_top.plot(wp[0], wp[1], "rD", ms=5)
-        viz.ax_side.plot(wp[0], wp[2], "rD", ms=5)
+    viz.draw_path(waypoints, color="blue", lw=1.0, alpha=0.5, label="A* Path")
+    viz.mark_start_goal(START, GOAL)
 
     trail = viz.create_trail_artists()
     anim = SimAnimator("waypoint_tracking", out_dir=Path(__file__).parent)
