@@ -15,7 +15,7 @@ class TestLQRInit:
 
     def test_hover_wrench(self):
         lqr = LQRController()
-        assert pytest.approx(lqr.hover_wrench[0], rel=1e-6) == 0.027 * 9.81
+        assert pytest.approx(lqr.hover_wrench[0], rel=1e-6) == 1.5 * 9.81
 
 
 class TestLQRCompute:
