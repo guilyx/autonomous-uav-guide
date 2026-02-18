@@ -1,13 +1,14 @@
-# Erwin Lejeune - 2026-02-17
-"""Grid-based occupancy mapping: quadrotor explores an environment with lidar.
+# Erwin Lejeune - 2026-02-18
+"""Grid-based occupancy mapping: quadrotor explores with 2D lidar.
 
-The drone follows a lawnmower pattern via pure pursuit, building an occupancy
-grid incrementally using log-odds inverse sensor model.  Left panel: 2D map
-with obstacles, drone, and lidar rays.  Right panel: evolving occupancy grid
-with colour map.
+Three panels (3D, top-down, side) + inset occupancy grid:
+  - 3D scene with buildings, quadrotor model, and lidar FOV disc.
+  - Top-down with lidar FOV wedge, ray hits, and exploration path.
+  - Side view with altitude profile.
+  - Inset: evolving occupancy grid.
 
 Reference: S. Thrun, "Learning Occupancy Grid Maps with Forward Sensor
-Models," Autonomous Robots, 2003.
+Models," CMU Tech Report, 2003.
 """
 
 from __future__ import annotations
@@ -18,195 +19,177 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from uav_sim.costmap.occupancy_grid import OccupancyGrid
-from uav_sim.path_tracking.flight_ops import fly_path
+from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_tracking.flight_ops import fly_path, init_hover
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
-from uav_sim.perception.occupancy_mapping import OccupancyMapper
 from uav_sim.sensors.lidar import Lidar2D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
-from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import (
-    clear_vehicle_artists,
-    draw_quadrotor_2d,
+from uav_sim.visualization import SimAnimator, ThreePanelViz
+from uav_sim.visualization.sensor_viz import (
+    draw_lidar2d_fov_3d,
+    draw_lidar2d_fov_top,
+    draw_lidar2d_rays_top,
 )
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists
 
 matplotlib.use("Agg")
 
+WORLD_SIZE = 30.0
+CRUISE_ALT = 12.0
+GRID_RES = 0.5
 
-def _lawnmower_path(
-    x_min: float,
-    x_max: float,
-    y_min: float,
-    y_max: float,
-    spacing: float,
-    altitude: float,
-) -> np.ndarray:
-    """Generate a lawnmower (boustrophedon) waypoint sequence."""
-    wps = []
-    y_vals = np.arange(y_min, y_max + spacing, spacing)
-    for i, y in enumerate(y_vals):
-        if i % 2 == 0:
-            wps.append([x_min, y, altitude])
-            wps.append([x_max, y, altitude])
-        else:
-            wps.append([x_max, y, altitude])
-            wps.append([x_min, y, altitude])
-    return np.array(wps)
+
+def _lawnmower_path(size: float, alt: float, n_rows: int = 5) -> np.ndarray:
+    """Lawnmower exploration with rounded transitions between rows."""
+    margin = 3.0
+    xs = np.linspace(margin, size - margin, 30)
+    ys = np.linspace(margin, size - margin, n_rows)
+    pts: list[np.ndarray] = []
+    for i, y in enumerate(ys):
+        row_x = xs if i % 2 == 0 else xs[::-1]
+        for x in row_x:
+            pts.append(np.array([x, y, alt]))
+        if i < n_rows - 1:
+            mid_y = (ys[i] + ys[i + 1]) / 2.0
+            end_x = row_x[-1]
+            pts.append(np.array([end_x, mid_y, alt]))
+    return np.array(pts)
 
 
 def main() -> None:
-    rng = np.random.default_rng(42)
-    world_size = 10.0
-    cruise_alt = 1.0
+    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
+    add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=6, seed=42)
 
-    # Ground-truth obstacles (circles in 2D)
-    obstacles = [
-        (np.array([3.0, 3.0]), 0.8),
-        (np.array([6.0, 4.0]), 1.0),
-        (np.array([4.0, 7.0]), 0.7),
-        (np.array([7.5, 7.5]), 0.9),
-    ]
+    lidar = Lidar2D(num_beams=72, max_range=10.0, noise_std=0.1, seed=42)
 
-    # Occupancy grid
-    grid = OccupancyGrid(
-        resolution=0.5,
-        bounds_min=np.zeros(3),
-        bounds_max=np.array([world_size, world_size, 0.0]),
-    )
-    mapper = OccupancyMapper(grid)
-    lidar = Lidar2D(max_range=4.0, num_beams=36, noise_std=0.05, seed=42)
-
-    # ── Generate flight path ──────────────────────────────────────────────
-    path_3d = _lawnmower_path(
-        0.5, world_size - 0.5, 0.5, world_size - 0.5, spacing=2.0, altitude=cruise_alt
-    )
+    # Lawnmower exploration
+    path_3d = _lawnmower_path(WORLD_SIZE, CRUISE_ALT, n_rows=5)
 
     quad = Quadrotor()
-    quad.reset(position=np.array([0.5, 0.5, cruise_alt]))
+    quad.reset(position=path_3d[0].copy())
+    init_hover(quad)
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=0.8, waypoint_threshold=0.3, adaptive=True)
-
+    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=60.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=120.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
-
-    # ── Build map incrementally and record snapshots ──────────────────────
     n_steps = len(flight_states)
-    scan_interval = max(1, n_steps // 80)
-    map_snapshots: list[np.ndarray] = []
-    scan_positions: list[np.ndarray] = []
-    scan_ranges_list: list[np.ndarray] = []
 
-    for i in range(0, n_steps, scan_interval):
-        s = flight_states[i]
+    # Occupancy grid
+    n_cells = int(WORLD_SIZE / GRID_RES)
+    log_odds = np.zeros((n_cells, n_cells))
+    l_occ = 0.85
+    l_free = -0.4
+
+    scan_every = max(1, n_steps // 150)
+    scan_indices = list(range(0, n_steps, scan_every))
+    n_frames = len(scan_indices)
+
+    grid_snapshots: list[np.ndarray] = []
+    scan_ranges: list[np.ndarray] = []
+    coverage_pct: list[float] = []
+
+    for si in scan_indices:
+        s = flight_states[si]
+        ranges = lidar.sense(s, world)
+        scan_ranges.append(ranges.copy())
         pos = s[:3]
+        yaw = s[5] if len(s) > 5 else 0.0
 
-        # Simulate lidar ranges against circular obstacles
-        yaw = s[5]
-        angles = np.linspace(0, 2 * np.pi, lidar.num_beams, endpoint=False) + yaw
-        ranges = np.full(lidar.num_beams, lidar.max_range)
-        for j, a in enumerate(angles):
-            direction = np.array([np.cos(a), np.sin(a)])
-            for oc, orad in obstacles:
-                oc2 = oc[:2] if len(oc) > 2 else oc
-                to_obs = oc2 - pos[:2]
-                proj = float(np.dot(to_obs, direction))
-                if proj < 0:
-                    continue
-                perp = float(np.linalg.norm(to_obs - proj * direction))
-                if perp < orad:
-                    hit_dist = proj - np.sqrt(max(0, orad**2 - perp**2))
-                    if 0 < hit_dist < ranges[j]:
-                        ranges[j] = hit_dist + rng.normal(0, lidar.noise_std)
+        for beam_idx, angle in enumerate(lidar.angles):
+            r = ranges[beam_idx]
+            cos_a = np.cos(yaw + angle)
+            sin_a = np.sin(yaw + angle)
+            n_ray_steps = int(r / GRID_RES)
+            for d_step in range(n_ray_steps + 1):
+                d = d_step * GRID_RES
+                px = pos[0] + d * cos_a
+                py = pos[1] + d * sin_a
+                ci = int(px / GRID_RES)
+                cj = int(py / GRID_RES)
+                if 0 <= ci < n_cells and 0 <= cj < n_cells:
+                    if d_step == n_ray_steps and r < lidar.max_range - 0.5:
+                        log_odds[ci, cj] += l_occ
+                    else:
+                        log_odds[ci, cj] += l_free
+                    log_odds[ci, cj] = np.clip(log_odds[ci, cj], -5, 5)
 
-        beam_angles = np.linspace(0, 2 * np.pi, lidar.num_beams, endpoint=False)
-        mapper.update(pos, ranges, beam_angles + yaw, max_range=lidar.max_range)
-        map_snapshots.append(grid.grid.copy())
-        scan_positions.append(pos[:2].copy())
-        scan_ranges_list.append(ranges.copy())
+        prob = 1.0 / (1.0 + np.exp(-log_odds))
+        grid_snapshots.append(prob.copy())
+        known = np.sum((prob > 0.6) | (prob < 0.4))
+        coverage_pct.append(100.0 * known / (n_cells * n_cells))
 
-    # ── Animation ─────────────────────────────────────────────────────────
-    n_snapshots = len(map_snapshots)
     pos = flight_states[:, :3]
-    skip = max(1, n_steps // (n_snapshots))
-    frame_idx = list(range(0, n_steps, skip))[:n_snapshots]
-    n_frames = len(frame_idx)
+
+    # ── 3-Panel viz + inset occupancy grid ─────────────────────────────
+    viz = ThreePanelViz(
+        title="Grid Mapping — Lidar Exploration", world_size=WORLD_SIZE, figsize=(18, 9)
+    )
+    viz.draw_buildings(world.obstacles)
+    viz.draw_path(path_3d, color="cyan", lw=0.6, alpha=0.3, label="Explore path")
 
     anim = SimAnimator("grid_mapping", out_dir=Path(__file__).parent)
-    fig = plt.figure(figsize=(14, 6.5))
-    anim._fig = fig
-    gs = fig.add_gridspec(1, 2, wspace=0.25)
-    ax_scene = fig.add_subplot(gs[0])
-    ax_map = fig.add_subplot(gs[1])
-    fig.suptitle("Grid Mapping — Lawnmower Exploration", fontsize=13)
+    anim._fig = viz.fig
 
-    # Scene panel
-    ax_scene.set_aspect("equal")
-    ax_scene.set_xlim(-0.5, world_size + 0.5)
-    ax_scene.set_ylim(-0.5, world_size + 0.5)
-    ax_scene.set_xlabel("X [m]")
-    ax_scene.set_ylabel("Y [m]")
-    ax_scene.grid(True, alpha=0.15)
-    for oc, orad in obstacles:
-        circle = plt.Circle(oc, orad, color="red", alpha=0.3)
-        ax_scene.add_patch(circle)
-    ax_scene.plot(path_3d[:, 0], path_3d[:, 1], "c--", lw=0.5, alpha=0.3, label="Plan")
-    (trail,) = ax_scene.plot([], [], "b-", lw=1.0, alpha=0.6)
-    ray_lines: list = []
-    ax_scene.legend(fontsize=7)
+    trail_arts = viz.create_trail_artists(color="orange")
 
-    # Map panel
-    ax_map.set_aspect("equal")
-    ax_map.set_xlim(-0.5, world_size + 0.5)
-    ax_map.set_ylim(-0.5, world_size + 0.5)
-    ax_map.set_xlabel("X [m]")
-    ax_map.set_ylabel("Y [m]")
-    ax_map.set_title("Occupancy Grid", fontsize=10)
-    g_shape = grid.grid.shape
-    im = ax_map.imshow(
-        np.full(g_shape[:2], 0.5).T,
+    # Inset: occupancy grid
+    ax_grid = viz.fig.add_axes([0.60, 0.02, 0.36, 0.35])
+    ax_grid.set_xlim(0, WORLD_SIZE)
+    ax_grid.set_ylim(0, WORLD_SIZE)
+    ax_grid.set_aspect("equal")
+    ax_grid.set_title("Occupancy Grid", fontsize=8)
+    ax_grid.tick_params(labelsize=5)
+    im_grid = ax_grid.imshow(
+        grid_snapshots[0].T,
         origin="lower",
-        extent=[0, world_size, 0, world_size],
+        extent=[0, WORLD_SIZE, 0, WORLD_SIZE],
         cmap="gray_r",
         vmin=0,
         vmax=1,
     )
+    plt.colorbar(im_grid, ax=ax_grid, fraction=0.046, pad=0.04)
 
-    vehicle_arts: list = []
+    fov_arts: list = []
 
-    def update(f):
-        nonlocal ray_lines
-        for rl in ray_lines:
-            rl.remove()
-        ray_lines.clear()
+    def update(f: int) -> None:
+        k = scan_indices[min(f, n_frames - 1)]
+        s = flight_states[k]
+        yaw = s[5] if len(s) > 5 else 0.0
 
-        k = frame_idx[min(f, len(frame_idx) - 1)]
-        snap_i = min(f, n_snapshots - 1)
+        viz.update_trail(trail_arts, pos, k)
+        viz.update_vehicle(pos[k], s[3:6], size=1.5)
 
-        # Trail
-        trail.set_data(pos[:k, 0], pos[:k, 1])
+        clear_vehicle_artists(fov_arts)
 
-        # Lidar rays
-        sp = scan_positions[snap_i]
-        sr = scan_ranges_list[snap_i]
-        yaw_k = flight_states[k, 5]
-        angles_k = np.linspace(0, 2 * np.pi, lidar.num_beams, endpoint=False) + yaw_k
-        for j in range(lidar.num_beams):
-            end = sp + sr[j] * np.array([np.cos(angles_k[j]), np.sin(angles_k[j])])
-            (rl,) = ax_scene.plot([sp[0], end[0]], [sp[1], end[1]], "g-", lw=0.3, alpha=0.3)
-            ray_lines.append(rl)
+        fov_arts.extend(
+            draw_lidar2d_fov_3d(
+                viz.ax3d, s[:3], yaw, lidar.fov, lidar.max_range, alpha=0.03, color="lime"
+            )
+        )
+        fov_arts.extend(
+            draw_lidar2d_fov_top(
+                viz.ax_top, s[:2], yaw, lidar.fov, lidar.max_range, alpha=0.04, color="lime"
+            )
+        )
 
-        # Vehicle
-        clear_vehicle_artists(vehicle_arts)
-        vehicle_arts.extend(draw_quadrotor_2d(ax_scene, pos[k, :2], yaw_k, size=0.5))
+        ranges = scan_ranges[min(f, len(scan_ranges) - 1)]
+        fov_arts.extend(
+            draw_lidar2d_rays_top(
+                viz.ax_top,
+                s[:2],
+                yaw,
+                ranges,
+                lidar.angles,
+                lidar.max_range,
+                ray_alpha=0.15,
+                every_n=3,
+                hit_size=5,
+            )
+        )
 
-        # Update occupancy grid
-        snap = map_snapshots[snap_i]
-        if snap.ndim == 3:
-            im.set_data(snap[:, :, 0].T)
-        else:
-            im.set_data(snap.T)
+        im_grid.set_data(grid_snapshots[min(f, len(grid_snapshots) - 1)].T)
 
     anim.animate(update, n_frames)
     anim.save()

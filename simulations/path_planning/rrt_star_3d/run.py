@@ -1,7 +1,8 @@
-# Erwin Lejeune - 2026-02-17
-"""RRT* 3D: two-phase visualisation.
+# Erwin Lejeune - 2026-02-15
+"""RRT* 3D: 3-panel, two-phase visualisation.
 
-Phase 1 — Algorithm: tree growing node by node, edges drawn incrementally.
+Phase 1 — Algorithm: tree growing with progressive reveal.
+           Path smoothing is shown as a distinct step.
 Phase 2 — Platform: quadrotor takeoff -> pure-pursuit along path -> land.
 
 Reference: S. Karaman, E. Frazzoli, "Sampling-based Algorithms for Optimal
@@ -13,9 +14,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
+from uav_sim.environment import World, add_urban_buildings
 from uav_sim.path_planning.rrt_3d import RRTStar3D
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
@@ -23,86 +24,74 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import (
-    clear_vehicle_artists,
-    draw_quadrotor_3d,
-)
+from uav_sim.visualization.three_panel import ThreePanelViz
 
 matplotlib.use("Agg")
 
+WORLD_SIZE = 30.0
+
+
+def _box_to_sphere(b):
+    """Approximate a BoxObstacle with a bounding sphere for the RRT planner."""
+    centre = (b.min_corner + b.max_corner) / 2
+    radius = float(np.linalg.norm(b.max_corner - b.min_corner)) / 2
+    return (centre, radius)
+
 
 def main() -> None:
-    obs = [
-        (np.array([3.0, 3.0, 3.0]), 1.5),
-        (np.array([7.0, 5.0, 4.0]), 1.0),
-        (np.array([5.0, 8.0, 6.0]), 1.2),
-    ]
+    world = World(
+        bounds_min=np.zeros(3),
+        bounds_max=np.full(3, WORLD_SIZE),
+    )
+    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=21)
+
+    # Convert box buildings to sphere obstacles for RRT collision checks
+    sphere_obs = [_box_to_sphere(b) for b in buildings]
+
+    start = np.array([2.0, 2.0, 12.0])
+    goal = np.array([28.0, 28.0, 12.0])
+
     planner = RRTStar3D(
         bounds_min=np.zeros(3),
-        bounds_max=np.full(3, 10),
-        obstacles=obs,
-        step_size=1.0,
-        goal_radius=1.0,
-        max_iter=1500,
+        bounds_max=np.full(3, WORLD_SIZE),
+        obstacles=sphere_obs,
+        step_size=2.5,
+        goal_radius=2.5,
+        max_iter=2000,
         goal_bias=0.15,
-        gamma=8.0,
+        gamma=12.0,
     )
-    start, goal = np.zeros(3), np.array([9.0, 9.0, 9.0])
     path = planner.plan(start, goal, seed=42)
     if path is None:
         print("No path found!")
         return
 
-    tree_nodes = np.array(planner.nodes)
-    tree_parents = planner.parents
-    path_pts = np.array(path)
+    raw_path = np.array(path)
+    smooth_path = smooth_path_3d(raw_path, epsilon=2.0, min_spacing=1.5)
 
-    # Smooth the raw RRT* path: prune redundant nodes, resample evenly
-    flight_path = smooth_path_3d(path_pts, epsilon=0.8, min_spacing=0.5)
-
-    # ── Phase 2: fly mission via pure pursuit ─────────────────────────────
+    # Phase 2: fly the smoothed path
     quad = Quadrotor()
-    quad.reset(position=np.array([0.0, 0.0, 0.0]))
+    quad.reset(position=np.array([start[0], start[1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=2.0, waypoint_threshold=1.0, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+
     flight_states = fly_mission(
         quad,
         ctrl,
-        flight_path,
-        cruise_alt=float(flight_path[0, 2]),
+        smooth_path,
+        cruise_alt=12.0,
         dt=0.005,
         pursuit=pursuit,
-        takeoff_duration=2.0,
-        landing_duration=2.0,
+        takeoff_duration=2.5,
+        landing_duration=2.5,
         loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
 
-    # ── Animation setup ───────────────────────────────────────────────────
-    # Pre-draw the full tree (static); animate only path reveal + drone flight
-    fly_step = max(1, len(flight_pos) // 80)
-    fly_frames = list(range(0, len(flight_pos), fly_step))
-    n_reveal = 10  # frames to reveal tree + path
-    n_ff = len(fly_frames)
-    total = n_reveal + n_ff
+    # ── Animation ─────────────────────────────────────────────────────
+    tree_nodes = np.array(planner.nodes)
+    tree_parents = planner.parents
 
-    anim = SimAnimator("rrt_star_3d", out_dir=Path(__file__).parent)
-    fig = plt.figure(figsize=(10, 7))
-    anim._fig = fig
-    ax = fig.add_subplot(111, projection="3d")
-    ax.set_xlabel("X [m]")
-    ax.set_ylabel("Y [m]")
-    ax.set_zlabel("Z [m]")
-    for c, r in obs:
-        anim.draw_sphere(ax, c, r)
-    ax.scatter(*start, c="green", s=120, marker="^", label="Start", zorder=5)
-    ax.scatter(*goal, c="red", s=120, marker="v", label="Goal", zorder=5)
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 10)
-    ax.set_zlim(0, 10)
-    ax.legend(fontsize=7, loc="upper left")
-
-    # Batch-draw tree edges (much faster than individual plot calls)
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
     tree_segs = []
@@ -110,35 +99,71 @@ def main() -> None:
         pi = tree_parents[i]
         if pi >= 0:
             tree_segs.append([tree_nodes[pi], tree_nodes[i]])
+
+    n_reveal = 15
+    smooth_pause = 15
+    fly_step = max(1, len(flight_pos) // 100)
+    fly_frames = list(range(0, len(flight_pos), fly_step))
+    n_ff = len(fly_frames)
+    total = n_reveal + smooth_pause + n_ff
+
+    viz = ThreePanelViz(title="RRT* 3D — Tree → Smooth → Flight", world_size=WORLD_SIZE)
+    viz.draw_buildings(buildings)
+    viz.mark_start_goal(start, goal)
+
     if tree_segs:
         tree_col = Line3DCollection(tree_segs, colors="cyan", linewidths=0.3, alpha=0.0)
-        ax.add_collection3d(tree_col)
+        viz.ax3d.add_collection3d(tree_col)
 
-    (path_line,) = ax.plot([], [], [], "b-", lw=2.5, alpha=0.0)
-    (fly_trail,) = ax.plot([], [], [], "orange", lw=1.8)
-    title = ax.set_title("Phase 1: RRT* Tree")
-    vehicle_arts: list = []
+    (raw_line_3d,) = viz.ax3d.plot([], [], [], "b-", lw=1.5, alpha=0.0)
+    (smooth_line_3d,) = viz.ax3d.plot([], [], [], "lime", lw=2.5, alpha=0.0, label="Smoothed")
+    (raw_line_top,) = viz.ax_top.plot([], [], "b-", lw=1.0, alpha=0.0)
+    (smooth_line_top,) = viz.ax_top.plot([], [], "lime", lw=2.0, alpha=0.0)
+    (raw_line_side,) = viz.ax_side.plot([], [], "b-", lw=1.0, alpha=0.0)
+    (smooth_line_side,) = viz.ax_side.plot([], [], "lime", lw=2.0, alpha=0.0)
 
-    def update(f):
-        clear_vehicle_artists(vehicle_arts)
+    fly_trail = viz.create_trail_artists()
+    title = viz.ax3d.set_title("Phase 1: RRT* Tree Growing")
+
+    anim = SimAnimator("rrt_star_3d", out_dir=Path(__file__).parent)
+    anim._fig = viz.fig
+
+    def update(f: int) -> None:
         if f < n_reveal:
-            # Gradually reveal the tree then show the path
             alpha = min(1.0, (f + 1) / (n_reveal * 0.6))
             if tree_segs:
                 tree_col.set_alpha(alpha * 0.4)
             if f >= n_reveal - 2:
-                path_line.set_alpha(1.0)
-                path_line.set_data(path_pts[:, 0], path_pts[:, 1])
-                path_line.set_3d_properties(path_pts[:, 2])
+                raw_line_3d.set_alpha(1.0)
+                raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
+                raw_line_3d.set_3d_properties(raw_path[:, 2])
+                raw_line_top.set_alpha(1.0)
+                raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
+                raw_line_side.set_alpha(1.0)
+                raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
             pct = int(100 * (f + 1) / n_reveal)
             title.set_text(f"Phase 1: RRT* Tree — {pct}%")
+        elif f < n_reveal + smooth_pause:
+            sf = f - n_reveal
+            if sf < smooth_pause // 2:
+                title.set_text("Raw RRT* Path")
+            else:
+                smooth_line_3d.set_alpha(1.0)
+                smooth_line_3d.set_data(smooth_path[:, 0], smooth_path[:, 1])
+                smooth_line_3d.set_3d_properties(smooth_path[:, 2])
+                smooth_line_top.set_alpha(1.0)
+                smooth_line_top.set_data(smooth_path[:, 0], smooth_path[:, 1])
+                smooth_line_side.set_alpha(1.0)
+                smooth_line_side.set_data(smooth_path[:, 0], smooth_path[:, 2])
+                raw_line_3d.set_alpha(0.2)
+                raw_line_top.set_alpha(0.2)
+                raw_line_side.set_alpha(0.2)
+                title.set_text("Smoothed Path (RDP + Resample)")
         else:
-            fi = f - n_reveal
+            fi = f - n_reveal - smooth_pause
             k = fly_frames[min(fi, len(fly_frames) - 1)]
-            fly_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
-            fly_trail.set_3d_properties(flight_pos[:k, 2])
-            R = Quadrotor.rotation_matrix(*flight_states[k, 3:6])
-            vehicle_arts.extend(draw_quadrotor_3d(ax, flight_pos[k], R, size=0.6))
+            viz.update_trail(fly_trail, flight_pos, k)
+            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
             title.set_text("Phase 2: Quadrotor Following RRT* Path")
 
     anim.animate(update, total)

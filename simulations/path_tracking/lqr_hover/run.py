@@ -17,6 +17,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.path_tracking.lqr_controller import LQRController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -40,6 +41,7 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=start)
+    init_hover(quad)
     ctrl = LQRController(
         mass=quad.params.mass, gravity=quad.params.gravity, inertia=quad.params.inertia
     )

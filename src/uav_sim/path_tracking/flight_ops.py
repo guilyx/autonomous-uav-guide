@@ -21,6 +21,19 @@ from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 _MAX_CMD_DIST = 0.3  # metres — maximum effective distance to the target sent to PID
 
 
+def init_hover(quad: Quadrotor) -> None:
+    """Pre-spin motors to hover speed for a clean start at altitude.
+
+    Call before :func:`fly_path` when the quadrotor is already at cruise
+    altitude and motors have not been spun up yet.  Without this, the
+    zero-speed motors cause a brief altitude drop while the first-order
+    lag catches up.
+    """
+    hover_f = quad.hover_wrench()[0] / 4.0
+    for m in quad.motors:
+        m.reset(m.thrust_to_omega(hover_f))
+
+
 def _is_sane(state: NDArray) -> bool:
     """Return False if state has NaN or is wildly out of range."""
     return bool(not np.any(np.isnan(state[:3])) and np.all(np.abs(state[:3]) < 500))
