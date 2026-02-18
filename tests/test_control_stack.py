@@ -26,11 +26,17 @@ class TestRateController:
         torques = rc.compute(np.zeros(3), np.array([1.0, 0.0, 0.0]), dt=0.01)
         assert torques[0] > 0.0
 
-    def test_reset_clears_state(self):
+    def test_proportional_scaling(self):
         rc = RateController()
-        rc.compute(np.zeros(3), np.ones(3), dt=0.01)
-        rc.reset()
-        assert rc._first is True
+        t1 = rc.compute(np.zeros(3), np.array([1.0, 0.0, 0.0]), dt=0.01)
+        t2 = rc.compute(np.zeros(3), np.array([2.0, 0.0, 0.0]), dt=0.01)
+        np.testing.assert_allclose(t2[0], 2.0 * t1[0], rtol=1e-10)
+
+    def test_conservative_torque_magnitude(self):
+        """1 rad/s error should NOT produce > 0.5 Nm torque (avoid oscillation)."""
+        rc = RateController()
+        torques = rc.compute(np.zeros(3), np.array([1.0, 1.0, 1.0]), dt=0.01)
+        assert all(abs(t) < 0.5 for t in torques)
 
 
 class TestAttitudeController:
@@ -56,6 +62,17 @@ class TestAttitudeController:
             dt=0.01,
         )
         assert wrench[1] > 0.0
+
+    def test_zero_error_zero_torques(self):
+        ac = AttitudeController()
+        wrench = ac.compute(
+            euler=np.array([0.1, 0.0, 0.0]),
+            angular_velocity=np.zeros(3),
+            desired_euler=np.array([0.1, 0.0, 0.0]),
+            thrust=14.715,
+            dt=0.01,
+        )
+        np.testing.assert_allclose(wrench[1:], 0.0, atol=1e-10)
 
 
 class TestVelocityController:
@@ -84,13 +101,29 @@ class TestVelocityController:
 class TestPositionController:
     def test_at_target_zero_velocity(self):
         pc = PositionController()
-        vel = pc.compute(np.array([5.0, 5.0, 10.0]), np.array([5.0, 5.0, 10.0]), dt=0.01)
+        vel = pc.compute(
+            np.array([5.0, 5.0, 10.0]),
+            np.array([5.0, 5.0, 10.0]),
+            dt=0.01,
+        )
         np.testing.assert_allclose(vel, 0.0, atol=1e-6)
 
     def test_velocity_is_clamped(self):
         pc = PositionController()
         vel = pc.compute(np.zeros(3), np.array([100.0, 100.0, 100.0]), dt=0.01)
         assert float(np.linalg.norm(vel)) <= pc.cfg.max_velocity + 1e-6
+
+    def test_velocity_feedback_damps(self):
+        """Providing measured velocity should reduce commanded velocity."""
+        pc = PositionController()
+        vel_no_fb = pc.compute(np.zeros(3), np.array([1.0, 0.0, 0.0]), dt=0.01)
+        vel_fb = pc.compute(
+            np.zeros(3),
+            np.array([1.0, 0.0, 0.0]),
+            dt=0.01,
+            velocity=np.array([0.5, 0.0, 0.0]),
+        )
+        assert float(np.linalg.norm(vel_fb)) < float(np.linalg.norm(vel_no_fb))
 
 
 class TestFlightController:

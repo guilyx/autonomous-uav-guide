@@ -89,7 +89,7 @@ class FlightController:
         omega = state[9:12]
 
         if self.mode == ControlMode.POSITION:
-            des_vel = self.pos_ctrl.compute(pos, self._target_pos, dt)
+            des_vel = self.pos_ctrl.compute(pos, self._target_pos, dt, velocity=vel)
             des_euler, thrust = self.vel_ctrl.compute(vel, self._target_yaw, des_vel, dt)
             return self.att_ctrl.compute(euler, omega, des_euler, thrust, dt)
 
