@@ -16,7 +16,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment import default_world
 from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import rdp_simplify
@@ -36,11 +36,7 @@ GOAL = np.array([27.0, 27.0, CRUISE_ALT])
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.full(3, WORLD_SIZE),
-    )
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=44)
+    world, buildings = default_world()
 
     planned = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
     if planned is None:

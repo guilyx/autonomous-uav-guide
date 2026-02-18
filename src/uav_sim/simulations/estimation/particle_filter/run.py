@@ -16,9 +16,9 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment import default_world
 from uav_sim.estimation.particle_filter import ParticleFilter
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover
+from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -44,8 +44,7 @@ def _likelihood(z, x):
 def main() -> None:
     rng = np.random.default_rng(42)
 
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
-    add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=42)
+    world, buildings = default_world()
 
     cx, cy, radius = 15.0, 15.0, 8.0
     n_wp = 60
@@ -56,7 +55,6 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=np.array([cx + radius, cy, CRUISE_ALT]))
-    init_hover(quad)
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []

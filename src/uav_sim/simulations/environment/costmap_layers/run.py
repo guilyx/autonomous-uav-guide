@@ -21,7 +21,7 @@ import numpy as np
 
 from uav_sim.costmap import InflationLayer, LayeredCostmap, OccupancyGrid
 from uav_sim.costmap.social_layer import SocialLayer
-from uav_sim.environment import World
+from uav_sim.environment import default_world
 from uav_sim.environment.buildings import add_city_grid
 from uav_sim.environment.world import DynamicAgent
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -38,7 +38,7 @@ WORLD_SIZE = 30.0
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
+    world, buildings = default_world()
     buildings = add_city_grid(world, n_blocks=(2, 2), height_range=(5.0, 15.0), seed=42)
 
     grid = OccupancyGrid(

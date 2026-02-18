@@ -19,7 +19,7 @@ import matplotlib
 import numpy as np
 from matplotlib.patches import Ellipse, Wedge
 
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover
+from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -87,7 +87,6 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=np.array([cx + radius, cy, CRUISE_ALT]))
-    init_hover(quad)
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []

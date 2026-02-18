@@ -16,7 +16,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment import default_world
 from uav_sim.path_planning.rrt_3d import RRTStar3D
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
@@ -39,11 +39,7 @@ def _box_to_sphere(b):
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.full(3, WORLD_SIZE),
-    )
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=21)
+    world, buildings = default_world()
 
     # Convert box buildings to sphere obstacles for RRT collision checks
     sphere_obs = [_box_to_sphere(b) for b in buildings]

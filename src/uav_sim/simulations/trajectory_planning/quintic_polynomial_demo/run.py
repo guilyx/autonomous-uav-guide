@@ -17,7 +17,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment import default_world
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -33,8 +33,7 @@ CRUISE_ALT = 12.0
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=27)
+    world, buildings = default_world()
 
     start_state = QuinticState(
         pos=np.array([3.0, 3.0, CRUISE_ALT]),

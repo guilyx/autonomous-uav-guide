@@ -19,7 +19,7 @@ import matplotlib
 import matplotlib.patches as mpatches
 import numpy as np
 
-from uav_sim.environment import World
+from uav_sim.environment import default_world
 from uav_sim.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
@@ -36,7 +36,7 @@ SWATH = 5.0
 
 
 def main() -> None:
-    World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
+    default_world()
 
     region = CoverageRegion(
         origin=np.array([3.0, 3.0]),
