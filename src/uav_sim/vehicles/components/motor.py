@@ -25,11 +25,11 @@ class Motor:
 
     def __init__(
         self,
-        k_thrust: float = 2.98e-6,
-        k_torque: float = 1.14e-7,
+        k_thrust: float = 8.55e-6,
+        k_torque: float = 1.36e-7,
         tau: float = 0.02,
         omega_min: float = 0.0,
-        omega_max: float = 2199.0,
+        omega_max: float = 1100.0,
         direction: int = 1,
     ) -> None:
         self.k_thrust = k_thrust

@@ -25,9 +25,9 @@ class Mixer:
 
     def __init__(
         self,
-        arm_length: float = 0.0397,
-        k_thrust: float = 2.98e-6,
-        k_torque: float = 1.14e-7,
+        arm_length: float = 0.175,
+        k_thrust: float = 8.55e-6,
+        k_torque: float = 1.36e-7,
         frame: str = "x",
     ) -> None:
         self.arm_length = arm_length

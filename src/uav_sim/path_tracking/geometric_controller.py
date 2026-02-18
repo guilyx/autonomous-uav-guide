@@ -31,16 +31,16 @@ class GeometricControllerConfig:
 
     kx: float = 4.0
     kv: float = 2.8
-    kR: float = 0.005
-    kw: float = 0.002
-    mass: float = 0.027
+    kR: float = 8.0
+    kw: float = 2.5
+    mass: float = 1.5
     gravity: float = 9.81
-    max_acc: float = 3.0
+    max_acc: float = 5.0
     inertia: NDArray[np.floating] | None = None
 
     def __post_init__(self):
         if self.inertia is None:
-            self.inertia = np.diag([1.66e-5, 1.66e-5, 2.96e-5])
+            self.inertia = np.diag([0.0082, 0.0082, 0.0148])
 
 
 class GeometricController:

@@ -19,20 +19,38 @@ from uav_sim.vehicles.components.motor import Motor
 
 @dataclass
 class QuadrotorParams:
-    """Physical parameters of a quadrotor (Crazyflie-like defaults)."""
+    """Physical parameters of a quadrotor.
 
-    mass: float = 0.027
-    arm_length: float = 0.046
+    Defaults represent a 250mm-class racing/inspection quad (~1.5 kg) with
+    5-inch propellers — a reasonable match for 30 m-scale simulation worlds.
+    """
+
+    mass: float = 1.5
+    arm_length: float = 0.175
     inertia: NDArray[np.floating] = field(
-        default_factory=lambda: np.diag([1.66e-5, 1.66e-5, 2.96e-5])
+        default_factory=lambda: np.diag([0.0082, 0.0082, 0.0148])
     )
-    k_thrust: float = 2.55e-8
-    k_torque: float = 7.94e-10
+    k_thrust: float = 8.55e-6
+    k_torque: float = 1.36e-7
     motor_tau: float = 0.02
-    omega_max: float = 2500.0
-    drag_coeff: float = 0.01
+    omega_max: float = 1100.0
+    drag_coeff: float = 0.1
     gravity: float = 9.81
     frame: str = "x"
+
+    @classmethod
+    def crazyflie(cls) -> "QuadrotorParams":
+        """Crazyflie 2.1 nano-quadrotor (27 g, 46 mm arms)."""
+        return cls(
+            mass=0.027,
+            arm_length=0.046,
+            inertia=np.diag([1.66e-5, 1.66e-5, 2.96e-5]),
+            k_thrust=2.55e-8,
+            k_torque=7.94e-10,
+            motor_tau=0.02,
+            omega_max=2500.0,
+            drag_coeff=0.01,
+        )
 
 
 class Quadrotor:

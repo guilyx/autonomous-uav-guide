@@ -33,7 +33,7 @@ class LQRController:
 
     def __init__(
         self,
-        mass: float = 0.027,
+        mass: float = 1.5,
         gravity: float = 9.81,
         inertia: NDArray[np.floating] | None = None,
         Q: NDArray[np.floating] | None = None,
@@ -41,16 +41,15 @@ class LQRController:
     ) -> None:
         self.mass = mass
         self.gravity = gravity
-        self.inertia = inertia if inertia is not None else np.diag([1.66e-5, 1.66e-5, 2.96e-5])
+        self.inertia = inertia if inertia is not None else np.diag([0.0082, 0.0082, 0.0148])
 
         # Build linearised A, B matrices.
         self.A, self.B = self._linearise()
 
-        # Default cost matrices tuned for Crazyflie-class airframe.
         if Q is None:
             Q = np.diag([10, 10, 20, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.1])
         if R is None:
-            R = np.diag([0.5, 500, 500, 500])
+            R = np.diag([0.01, 5.0, 5.0, 5.0])
 
         self.Q = Q
         self.R = R

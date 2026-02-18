@@ -20,7 +20,7 @@ class TestMPCController:
         state = np.zeros(12)
         state[2] = 3.0
         wrench = ctrl.compute(state, target_pos=np.array([0, 0, 5.0]))
-        assert wrench[0] > 0.027 * 9.81
+        assert wrench[0] > 1.5 * 9.81
 
     def test_reset(self):
         ctrl = MPCController()
