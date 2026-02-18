@@ -22,6 +22,10 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.trajectory_tracking.mppi import MPPITracker
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
 
@@ -36,7 +40,9 @@ def _dyn(x, u, dt):
 def _cost(x, _u, ref):
     if ref is None:
         return 0.0
-    return float(np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2))
+    return float(
+        np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2)
+    )
 
 
 def main() -> None:
@@ -71,23 +77,27 @@ def main() -> None:
     quad.reset(position=np.array([0.0, 0.0, 0.0]))
     ctrl = CascadedPIDController()
     dt_fly = 0.005
-    flight_pos = []
+    flight_pos: list[np.ndarray] = []
+    flight_euler: list[np.ndarray] = []
     for i in range(n_steps):
         wp = mppi_hist[i, :3]
         for _ in range(int(dt_mppi / dt_fly)):
-            p = quad.state[:3].copy()
+            s = quad.state
+            p = s[:3].copy()
             if np.any(np.isnan(p)) or np.any(np.abs(p) > 50):
                 break
             flight_pos.append(p)
-            quad.step(ctrl.compute(quad.state, wp, dt=dt_fly), dt_fly)
-    flight_pos = np.array(flight_pos) if flight_pos else mppi_hist[:1, :3]
+            flight_euler.append(s[3:6].copy())
+            quad.step(ctrl.compute(s, wp, dt=dt_fly), dt_fly)
+    flight_pos_arr = np.array(flight_pos) if flight_pos else mppi_hist[:1, :3]
+    flight_euler_arr = np.array(flight_euler) if flight_euler else np.zeros((1, 3))
 
     # ── Animation ─────────────────────────────────────────────────────────
     t_mppi = np.arange(n_steps) * dt_mppi
     mppi_skip = max(1, n_steps // 120)
     mppi_idx = list(range(0, n_steps, mppi_skip))
-    fly_skip = max(1, len(flight_pos) // 120)
-    fly_idx = list(range(0, len(flight_pos), fly_skip))
+    fly_skip = max(1, len(flight_pos_arr) // 120)
+    fly_idx = list(range(0, len(flight_pos_arr), fly_skip))
     n_mf = len(mppi_idx)
     n_ff = len(fly_idx)
     total = n_mf + n_ff
@@ -134,11 +144,15 @@ def main() -> None:
     ax_vel.set_xlabel("Time [s]", fontsize=8)
     ax_vel.set_ylabel("Vel [m/s]", fontsize=8)
     ax_vel.grid(True, alpha=0.3)
-    lv = [ax_vel.plot([], [], f"C{j}-", lw=1, label=f"v{lb}")[0] for j, lb in enumerate(lbl)]
+    lv = [
+        ax_vel.plot([], [], f"C{j}-", lw=1, label=f"v{lb}")[0]
+        for j, lb in enumerate(lbl)
+    ]
     ax_vel.legend(fontsize=6, ncol=3, loc="upper right")
     ax_vel.tick_params(labelsize=7)
 
     title = ax3d.set_title("Phase 1: MPPI Planning")
+    vehicle_arts: list = []
 
     def update(f):
         if f < n_mf:
@@ -157,10 +171,15 @@ def main() -> None:
             k = fly_idx[min(fi, len(fly_idx) - 1)]
             mppi_dot.set_data([], [])
             mppi_dot.set_3d_properties([])
-            fly_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
-            fly_trail.set_3d_properties(flight_pos[:k, 2])
-            fly_dot.set_data([flight_pos[k, 0]], [flight_pos[k, 1]])
-            fly_dot.set_3d_properties([flight_pos[k, 2]])
+            fly_trail.set_data(flight_pos_arr[:k, 0], flight_pos_arr[:k, 1])
+            fly_trail.set_3d_properties(flight_pos_arr[:k, 2])
+            fly_dot.set_data([flight_pos_arr[k, 0]], [flight_pos_arr[k, 1]])
+            fly_dot.set_3d_properties([flight_pos_arr[k, 2]])
+            clear_vehicle_artists(vehicle_arts)
+            R = Quadrotor.rotation_matrix(*flight_euler_arr[k])
+            vehicle_arts.extend(
+                draw_quadrotor_3d(ax3d, flight_pos_arr[k], R, size=0.15)
+            )
             title.set_text("Phase 2: Quadrotor Executing MPPI Trajectory")
 
     anim.animate(update, total)

@@ -74,14 +74,18 @@ def _linear_H_jac(x):
 
 class TestEKF:
     def test_predict_advances_state(self):
-        ekf = ExtendedKalmanFilter(2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac)
+        ekf = ExtendedKalmanFilter(
+            2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac
+        )
         ekf.reset(np.array([0.0, 1.0]))  # pos=0, vel=1
         ekf.Q = np.eye(2) * 0.001
         ekf.predict(np.zeros(1), dt=1.0)
         assert pytest.approx(ekf.state[0], abs=0.1) == 1.0  # moved by vel*dt
 
     def test_update_corrects_state(self):
-        ekf = ExtendedKalmanFilter(2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac)
+        ekf = ExtendedKalmanFilter(
+            2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac
+        )
         ekf.reset(np.array([0.0, 0.0]))
         ekf.R = np.eye(1) * 0.01
         ekf.predict(np.zeros(1), dt=1.0)
@@ -89,7 +93,9 @@ class TestEKF:
         assert ekf.state[0] > 1.0  # pulled towards measurement
 
     def test_covariance_shrinks_after_update(self):
-        ekf = ExtendedKalmanFilter(2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac)
+        ekf = ExtendedKalmanFilter(
+            2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac
+        )
         ekf.reset(np.array([0.0, 0.0]))
         ekf.predict(np.zeros(1), dt=1.0)
         P_before = ekf.covariance[0, 0]
@@ -99,7 +105,9 @@ class TestEKF:
 
     def test_tracks_constant_velocity(self):
         """EKF should converge to true state with noisy measurements."""
-        ekf = ExtendedKalmanFilter(2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac)
+        ekf = ExtendedKalmanFilter(
+            2, 1, _linear_f, _linear_h, _linear_F_jac, _linear_H_jac
+        )
         ekf.reset(np.array([0.0, 0.0]))
         ekf.Q = np.eye(2) * 0.001
         ekf.R = np.eye(1) * 1.0

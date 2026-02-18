@@ -18,6 +18,10 @@ import numpy as np
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
 
@@ -102,14 +106,19 @@ def main() -> None:
     pos = states[:, :3]
     vel = states[:, 6:9]
     att_deg = np.rad2deg(states[:, 3:6])
+    vehicle_arts: list = []
 
     def update(f):
         k = idx[f]
-        # 3D
+        # 3D trail
         trail3d.set_data(pos[:k, 0], pos[:k, 1])
         trail3d.set_3d_properties(pos[:k, 2])
         dot3d.set_data([pos[k, 0]], [pos[k, 1]])
         dot3d.set_3d_properties([pos[k, 2]])
+        # Vehicle model
+        clear_vehicle_artists(vehicle_arts)
+        R = Quadrotor.rotation_matrix(*states[k, 3:6])
+        vehicle_arts.extend(draw_quadrotor_3d(ax3d, pos[k], R, size=0.15))
         # Position
         lx.set_data(times[:k], pos[:k, 0])
         ly.set_data(times[:k], pos[:k, 1])
