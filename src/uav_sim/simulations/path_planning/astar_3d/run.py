@@ -17,7 +17,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment import default_world
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
@@ -85,11 +85,7 @@ def _astar(grid, start, goal):
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.full(3, float(WORLD_SIZE)),
-    )
-    buildings = add_urban_buildings(world, world_size=float(WORLD_SIZE), n_buildings=6, seed=42)
+    world, buildings = default_world()
     grid = _build_occupancy(buildings, WORLD_SIZE)
 
     start = (2, 2, 12)

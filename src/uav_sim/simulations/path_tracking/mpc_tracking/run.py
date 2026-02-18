@@ -15,8 +15,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
-from uav_sim.path_tracking.flight_ops import init_hover
+from uav_sim.environment import default_world
 from uav_sim.path_tracking.mpc_controller import MPCController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -51,13 +50,11 @@ def _ref(t: float) -> tuple[np.ndarray, np.ndarray]:
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=6)
+    world, buildings = default_world()
 
     quad = Quadrotor()
     rp0, _ = _ref(0.0)
     quad.reset(position=rp0.copy())
-    init_hover(quad)
 
     ctrl = MPCController(
         horizon=10,

@@ -19,8 +19,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover
+from uav_sim.environment import default_world
+from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.sensors.lidar import Lidar2D
@@ -58,8 +58,7 @@ def _lawnmower_path(size: float, alt: float, n_rows: int = 5) -> np.ndarray:
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
-    add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=6, seed=42)
+    world, buildings = default_world()
 
     lidar = Lidar2D(num_beams=72, max_range=10.0, noise_std=0.1, seed=42)
 
@@ -68,7 +67,6 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=path_3d[0].copy())
-    init_hover(quad)
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []

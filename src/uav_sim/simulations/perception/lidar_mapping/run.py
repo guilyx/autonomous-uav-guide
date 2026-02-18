@@ -20,8 +20,8 @@ import matplotlib
 import numpy as np
 
 from uav_sim.costmap import OccupancyGrid
-from uav_sim.environment import World, add_urban_buildings
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover
+from uav_sim.environment import default_world
+from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.perception import OccupancyMapper
@@ -45,15 +45,10 @@ CRUISE_ALT = 12.0
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.array([WORLD_SIZE, WORLD_SIZE, WORLD_SIZE]),
-    )
-    add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=6, seed=42)
+    world, buildings = default_world()
 
     quad = Quadrotor()
     quad.reset(position=np.array([2.0, 2.0, CRUISE_ALT]))
-    init_hover(quad)
     ctrl = CascadedPIDController()
     lidar = Lidar2D(num_beams=72, max_range=12.0, noise_std=0.1, seed=42)
 

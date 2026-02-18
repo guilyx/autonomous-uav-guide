@@ -16,8 +16,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
-from uav_sim.path_tracking.flight_ops import init_hover
+from uav_sim.environment import default_world
 from uav_sim.path_tracking.lqr_path_tracker import LQRPathTracker
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -30,8 +29,7 @@ CRUISE_ALT = 12.0
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=13)
+    world, buildings = default_world()
 
     waypoints = np.array(
         [
@@ -45,7 +43,6 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=waypoints[0].copy())
-    init_hover(quad)
 
     tracker = LQRPathTracker(
         lookahead=3.0,

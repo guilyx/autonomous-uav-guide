@@ -21,7 +21,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.costmap import InflationLayer, LayeredCostmap, OccupancyGrid
-from uav_sim.environment import World
+from uav_sim.environment import default_world
 from uav_sim.environment.buildings import add_city_grid
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
@@ -75,7 +75,7 @@ def _simple_astar_2d(
 
 
 def main() -> None:
-    world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, WORLD_SIZE))
+    world, buildings = default_world()
     add_city_grid(
         world,
         n_blocks=(2, 2),
