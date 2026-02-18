@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
-"""Feedback-linearisation tracker: 3-panel circular tracking.
+"""Feedback-linearisation tracker: 3-panel path tracking to goal.
 
-The quadrotor tracks a slow circular reference trajectory using
-differential-flatness-based feedback linearisation, rendered in an
-urban 30x30x30 world.
+The quadrotor tracks a planned reference trajectory from start to goal
+using differential-flatness-based feedback linearisation, navigating
+through an urban 30x30x30 world with obstacle avoidance.
 
 Reference: D. Mellinger, V. Kumar, "Minimum Snap Trajectory Generation and
 Control for Quadrotors," ICRA, 2011, Sec. IV. DOI: 10.1109/ICRA.2011.5980409
@@ -15,8 +15,10 @@ from pathlib import Path
 
 import matplotlib
 import numpy as np
+from scipy.interpolate import CubicSpline
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.trajectory_tracking.feedback_linearisation import (
     FeedbackLinearisationTracker,
 )
@@ -27,36 +29,21 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-CENTER = np.array([15.0, 15.0])
-RADIUS = 6.0
-ALT = 12.0
-OMEGA = 0.25  # slow angular velocity [rad/s]
+START = np.array([3.0, 3.0, 12.0])
+GOAL = np.array([27.0, 27.0, 12.0])
+FLIGHT_SPEED = 2.0
 
 
-def _ref(t: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Circular reference: position, velocity, acceleration."""
-    rp = np.array(
-        [
-            CENTER[0] + RADIUS * np.cos(OMEGA * t),
-            CENTER[1] + RADIUS * np.sin(OMEGA * t),
-            ALT + 1.5 * np.sin(0.3 * t),
-        ]
-    )
-    rv = np.array(
-        [
-            -RADIUS * OMEGA * np.sin(OMEGA * t),
-            RADIUS * OMEGA * np.cos(OMEGA * t),
-            1.5 * 0.3 * np.cos(0.3 * t),
-        ]
-    )
-    ra = np.array(
-        [
-            -RADIUS * OMEGA**2 * np.cos(OMEGA * t),
-            -RADIUS * OMEGA**2 * np.sin(OMEGA * t),
-            -1.5 * 0.3**2 * np.sin(0.3 * t),
-        ]
-    )
-    return rp, rv, ra
+def _time_parametrize(
+    path: np.ndarray, speed: float
+) -> tuple[np.ndarray, CubicSpline, CubicSpline, CubicSpline]:
+    """Build time-parametrised cubic splines for position, velocity, acceleration."""
+    dists = np.cumsum(np.r_[0.0, np.linalg.norm(np.diff(path, axis=0), axis=1)])
+    times = dists / speed
+    cs_x = CubicSpline(times, path[:, 0])
+    cs_y = CubicSpline(times, path[:, 1])
+    cs_z = CubicSpline(times, path[:, 2])
+    return times, cs_x, cs_y, cs_z
 
 
 def main() -> None:
@@ -66,9 +53,16 @@ def main() -> None:
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=5)
 
+    planned = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
+    if planned is None:
+        print("No path found!")
+        return
+
+    t_arr, cs_x, cs_y, cs_z = _time_parametrize(planned, FLIGHT_SPEED)
+    t_final = t_arr[-1]
+
     quad = Quadrotor()
-    rp0, _, _ = _ref(0.0)
-    quad.reset(position=rp0.copy())
+    quad.reset(position=START.copy())
     hover_f = quad.hover_wrench()[0] / 4.0
     for m in quad.motors:
         m.reset(m.thrust_to_omega(hover_f))
@@ -77,13 +71,20 @@ def main() -> None:
         mass=quad.params.mass, gravity=quad.params.gravity, inertia=quad.params.inertia
     )
 
-    dt, dur = 0.005, 25.0
+    dt = 0.005
+    dur = t_final + 2.0
     steps = int(dur / dt)
     states = np.zeros((steps, 12))
     refs = np.zeros((steps, 3))
     for i in range(steps):
-        t = i * dt
-        rp, rv, ra = _ref(t)
+        t = min(i * dt, t_final)
+        rp = np.array([float(cs_x(t)), float(cs_y(t)), float(cs_z(t))])
+        rv = np.array([float(cs_x(t, 1)), float(cs_y(t, 1)), float(cs_z(t, 1))])
+        ra = np.array([float(cs_x(t, 2)), float(cs_y(t, 2)), float(cs_z(t, 2))])
+        if i * dt > t_final:
+            rp = GOAL.copy()
+            rv = np.zeros(3)
+            ra = np.zeros(3)
         refs[i] = rp
         states[i] = quad.state
         quad.step(tracker.compute(quad.state, rp, rv, ra), dt)
@@ -95,9 +96,13 @@ def main() -> None:
     idx = list(range(0, steps, skip))
     n_frames = len(idx)
 
-    viz = ThreePanelViz(title="Feedback Linearisation — Circular Tracking", world_size=WORLD_SIZE)
+    viz = ThreePanelViz(
+        title="Feedback Linearisation — Path Tracking to Goal",
+        world_size=WORLD_SIZE,
+    )
     viz.draw_buildings(buildings)
-    viz.draw_path(refs, color="red", lw=1.0, alpha=0.3, label="Reference")
+    viz.draw_path(planned, color="blue", lw=1.0, alpha=0.3, label="Planned Path")
+    viz.mark_start_goal(START, GOAL)
 
     trail = viz.create_trail_artists()
     (ref_dot_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10)

@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
 """Path smoothing demo: 3-panel visualisation of RDP + spline resampling.
 
-Generates a noisy zigzag path (as would come from a grid-based planner),
-then demonstrates the RDP simplification and cubic-spline resampling steps
-side by side.  The drone then flies the smoothed path.
+Plans a raw A* path through an urban environment with obstacles, then
+demonstrates the RDP simplification and cubic-spline resampling steps
+side by side.  The drone then flies the smoothed path all the way to goal.
 
 Reference: D. Douglas, T. Peucker, "Algorithms for the Reduction of the
 Number of Points Required to Represent a Digitized Line or its Caricature,"
@@ -18,6 +18,8 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import World, add_urban_buildings
+from uav_sim.environment.obstacles import BoxObstacle
+from uav_sim.path_planning.astar_3d import AStar3D
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import rdp_simplify, smooth_path_3d
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
@@ -30,31 +32,17 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
+START = np.array([3.0, 3.0, CRUISE_ALT])
+GOAL = np.array([27.0, 27.0, CRUISE_ALT])
 
 
-def _generate_zigzag(rng: np.random.Generator) -> np.ndarray:
-    """Create a realistic noisy grid-planner path."""
-    base = np.array(
-        [
-            [3.0, 3.0, CRUISE_ALT],
-            [6.0, 4.0, CRUISE_ALT],
-            [8.0, 7.0, CRUISE_ALT + 1],
-            [10.0, 8.0, CRUISE_ALT],
-            [12.0, 10.0, CRUISE_ALT + 2],
-            [14.0, 13.0, CRUISE_ALT],
-            [16.0, 14.0, CRUISE_ALT],
-            [18.0, 16.0, CRUISE_ALT + 1],
-            [20.0, 18.0, CRUISE_ALT],
-            [22.0, 20.0, CRUISE_ALT + 2],
-            [24.0, 22.0, CRUISE_ALT],
-            [26.0, 25.0, CRUISE_ALT],
-            [27.0, 27.0, CRUISE_ALT],
-        ]
-    )
-    noise = rng.normal(0, 0.4, base.shape)
-    noise[0] = 0
-    noise[-1] = 0
-    return base + noise
+def _build_occupancy(buildings: list[BoxObstacle], size: int, inflate: int = 1) -> np.ndarray:
+    grid = np.zeros((size, size, size), dtype=bool)
+    for b in buildings:
+        lo = np.clip(np.floor(b.min_corner).astype(int) - inflate, 0, size - 1)
+        hi = np.clip(np.ceil(b.max_corner).astype(int) + inflate, 0, size)
+        grid[lo[0] : hi[0], lo[1] : hi[1], lo[2] : hi[2]] = True
+    return grid
 
 
 def main() -> None:
@@ -64,14 +52,26 @@ def main() -> None:
     )
     buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=77)
 
-    rng = np.random.default_rng(42)
-    raw_path = _generate_zigzag(rng)
+    ws = int(WORLD_SIZE)
+    grid = _build_occupancy(buildings, ws)
+    si = tuple(np.clip(np.round(START).astype(int), 0, ws - 1))
+    gi = tuple(np.clip(np.round(GOAL).astype(int), 0, ws - 1))
+    grid[si] = False
+    grid[gi] = False
+
+    planner = AStar3D(grid, resolution=1.0)
+    path_idx = planner.plan(si, gi)
+    if path_idx is None:
+        print("No path found!")
+        return
+
+    raw_path = np.array(path_idx, dtype=float)
     rdp_path = rdp_simplify(raw_path, epsilon=1.5)
     smooth_path = smooth_path_3d(raw_path, epsilon=1.5, min_spacing=1.0)
 
     # Fly the smoothed path
     quad = Quadrotor()
-    quad.reset(position=np.array([raw_path[0, 0], raw_path[0, 1], 0.0]))
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
 
@@ -99,9 +99,9 @@ def main() -> None:
 
     viz = ThreePanelViz(title="Path Smoothing Demo — RDP + Resample", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
+    viz.mark_start_goal(START, GOAL)
 
-    # Pre-draw raw path (initially hidden)
-    (raw_3d,) = viz.ax3d.plot([], [], [], "r-", lw=1.5, alpha=0.0, label="Raw (zigzag)")
+    (raw_3d,) = viz.ax3d.plot([], [], [], "r-", lw=1.5, alpha=0.0, label="Raw (A*)")
     (raw_top,) = viz.ax_top.plot([], [], "r-", lw=1.5, alpha=0.0)
     (raw_side,) = viz.ax_side.plot([], [], "r-", lw=1.5, alpha=0.0)
     raw_scat_3d = viz.ax3d.scatter([], [], [], c="red", s=15, alpha=0.0)
@@ -136,7 +136,7 @@ def main() -> None:
             raw_side.set_data(raw_path[:, 0], raw_path[:, 2])
             raw_scat_3d._offsets3d = (raw_path[:, 0], raw_path[:, 1], raw_path[:, 2])
             raw_scat_3d.set_alpha(1.0)
-            title.set_text(f"Step 1: Raw path ({len(raw_path)} points)")
+            title.set_text(f"Step 1: Raw A* path ({len(raw_path)} points)")
         elif f < p2_end:
             rdp_3d.set_alpha(1.0)
             rdp_3d.set_data(rdp_path[:, 0], rdp_path[:, 1])
@@ -167,7 +167,7 @@ def main() -> None:
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
-            title.set_text("Quadrotor Following Smoothed Path")
+            title.set_text("Quadrotor Following Smoothed Path to Goal")
 
     anim.animate(update, total)
     anim.save()
