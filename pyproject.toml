@@ -1,7 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "uav-sim"
 version = "0.1.0"
 requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.14",
+    "matplotlib>=3.9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uav_sim"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+    "pre-commit>=4.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
