@@ -25,8 +25,8 @@ matplotlib.use("Agg")
 def main() -> None:
     n_ag = 6
     rng = np.random.default_rng(1)
-    pos = rng.uniform(-4, 4, (n_ag, 3))
-    r = 2.0
+    pos = rng.uniform(5, 25, (n_ag, 3))
+    r = 6.0
     angles = np.linspace(0, 2 * np.pi, n_ag, endpoint=False)
     offsets = np.column_stack([r * np.cos(angles), r * np.sin(angles), np.zeros(n_ag)])
     adj = np.ones((n_ag, n_ag)) - np.eye(n_ag)

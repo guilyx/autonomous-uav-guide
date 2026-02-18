@@ -79,7 +79,7 @@ def main() -> None:
 
     # Phase 2: quadrotor follows MPPI path using pure pursuit
     quad = Quadrotor()
-    quad.reset(position=START[:3].copy())
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
 

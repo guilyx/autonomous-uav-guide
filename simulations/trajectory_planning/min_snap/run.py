@@ -1,5 +1,5 @@
-# Erwin Lejeune - 2026-02-17
-"""Minimum-snap trajectory: two-phase visualisation.
+# Erwin Lejeune - 2026-02-15
+"""Minimum-snap trajectory: 3-panel, two-phase visualisation.
 
 Phase 1 — Algorithm: incremental spline construction through waypoints.
 Phase 2 — Platform: quadrotor takeoff -> pure-pursuit trajectory -> land.
@@ -13,50 +13,67 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
+from uav_sim.environment import World, add_urban_buildings
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.trajectory_planning.min_snap import MinSnapTrajectory
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import (
-    clear_vehicle_artists,
-    draw_quadrotor_3d,
-)
+from uav_sim.visualization.three_panel import ThreePanelViz
 
 matplotlib.use("Agg")
 
+WORLD_SIZE = 30.0
+CRUISE_ALT = 12.0
+
 
 def main() -> None:
-    wps = np.array([[0, 0, 1], [2, 0, 1.5], [4, 2, 2.0], [6, 2, 1.5], [8, 0, 1.0]])
-    seg_times = np.array([1.5, 1.5, 1.5, 1.5])
+    world = World(
+        bounds_min=np.zeros(3),
+        bounds_max=np.full(3, WORLD_SIZE),
+    )
+    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=44)
+
+    wps = np.array(
+        [
+            [3, 3, CRUISE_ALT],
+            [10, 5, CRUISE_ALT + 3],
+            [18, 12, CRUISE_ALT],
+            [24, 18, CRUISE_ALT + 2],
+            [27, 27, CRUISE_ALT],
+        ],
+        dtype=float,
+    )
+    seg_times = np.array([3.0, 3.0, 3.0, 3.0])
+
     ms = MinSnapTrajectory()
     coeffs = ms.generate(wps, seg_times)
-    _, traj_pts = ms.evaluate(coeffs, seg_times, dt=0.02)
+    _, traj_pts = ms.evaluate(coeffs, seg_times, dt=0.05)
 
-    # ── Phase 2: fly mission via pure pursuit ─────────────────────────────
+    # Phase 2: fly
     quad = Quadrotor()
     quad.reset(position=np.array([wps[0, 0], wps[0, 1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=0.8, waypoint_threshold=0.3, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     flight_states = fly_mission(
         quad,
         ctrl,
         traj_pts,
+        cruise_alt=CRUISE_ALT,
         dt=0.005,
         pursuit=pursuit,
-        takeoff_duration=2.0,
-        landing_duration=2.0,
+        takeoff_duration=2.5,
+        landing_duration=2.5,
         loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
 
-    # ── Animation ─────────────────────────────────────────────────────────
+    # ── Animation ─────────────────────────────────────────────────────
     n_traj = len(traj_pts)
-    traj_step = max(1, n_traj // 100)
+    traj_step = max(1, n_traj // 80)
     traj_frames = list(range(0, n_traj, traj_step))
     fly_step = max(1, len(flight_pos) // 100)
     fly_frames = list(range(0, len(flight_pos), fly_step))
@@ -64,64 +81,46 @@ def main() -> None:
     n_ff = len(fly_frames)
     total = n_tf + n_ff
 
-    anim = SimAnimator("min_snap", out_dir=Path(__file__).parent)
-    fig = plt.figure(figsize=(12, 6))
-    anim._fig = fig
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.3, 1], wspace=0.25)
-    ax3d = fig.add_subplot(gs[0], projection="3d")
-    ax2d = fig.add_subplot(gs[1])
-    fig.suptitle("Minimum-Snap Trajectory", fontsize=13)
+    viz = ThreePanelViz(title="Minimum-Snap Trajectory", world_size=WORLD_SIZE)
+    viz.draw_buildings(buildings)
 
-    ax3d.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=80, marker="D", zorder=5, label="WP")
+    viz.ax3d.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=80, marker="D", zorder=5)
     for i, wp in enumerate(wps):
-        ax3d.text(wp[0], wp[1], wp[2] + 0.15, f"WP{i}", fontsize=7, ha="center")
-    ax3d.set_xlim(-0.5, 9)
-    ax3d.set_ylim(-0.5, 3)
-    ax3d.set_zlim(-0.5, 3)
-    ax3d.set_xlabel("X [m]")
-    ax3d.set_ylabel("Y [m]")
-    ax3d.set_zlabel("Z [m]")
-    ax3d.legend(fontsize=7, loc="upper left")
-    (traj_line,) = ax3d.plot([], [], [], "b-", lw=2, alpha=0.7)
-    (traj_dot,) = ax3d.plot([], [], [], "bo", ms=5)
-    (fly_trail,) = ax3d.plot([], [], [], "orange", lw=1.8)
+        viz.ax3d.text(wp[0], wp[1], wp[2] + 1.0, f"WP{i}", fontsize=7, ha="center")
+        viz.ax_top.plot(wp[0], wp[1], "rD", ms=5)
+        viz.ax_side.plot(wp[0], wp[2], "rD", ms=5)
 
-    ax2d.set_aspect("equal")
-    ax2d.scatter(wps[:, 0], wps[:, 1], c="red", s=60, marker="D", zorder=5)
-    ax2d.set_xlim(-0.5, 9)
-    ax2d.set_ylim(-1, 3.5)
-    ax2d.set_xlabel("X [m]")
-    ax2d.set_ylabel("Y [m]")
-    ax2d.grid(True, alpha=0.2)
-    ax2d.set_title("Top-down View", fontsize=10)
-    (traj2d,) = ax2d.plot([], [], "b-", lw=1.5, alpha=0.7)
-    (fly2d,) = ax2d.plot([], [], "orange", lw=1.5)
+    (traj_3d,) = viz.ax3d.plot([], [], [], "b-", lw=2, alpha=0.7, label="Min-Snap")
+    (traj_dot_3d,) = viz.ax3d.plot([], [], [], "bo", ms=5)
+    (traj_top,) = viz.ax_top.plot([], [], "b-", lw=1.5, alpha=0.7)
+    (traj_side,) = viz.ax_side.plot([], [], "b-", lw=1.5, alpha=0.7)
 
-    title = ax3d.set_title("Phase 1: Trajectory Generation")
-    vehicle_arts: list = []
+    fly_trail = viz.create_trail_artists()
+    viz.ax3d.legend(fontsize=7, loc="upper left")
+    title = viz.ax3d.set_title("Phase 1: Trajectory Generation")
 
-    def update(f):
-        clear_vehicle_artists(vehicle_arts)
+    anim = SimAnimator("min_snap", out_dir=Path(__file__).parent)
+    anim._fig = viz.fig
+
+    def update(f: int) -> None:
         if f < n_tf:
             k = traj_frames[f]
-            traj_line.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
-            traj_line.set_3d_properties(traj_pts[: k + 1, 2])
-            traj_dot.set_data([traj_pts[k, 0]], [traj_pts[k, 1]])
-            traj_dot.set_3d_properties([traj_pts[k, 2]])
-            traj2d.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
+            traj_3d.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
+            traj_3d.set_3d_properties(traj_pts[: k + 1, 2])
+            traj_dot_3d.set_data([traj_pts[k, 0]], [traj_pts[k, 1]])
+            traj_dot_3d.set_3d_properties([traj_pts[k, 2]])
+            traj_top.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
+            traj_side.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 2])
             seg = min(int(k / (n_traj / len(seg_times))), len(seg_times) - 1)
-            title.set_text(f"Phase 1: Min-Snap Generation — segment {seg + 1}/{len(seg_times)}")
+            title.set_text(f"Phase 1: Min-Snap — segment {seg + 1}/{len(seg_times)}")
         else:
-            traj_dot.set_data([], [])
-            traj_dot.set_3d_properties([])
+            traj_dot_3d.set_data([], [])
+            traj_dot_3d.set_3d_properties([])
             fi = f - n_tf
             k = fly_frames[min(fi, len(fly_frames) - 1)]
-            fly_trail.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
-            fly_trail.set_3d_properties(flight_pos[:k, 2])
-            fly2d.set_data(flight_pos[:k, 0], flight_pos[:k, 1])
-            R = Quadrotor.rotation_matrix(*flight_states[k, 3:6])
-            vehicle_arts.extend(draw_quadrotor_3d(ax3d, flight_pos[k], R, size=0.3))
-            title.set_text("Phase 2: Quadrotor Flying Trajectory")
+            viz.update_trail(fly_trail, flight_pos, k)
+            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
+            title.set_text("Phase 2: Quadrotor Flying Min-Snap Trajectory")
 
     anim.animate(update, total)
     anim.save()
