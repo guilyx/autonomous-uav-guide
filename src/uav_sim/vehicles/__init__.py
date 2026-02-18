@@ -2,5 +2,6 @@
 """Vehicle models: multirotor, VTOL, fixed-wing."""
 
 from uav_sim.vehicles.base import UAVBase, UAVParams
+from uav_sim.vehicles.presets import VehiclePreset, create_quadrotor, get_params
 
-__all__ = ["UAVBase", "UAVParams"]
+__all__ = ["UAVBase", "UAVParams", "VehiclePreset", "create_quadrotor", "get_params"]
