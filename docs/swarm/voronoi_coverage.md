@@ -17,15 +17,15 @@ J. Cortes, S. Martinez, T. Karatas, F. Bullo, "Coverage Control for Mobile Sensi
 ## Simulation
 
 ```bash
-uv run python simulations/voronoi_coverage/run.py
+uv run python simulations/swarm/voronoi_coverage/run.py
 ```
 
-![Voronoi Coverage](../../simulations/voronoi_coverage/voronoi_coverage.gif)
+![Voronoi Coverage](../../simulations/swarm/voronoi_coverage/voronoi_coverage.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.swarm.coverage import CoverageController
+from uav_sim.swarm.coverage import CoverageController
 ctrl = CoverageController(bounds=np.array([[0,10],[0,10]]))
 forces = ctrl.compute_forces(positions_2d)
 ```

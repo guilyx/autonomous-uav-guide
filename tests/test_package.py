@@ -3,6 +3,6 @@
 
 
 def test_import():
-    import quadrotor_sim
+    import uav_sim
 
-    assert quadrotor_sim.__version__ == "0.1.0"
+    assert uav_sim.__version__ == "0.2.0"

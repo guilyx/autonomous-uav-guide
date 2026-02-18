@@ -15,15 +15,15 @@ M. A. Lewis, K.-H. Tan, "High Precision Formation Control of Mobile Robots Using
 ## Simulation
 
 ```bash
-uv run python simulations/virtual_structure/run.py
+uv run python simulations/swarm/virtual_structure/run.py
 ```
 
-![Virtual Structure](../../simulations/virtual_structure/virtual_structure.gif)
+![Virtual Structure](../../simulations/swarm/virtual_structure/virtual_structure.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.swarm.virtual_structure import VirtualStructure
+from uav_sim.swarm.virtual_structure import VirtualStructure
 ctrl = VirtualStructure(body_offsets=offsets, kp=3.0, kd=2.0)
 forces = ctrl.compute_forces(positions, velocities, body_pos, body_yaw)
 ```

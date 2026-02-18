@@ -4,9 +4,11 @@
 import numpy as np
 import pytest
 
-from quadrotor_sim.models.quadrotor import Quadrotor
-from quadrotor_sim.tracking.feedback_linearisation import FeedbackLinearisationTracker
-from quadrotor_sim.tracking.mppi import MPPITracker
+from uav_sim.trajectory_tracking.feedback_linearisation import (
+    FeedbackLinearisationTracker,
+)
+from uav_sim.trajectory_tracking.mppi import MPPITracker
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
 # ---------------------------------------------------------------------------
 # Feedback linearisation
@@ -80,9 +82,7 @@ class TestMPPI:
             cost_fn=_simple_cost,
             dt=0.1,
         )
-        u = mppi.compute(
-            np.array([0, 0, 0, 0.0]), reference=np.array([1, 1, 0, 0.0]), seed=42
-        )
+        u = mppi.compute(np.array([0, 0, 0, 0.0]), reference=np.array([1, 1, 0, 0.0]), seed=42)
         assert u.shape == (2,)
 
     def test_drives_towards_target(self):
