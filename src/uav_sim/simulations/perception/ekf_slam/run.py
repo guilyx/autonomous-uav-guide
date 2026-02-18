@@ -77,10 +77,10 @@ def main() -> None:
     )[:_N_LM]
     lm_z = np.full(_N_LM, 5.0)
 
-    # Full circle + extra overlap for maximum landmark coverage
+    # Two+ full orbits for slow, exploratory SLAM convergence
     radius = 10.0
-    n_wp = 80
-    angles = np.linspace(0, 2.2 * np.pi, n_wp)
+    n_wp = 160
+    angles = np.linspace(0, 4.5 * np.pi, n_wp)
     path_3d = np.column_stack(
         [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
     )
@@ -90,7 +90,7 @@ def main() -> None:
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=80.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=160.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
     # ── EKF-SLAM at reduced rate for efficiency ────────────────────────
@@ -242,7 +242,7 @@ def main() -> None:
     ax_lm.tick_params(labelsize=5, colors="seagreen")
     (lm_line,) = ax_lm.plot([], [], "seagreen", lw=0.7)
 
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 400)
     frames = list(range(0, n_steps, skip))
     n_frames_anim = len(frames)
 

@@ -40,10 +40,10 @@ CRUISE_ALT = 12.0
 GRID_RES = 0.5
 
 
-def _lawnmower_path(size: float, alt: float, n_rows: int = 5) -> np.ndarray:
+def _lawnmower_path(size: float, alt: float, n_rows: int = 7) -> np.ndarray:
     """Lawnmower exploration with rounded transitions between rows."""
     margin = 3.0
-    xs = np.linspace(margin, size - margin, 30)
+    xs = np.linspace(margin, size - margin, 40)
     ys = np.linspace(margin, size - margin, n_rows)
     pts: list[np.ndarray] = []
     for i, y in enumerate(ys):
@@ -70,7 +70,7 @@ def main() -> None:
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=120.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=180.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     n_steps = len(flight_states)
 
@@ -80,7 +80,7 @@ def main() -> None:
     l_occ = 0.85
     l_free = -0.4
 
-    scan_every = max(1, n_steps // 150)
+    scan_every = max(1, n_steps // 300)
     scan_indices = list(range(0, n_steps, scan_every))
     n_frames = len(scan_indices)
 

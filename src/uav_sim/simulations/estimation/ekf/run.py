@@ -34,8 +34,8 @@ def main() -> None:
     world, buildings = default_world()
 
     cx, cy, radius = 15.0, 15.0, 8.0
-    n_wp = 60
-    angles = np.linspace(0, 1.8 * np.pi, n_wp)
+    n_wp = 100
+    angles = np.linspace(0, 3.5 * np.pi, n_wp)
     path_3d = np.column_stack(
         [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
     )
@@ -45,7 +45,7 @@ def main() -> None:
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=60.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=120.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     n_steps = len(flight_states)
     dt = 0.005
