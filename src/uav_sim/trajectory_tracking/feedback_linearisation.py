@@ -33,17 +33,17 @@ class FeedbackLinearisationTracker:
         self,
         kp: float | NDArray[np.floating] = 4.0,
         kd: float | NDArray[np.floating] = 2.8,
-        mass: float = 0.027,
+        mass: float = 1.5,
         gravity: float = 9.81,
         inertia: NDArray[np.floating] | None = None,
-        max_acc: float = 3.0,
+        max_acc: float = 5.0,
     ) -> None:
         self.kp = np.atleast_1d(np.asarray(kp, dtype=np.float64))
         self.kd = np.atleast_1d(np.asarray(kd, dtype=np.float64))
         self.mass = mass
         self.gravity = gravity
         self.max_acc = max_acc
-        self.inertia = inertia if inertia is not None else np.diag([1.66e-5, 1.66e-5, 2.96e-5])
+        self.inertia = inertia if inertia is not None else np.diag([0.0082, 0.0082, 0.0148])
 
     def compute(
         self,

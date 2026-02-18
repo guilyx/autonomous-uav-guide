@@ -35,7 +35,7 @@ class LQRPathTracker:
         self,
         lookahead: float = 2.0,
         speed: float = 1.5,
-        mass: float = 0.027,
+        mass: float = 1.5,
         gravity: float = 9.81,
         inertia: NDArray[np.floating] | None = None,
     ) -> None:

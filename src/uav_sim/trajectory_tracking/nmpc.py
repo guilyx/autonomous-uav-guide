@@ -36,19 +36,19 @@ class NMPCTracker:
         self,
         horizon: int = 8,
         dt: float = 0.02,
-        mass: float = 0.027,
+        mass: float = 1.5,
         gravity: float = 9.81,
         inertia: NDArray[np.floating] | None = None,
         Q: NDArray[np.floating] | None = None,
         R: NDArray[np.floating] | None = None,
-        max_thrust_ratio: float = 2.5,
-        max_torque: float = 1e-4,
+        max_thrust_ratio: float = 2.0,
+        max_torque: float = 2.0,
     ) -> None:
         self.horizon = horizon
         self.dt = dt
         self.mass = mass
         self.gravity = gravity
-        self.inertia = inertia if inertia is not None else np.diag([1.66e-5, 1.66e-5, 2.96e-5])
+        self.inertia = inertia if inertia is not None else np.diag([0.0082, 0.0082, 0.0148])
         self.inv_inertia = np.linalg.inv(self.inertia)
 
         self.Q = (
@@ -59,7 +59,7 @@ class NMPCTracker:
         self.R = (
             np.diag(R)
             if R is not None and R.ndim == 1
-            else (R if R is not None else np.diag([1.0, 1000, 1000, 1000]))
+            else (R if R is not None else np.diag([0.01, 10, 10, 10]))
         )
 
         self.hover_wrench = np.array([mass * gravity, 0.0, 0.0, 0.0])

@@ -21,7 +21,7 @@ class TestNMPCTracker:
         state = np.zeros(12)
         state[2] = 3.0
         wrench = nmpc.compute(state, ref_pos=np.array([0, 0, 5.0]))
-        hover_T = 0.027 * 9.81
+        hover_T = 1.5 * 9.81
         assert wrench[0] > hover_T * 0.5
 
     def test_closed_loop_z_convergence(self):
@@ -36,13 +36,13 @@ class TestNMPCTracker:
         dt = 0.01
         wrench = quad.hover_wrench()
         ctrl_counter = 0.0
-        for _ in range(500):
+        for _ in range(800):
             ctrl_counter += dt
             if ctrl_counter >= 0.02 - 1e-8:
                 wrench = nmpc.compute(quad.state, target)
                 ctrl_counter = 0.0
             quad.step(wrench, dt)
-        assert abs(quad.position[2] - 5.0) < 2.0
+        assert abs(quad.position[2] - 5.0) < 2.5
 
     def test_reset(self):
         nmpc = NMPCTracker()

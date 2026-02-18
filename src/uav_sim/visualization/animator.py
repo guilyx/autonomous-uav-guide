@@ -130,8 +130,8 @@ class SimAnimator:
         ax: Axes3D,
         position: NDArray[np.floating],
         R: NDArray[np.floating],
-        arm_length: float = 0.0397,
-        scale: float = 10.0,
+        arm_length: float = 0.175,
+        scale: float = 5.0,
     ) -> None:
         """Draw a quadrotor frame at the given pose."""
         L = arm_length * scale

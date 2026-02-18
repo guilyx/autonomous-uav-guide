@@ -34,7 +34,7 @@ class MPCController:
         self,
         horizon: int = 10,
         dt: float = 0.02,
-        mass: float = 0.027,
+        mass: float = 1.5,
         gravity: float = 9.81,
         inertia: NDArray[np.floating] | None = None,
         Q: NDArray[np.floating] | None = None,
@@ -44,7 +44,7 @@ class MPCController:
         self.dt = dt
         self.mass = mass
         self.gravity = gravity
-        inertia = inertia if inertia is not None else np.diag([1.66e-5, 1.66e-5, 2.96e-5])
+        inertia = inertia if inertia is not None else np.diag([0.0082, 0.0082, 0.0148])
 
         A_c, B_c = self._linearise(mass, gravity, inertia)
         # Euler discretisation
@@ -52,7 +52,7 @@ class MPCController:
         self.B_d = B_c * dt
 
         self.Q = Q if Q is not None else np.diag([15, 15, 25, 1, 1, 1, 2, 2, 2, 0.1, 0.1, 0.1])
-        self.R = R if R is not None else np.diag([0.5, 800, 800, 800])
+        self.R = R if R is not None else np.diag([0.01, 5.0, 5.0, 5.0])
 
         # Terminal cost from DARE
         P = solve_continuous_are(A_c, B_c, self.Q, self.R)

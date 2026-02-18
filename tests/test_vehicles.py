@@ -32,6 +32,9 @@ class TestQuadrotor:
         q.reset(position=np.array([0.0, 0.0, 1.0]))
         hover_thrust = q.params.mass * q.params.gravity
         u = np.array([hover_thrust, 0, 0, 0])
+        hover_f = hover_thrust / 4.0
+        for m in q.motors:
+            m.reset(m.thrust_to_omega(hover_f))
         z0 = q.state[2]
         for _ in range(100):
             q.step(u, 0.01)

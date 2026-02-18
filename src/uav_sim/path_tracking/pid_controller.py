@@ -77,21 +77,21 @@ class CascadedPIDConfig:
     """
 
     pos_x: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=6.0, ki=0.5, kd=4.0, output_limit=3.0)
+        default_factory=lambda: PIDGains(kp=2.0, ki=0.1, kd=1.5, output_limit=5.0)
     )
     pos_y: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=6.0, ki=0.5, kd=4.0, output_limit=3.0)
+        default_factory=lambda: PIDGains(kp=2.0, ki=0.1, kd=1.5, output_limit=5.0)
     )
     pos_z: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=10.0, ki=3.0, kd=5.0, output_limit=6.0)
+        default_factory=lambda: PIDGains(kp=4.0, ki=0.3, kd=2.5, output_limit=8.0)
     )
-    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=0.004, ki=0.0, kd=0.0009))
-    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=0.004, ki=0.0, kd=0.0009))
-    att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=0.006, ki=0.001, kd=0.001))
-    mass: float = 0.027
+    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=2.0))
+    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=2.0))
+    att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=4.0, ki=0.1, kd=1.0))
+    mass: float = 1.5
     gravity: float = 9.81
-    max_tilt: float = 0.26  # ~15°, prevents extreme manoeuvres
-    max_thrust_ratio: float = 2.5  # max thrust as multiple of hover thrust
+    max_tilt: float = 0.52  # ~30°, allows responsive lateral motion
+    max_thrust_ratio: float = 2.0  # max thrust as multiple of hover thrust
 
 
 class CascadedPIDController:

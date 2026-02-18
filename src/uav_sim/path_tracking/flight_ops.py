@@ -18,7 +18,7 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
-_MAX_CMD_DIST = 0.3  # metres — maximum effective distance to the target sent to PID
+_MAX_CMD_DIST = 2.0  # metres — maximum effective distance to the target sent to PID
 
 
 def init_hover(quad: Quadrotor) -> None:

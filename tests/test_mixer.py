@@ -9,12 +9,12 @@ from uav_sim.vehicles.components.mixer import Mixer
 
 @pytest.fixture
 def x_mixer() -> Mixer:
-    return Mixer(arm_length=0.0397, frame="x")
+    return Mixer(arm_length=0.175, frame="x")
 
 
 @pytest.fixture
 def plus_mixer() -> Mixer:
-    return Mixer(arm_length=0.0397, frame="+")
+    return Mixer(arm_length=0.175, frame="+")
 
 
 class TestMixerInit:
@@ -31,7 +31,7 @@ class TestMixerInit:
 
 class TestWrenchToForces:
     def test_hover_produces_equal_forces(self, x_mixer: Mixer):
-        hover_thrust = 0.027 * 9.81  # ~0.265 N
+        hover_thrust = 1.5 * 9.81  # ~14.715 N
         wrench = np.array([hover_thrust, 0.0, 0.0, 0.0])
         forces = x_mixer.wrench_to_forces(wrench)
         expected = hover_thrust / 4.0
