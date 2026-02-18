@@ -3,12 +3,12 @@
 
 import numpy as np
 
-from quadrotor_sim.swarm.consensus_formation import ConsensusFormation
-from quadrotor_sim.swarm.coverage import CoverageController
-from quadrotor_sim.swarm.leader_follower import LeaderFollower
-from quadrotor_sim.swarm.potential_swarm import PotentialSwarm
-from quadrotor_sim.swarm.reynolds_flocking import ReynoldsFlocking
-from quadrotor_sim.swarm.virtual_structure import VirtualStructure
+from uav_sim.swarm.consensus_formation import ConsensusFormation
+from uav_sim.swarm.coverage import CoverageController
+from uav_sim.swarm.leader_follower import LeaderFollower
+from uav_sim.swarm.potential_swarm import PotentialSwarm
+from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
+from uav_sim.swarm.virtual_structure import VirtualStructure
 
 
 class TestReynoldsFlocking:
@@ -92,9 +92,7 @@ class TestLeaderFollower:
     def test_output_shape(self):
         offsets = np.array([[2, 0, 0], [-2, 0, 0], [0, 2, 0.0]])
         lf = LeaderFollower(offsets)
-        forces = lf.compute_forces(
-            np.zeros(3), np.zeros(3), np.zeros((3, 3)), np.zeros((3, 3))
-        )
+        forces = lf.compute_forces(np.zeros(3), np.zeros(3), np.zeros((3, 3)), np.zeros((3, 3)))
         assert forces.shape == (3, 3)
 
     def test_follower_attracted_to_offset(self):
@@ -102,9 +100,7 @@ class TestLeaderFollower:
         lf = LeaderFollower(offsets, kp=5.0)
         leader_pos = np.array([0, 0, 0.0])
         follower_pos = np.array([[0, 0, 0.0]])
-        forces = lf.compute_forces(
-            leader_pos, np.zeros(3), follower_pos, np.zeros((1, 3))
-        )
+        forces = lf.compute_forces(leader_pos, np.zeros(3), follower_pos, np.zeros((1, 3)))
         # Follower at origin, desired at [2,0,0] → force in +x.
         assert forces[0, 0] > 0
 

@@ -15,15 +15,15 @@ J. P. Desai, J. P. Ostrowski, V. Kumar, "Modeling and Control of Formations of N
 ## Simulation
 
 ```bash
-uv run python simulations/leader_follower/run.py
+uv run python simulations/swarm/leader_follower/run.py
 ```
 
-![Leader-Follower](../../simulations/leader_follower/leader_follower.gif)
+![Leader-Follower](../../simulations/swarm/leader_follower/leader_follower.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.swarm.leader_follower import LeaderFollower
+from uav_sim.swarm.leader_follower import LeaderFollower
 ctrl = LeaderFollower(offsets=offsets, kp=4.0, kd=2.0)
 forces = ctrl.compute_forces(leader_pos, leader_vel, follower_pos, follower_vel)
 ```

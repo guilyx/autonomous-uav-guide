@@ -15,15 +15,15 @@ W. M. Spears, D. F. Spears, J. C. Hamann, R. Heil, "Distributed, Physics-Based C
 ## Simulation
 
 ```bash
-uv run python simulations/potential_swarm/run.py
+uv run python simulations/swarm/potential_swarm/run.py
 ```
 
-![Potential Swarm](../../simulations/potential_swarm/potential_swarm.gif)
+![Potential Swarm](../../simulations/swarm/potential_swarm/potential_swarm.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.swarm.potential_swarm import PotentialSwarm
+from uav_sim.swarm.potential_swarm import PotentialSwarm
 ctrl = PotentialSwarm(d_des=2.0)
 forces = ctrl.compute_forces(positions, goal=goal)
 ```

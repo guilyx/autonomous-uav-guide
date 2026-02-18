@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from quadrotor_sim.models.quadrotor import Quadrotor
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
 
 @pytest.fixture

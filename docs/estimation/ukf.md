@@ -15,15 +15,15 @@ E. A. Wan, R. Van Der Merwe, "The Unscented Kalman Filter for Nonlinear Estimati
 ## Simulation
 
 ```bash
-uv run python simulations/ukf/run.py
+uv run python simulations/estimation/ukf/run.py
 ```
 
-![UKF](../../simulations/ukf/ukf.gif)
+![UKF](../../simulations/estimation/ukf/ukf.gif)
 
 ## API
 
 ```python
-from quadrotor_sim.estimation.ukf import UnscentedKalmanFilter
+from uav_sim.estimation.ukf import UnscentedKalmanFilter
 ukf = UnscentedKalmanFilter(state_dim=2, meas_dim=1, f=f, h=h)
 ukf.predict(u, dt); ukf.update(z)
 ```
