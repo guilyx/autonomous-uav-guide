@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
-"""Path smoothing demo: 3-panel visualisation of RDP + spline resampling.
+"""Path smoothing demo: RDP + spline resampling, then fly the result.
 
-Plans a raw A* path through an urban environment with obstacles, then
-demonstrates the RDP simplification and cubic-spline resampling steps
-side by side.  The drone then flies the smoothed path all the way to goal.
+Plans a raw A* path through the default environment, visualises the
+RDP simplification and cubic-spline resampling steps, then the drone
+flies the smoothed path using StateManager.
 
 Reference: D. Douglas, T. Peucker, "Algorithms for the Reduction of the
 Number of Points Required to Represent a Digitized Line or its Caricature,"
@@ -17,12 +17,11 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.control import StateManager
+from uav_sim.environment import default_world
 from uav_sim.environment.obstacles import BoxObstacle
 from uav_sim.path_planning.astar_3d import AStar3D
-from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import rdp_simplify, smooth_path_3d
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -46,11 +45,7 @@ def _build_occupancy(buildings: list[BoxObstacle], size: int, inflate: int = 1) 
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.full(3, WORLD_SIZE),
-    )
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=4, seed=77)
+    _, buildings = default_world()
 
     ws = int(WORLD_SIZE)
     grid = _build_occupancy(buildings, ws)
@@ -67,28 +62,30 @@ def main() -> None:
 
     raw_path = np.array(path_idx, dtype=float)
     rdp_path = rdp_simplify(raw_path, epsilon=1.5)
-    smooth_path = smooth_path_3d(raw_path, epsilon=1.5, min_spacing=1.0)
+    smooth = smooth_path_3d(raw_path, epsilon=1.5, min_spacing=1.0)
 
-    # Fly the smoothed path
     quad = Quadrotor()
     quad.reset(position=np.array([START[0], START[1], 0.0]))
-    ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    sm = StateManager(quad)
+    dt = 0.005
 
-    flight_states = fly_mission(
-        quad,
-        ctrl,
-        smooth_path,
-        cruise_alt=CRUISE_ALT,
-        dt=0.005,
-        pursuit=pursuit,
-        takeoff_duration=2.5,
-        landing_duration=2.5,
-        loiter_duration=0.5,
-    )
+    sm.arm()
+    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=10.0)
+
+    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    sm.offboard()
+    for _ in range(int(60.0 / dt)):
+        target = pursuit.compute_target(quad.position, smooth, velocity=quad.velocity)
+        sm.set_position_target(target)
+        sm.step(dt)
+        if pursuit.is_path_complete(quad.position, smooth):
+            break
+
+    sm.run_land(dt=dt, timeout=8.0)
+
+    flight_states = np.array(sm.states)
     flight_pos = flight_states[:, :3]
 
-    # ── Animation: 3 phases ───────────────────────────────────────────
     n_raw_show = 20
     n_rdp_show = 20
     n_smooth_show = 20
@@ -152,16 +149,16 @@ def main() -> None:
             title.set_text(f"Step 2: RDP simplified ({len(rdp_path)} points)")
         elif f < p3_end:
             sm_3d.set_alpha(1.0)
-            sm_3d.set_data(smooth_path[:, 0], smooth_path[:, 1])
-            sm_3d.set_3d_properties(smooth_path[:, 2])
+            sm_3d.set_data(smooth[:, 0], smooth[:, 1])
+            sm_3d.set_3d_properties(smooth[:, 2])
             sm_top.set_alpha(1.0)
-            sm_top.set_data(smooth_path[:, 0], smooth_path[:, 1])
+            sm_top.set_data(smooth[:, 0], smooth[:, 1])
             sm_side.set_alpha(1.0)
-            sm_side.set_data(smooth_path[:, 0], smooth_path[:, 2])
+            sm_side.set_data(smooth[:, 0], smooth[:, 2])
             rdp_3d.set_alpha(0.2)
             rdp_top.set_alpha(0.2)
             rdp_side.set_alpha(0.2)
-            title.set_text(f"Step 3: Cubic resample ({len(smooth_path)} points)")
+            title.set_text(f"Step 3: Cubic resample ({len(smooth)} points)")
         else:
             fi = f - p3_end
             k = fly_frames[min(fi, len(fly_frames) - 1)]

@@ -1,8 +1,9 @@
 # Erwin Lejeune - 2026-02-15
 """PID-controlled hover: 3-panel live simulation.
 
-Three views (3D, top-down XY, side XZ) showing a quadrotor climbing
-from ground level to a target hover point inside an urban environment.
+Three views (3D, top-down XY, side XZ) showing a quadrotor taking off
+and hovering at a target point inside an urban environment using the
+new layered control stack and state machine.
 
 Reference: L. R. G. Carrillo et al., "Quad Rotorcraft Control," Springer, 2013.
 """
@@ -14,9 +15,8 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
-from uav_sim.path_tracking.flight_ops import _limit_target
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from uav_sim.control import StateManager
+from uav_sim.environment import default_world
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.three_panel import ThreePanelViz
@@ -28,28 +28,24 @@ TARGET = np.array([15.0, 15.0, 12.0])
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.full(3, WORLD_SIZE),
-    )
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, seed=7)
+    _, buildings = default_world()
 
     quad = Quadrotor()
     quad.reset(position=np.array([2.0, 2.0, 0.0]))
-    ctrl = CascadedPIDController()
-    dt, duration = 0.005, 8.0
-    steps = int(duration / dt)
-    states = np.zeros((steps, 12))
-    times = np.zeros(steps)
-    for i in range(steps):
-        states[i] = quad.state
-        times[i] = i * dt
-        cmd = _limit_target(quad.state[:3], TARGET)
-        quad.step(ctrl.compute(quad.state, cmd, dt=dt), dt)
 
-    # ── visualisation ──────────────────────────────────────────────────
-    skip = max(1, steps // 200)
-    idx = list(range(0, steps, skip))
+    sm = StateManager(quad)
+    sm.arm()
+    sm.run_takeoff(altitude=TARGET[2], dt=0.005, timeout=10.0)
+    sm.fly_to(TARGET, dt=0.005, threshold=0.5, timeout=15.0)
+
+    for _ in range(int(3.0 / 0.005)):
+        sm.step(0.005)
+
+    states = np.array(sm.states)
+    n_total = len(states)
+
+    skip = max(1, n_total // 200)
+    idx = list(range(0, n_total, skip))
     n_frames = len(idx)
 
     viz = ThreePanelViz(title="PID Hover — Live Simulation", world_size=WORLD_SIZE)
