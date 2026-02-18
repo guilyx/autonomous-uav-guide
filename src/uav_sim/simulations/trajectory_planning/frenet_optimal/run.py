@@ -39,7 +39,7 @@ def main() -> None:
     sphere_obs = [
         (
             (b.min_corner + b.max_corner) / 2,
-            float(np.linalg.norm(b.max_corner - b.min_corner)) / 3,
+            float(np.linalg.norm((b.max_corner[:2] - b.min_corner[:2]) / 2)) * 1.1,
         )
         for b in buildings
     ]
