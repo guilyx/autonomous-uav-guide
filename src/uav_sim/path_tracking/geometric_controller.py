@@ -22,19 +22,25 @@ def _vee(M: NDArray[np.floating]) -> NDArray[np.floating]:
 
 @dataclass
 class GeometricControllerConfig:
-    """Gains for the geometric SE(3) controller."""
+    """Gains for the geometric SE(3) controller.
 
-    kx: float = 4.0  # position gain
-    kv: float = 2.8  # velocity gain
-    kR: float = 8.0  # attitude gain
-    kw: float = 1.5  # angular velocity gain
+    Attitude gains (kR, kw) are scaled for the Crazyflie-class inertia
+    (~1.66e-5 kg⋅m²).  Position output is clamped via ``max_acc`` to
+    prevent extreme attitude commands.
+    """
+
+    kx: float = 4.0
+    kv: float = 2.8
+    kR: float = 0.005
+    kw: float = 0.002
     mass: float = 0.027
     gravity: float = 9.81
+    max_acc: float = 3.0
     inertia: NDArray[np.floating] | None = None
 
     def __post_init__(self):
         if self.inertia is None:
-            self.inertia = np.diag([1.4e-5, 1.4e-5, 2.17e-5])
+            self.inertia = np.diag([1.66e-5, 1.66e-5, 2.96e-5])
 
 
 class GeometricController:
@@ -88,11 +94,18 @@ class GeometricController:
         # --- Position control ---
         e_pos = pos - target_pos
         e_vel = vel - target_vel
-        F_des = -c.kx * e_pos - c.kv * e_vel + c.mass * c.gravity * e3 + c.mass * target_acc
+        a_cmd = -c.kx * e_pos - c.kv * e_vel + c.gravity * e3 + target_acc
+
+        # Clamp acceleration to avoid extreme attitudes
+        a_horiz = np.linalg.norm(a_cmd[:2])
+        if a_horiz > c.max_acc:
+            a_cmd[:2] *= c.max_acc / a_horiz
+
+        F_des = c.mass * a_cmd
 
         # Thrust magnitude.
         T = float(F_des @ R @ e3)
-        T = max(0.0, T)
+        T = np.clip(T, 0.0, c.mass * c.gravity * 2.5)
 
         # --- Desired rotation from force vector ---
         b3d = F_des / (np.linalg.norm(F_des) + 1e-6)

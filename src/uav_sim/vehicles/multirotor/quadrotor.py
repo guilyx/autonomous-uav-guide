@@ -22,14 +22,14 @@ class QuadrotorParams:
     """Physical parameters of a quadrotor (Crazyflie-like defaults)."""
 
     mass: float = 0.027
-    arm_length: float = 0.0397
+    arm_length: float = 0.046
     inertia: NDArray[np.floating] = field(
-        default_factory=lambda: np.diag([1.4e-5, 1.4e-5, 2.17e-5])
+        default_factory=lambda: np.diag([1.66e-5, 1.66e-5, 2.96e-5])
     )
-    k_thrust: float = 2.98e-6
-    k_torque: float = 1.14e-7
+    k_thrust: float = 2.55e-8
+    k_torque: float = 7.94e-10
     motor_tau: float = 0.02
-    omega_max: float = 2199.0
+    omega_max: float = 2500.0
     drag_coeff: float = 0.01
     gravity: float = 9.81
     frame: str = "x"
@@ -239,6 +239,11 @@ class Quadrotor:
 
         # Normalise angles to [-pi, pi].
         self.state[3:6] = (self.state[3:6] + np.pi) % (2 * np.pi) - np.pi
+
+        # Prevent sinking below ground plane.
+        if self.state[2] < 0.0:
+            self.state[2] = 0.0
+            self.state[8] = max(self.state[8], 0.0)
 
         self.time += dt
         return self.state.copy()

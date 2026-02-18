@@ -1,9 +1,12 @@
-# Erwin Lejeune - 2026-02-17
+# Erwin Lejeune - 2026-02-18
 """EKF-SLAM: quadrotor maps landmarks while localising itself.
 
-The drone flies a circular pattern via pure pursuit, observing point-landmarks
-with a range-bearing sensor.  The EKF jointly estimates the drone's 2D pose
-and all landmark positions, showing covariance ellipses for both.
+Three panels (3D, top-down, side) + insets:
+  - 3D scene with quadrotor, true landmarks, estimated landmarks.
+  - Top-down with covariance ellipses, FOV wedge, range-bearing lines.
+  - Insets: position error and landmark discovery count.
+
+The landmarks are progressively discovered as the drone orbits the world.
 
 Reference: S. Thrun et al., "Probabilistic Robotics," MIT Press, 2005, Ch. 10.
 """
@@ -13,35 +16,34 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Ellipse
+from matplotlib.patches import Ellipse, Wedge
 
-from uav_sim.path_tracking.flight_ops import fly_path
+from uav_sim.path_tracking.flight_ops import fly_path, init_hover
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
-from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import (
-    clear_vehicle_artists,
-    draw_quadrotor_2d,
-)
+from uav_sim.visualization import SimAnimator, ThreePanelViz
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists
 
 matplotlib.use("Agg")
 
-# ── EKF-SLAM core ─────────────────────────────────────────────────────────
 _N_LM = 8
-_STATE_DIM = 3  # robot: [x, y, yaw]
-_LM_DIM = 2  # each landmark: [lx, ly]
+_STATE_DIM = 3
+_LM_DIM = 2
 
 RANGE_STD = 0.3
 BEARING_STD = 0.1
-ODOM_V_STD = 0.2
-ODOM_W_STD = 0.05
+ODOM_V_STD = 0.15
+ODOM_W_STD = 0.04
+SENSOR_MAX_RANGE = 18.0
+SENSOR_FOV = np.radians(270.0)
+
+WORLD_SIZE = 30.0
+CRUISE_ALT = 12.0
 
 
 def _motion_model(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
-    """Simple constant-velocity unicycle model for the robot state."""
     v, w = u
     yaw = x[2]
     return x + np.array([v * np.cos(yaw) * dt, v * np.sin(yaw) * dt, w * dt])
@@ -59,51 +61,50 @@ def _range_bearing(rx: float, ry: float, ryaw: float, lx: float, ly: float):
 def main() -> None:
     rng = np.random.default_rng(42)
 
-    # True landmark positions
+    cx, cy = 15.0, 15.0
     landmarks = np.array(
         [
-            [4, 4],
-            [-4, 4],
-            [-4, -4],
-            [4, -4],
-            [6, 0],
-            [0, 6],
-            [-6, 0],
-            [0, -6],
+            [cx + 8, cy + 8],
+            [cx - 8, cy + 8],
+            [cx - 8, cy - 8],
+            [cx + 8, cy - 8],
+            [cx + 12, cy],
+            [cx, cy + 12],
+            [cx - 12, cy],
+            [cx, cy - 12],
         ],
         dtype=float,
     )[:_N_LM]
+    lm_z = np.full(_N_LM, 5.0)
 
-    # ── Generate flight path (circle at altitude 2) ───────────────────────
+    # Full circle + extra overlap for maximum landmark coverage
+    radius = 10.0
     n_wp = 80
-    angles = np.linspace(0, 2 * np.pi, n_wp, endpoint=False)
-    radius = 5.0
-    cruise_alt = 2.0
+    angles = np.linspace(0, 2.2 * np.pi, n_wp)
     path_3d = np.column_stack(
-        [
-            radius * np.cos(angles),
-            radius * np.sin(angles),
-            np.full(n_wp, cruise_alt),
-        ]
+        [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
     )
 
     quad = Quadrotor()
-    quad.reset(position=np.array([radius, 0.0, cruise_alt]))
+    quad.reset(position=np.array([cx + radius, cy, CRUISE_ALT]))
+    init_hover(quad)
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=1.5, waypoint_threshold=0.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(
-        quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=25.0, states=states_list
-    )
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=80.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
-    # ── Run EKF-SLAM over the recorded trajectory ─────────────────────────
-    n_steps = len(flight_states)
-    dt = 0.005
+    # ── EKF-SLAM at reduced rate for efficiency ────────────────────────
+    n_raw = len(flight_states)
+    slam_dt = 0.02
+    slam_skip = max(1, int(slam_dt / 0.005))
+    slam_states = flight_states[::slam_skip]
+    n_steps = len(slam_states)
+
     full_dim = _STATE_DIM + _N_LM * _LM_DIM
     mu = np.zeros(full_dim)
-    mu[:2] = flight_states[0, :2]
-    mu[2] = flight_states[0, 5]
+    mu[:2] = slam_states[0, :2]
+    mu[2] = slam_states[0, 5]
     sigma = np.eye(full_dim) * 100.0
     sigma[:3, :3] = np.diag([0.01, 0.01, 0.01])
     seen = np.zeros(_N_LM, dtype=bool)
@@ -112,36 +113,40 @@ def main() -> None:
     robot_true_hist = np.zeros((n_steps, 2))
     lm_est_hist = np.zeros((n_steps, _N_LM, 2))
     lm_cov_hist = np.zeros((n_steps, _N_LM, 2, 2))
+    seen_hist = np.zeros((n_steps, _N_LM), dtype=bool)
+    n_seen_hist = np.zeros(n_steps, dtype=int)
+    pos_err_hist = np.zeros(n_steps)
+    obs_record: list[list[int]] = []
 
     for step in range(n_steps):
-        s = flight_states[step]
+        s = slam_states[step]
         true_xy = s[:2]
         true_yaw = s[5]
         robot_true_hist[step] = true_xy
 
-        # Predict (use velocity from state)
         if step > 0:
             v = float(np.linalg.norm(s[6:8]))
             w = float(s[11]) if len(s) > 11 else 0.0
             u = np.array([v + rng.normal(0, ODOM_V_STD), w + rng.normal(0, ODOM_W_STD)])
-            mu[:3] = _motion_model(mu[:3], u, dt)
+            mu[:3] = _motion_model(mu[:3], u, slam_dt)
             F = np.eye(full_dim)
             yaw = mu[2]
-            F[0, 2] = -u[0] * np.sin(yaw) * dt
-            F[1, 2] = u[0] * np.cos(yaw) * dt
+            F[0, 2] = -u[0] * np.sin(yaw) * slam_dt
+            F[1, 2] = u[0] * np.cos(yaw) * slam_dt
             Q = np.zeros((full_dim, full_dim))
             Q[:3, :3] = np.diag(
-                [ODOM_V_STD**2 * dt, ODOM_V_STD**2 * dt, ODOM_W_STD**2 * dt]
+                [ODOM_V_STD**2 * slam_dt, ODOM_V_STD**2 * slam_dt, ODOM_W_STD**2 * slam_dt]
             )
             sigma = F @ sigma @ F.T + Q
 
-        # Update with landmark observations
+        observed: list[int] = []
         for j in range(_N_LM):
             r_true, b_true = _range_bearing(
                 true_xy[0], true_xy[1], true_yaw, landmarks[j, 0], landmarks[j, 1]
             )
-            if r_true > 8.0:
+            if r_true > SENSOR_MAX_RANGE or abs(b_true) > SENSOR_FOV / 2:
                 continue
+            observed.append(j)
             r_meas = r_true + rng.normal(0, RANGE_STD)
             b_meas = b_true + rng.normal(0, BEARING_STD)
 
@@ -155,9 +160,6 @@ def main() -> None:
             dy = mu[idx + 1] - mu[1]
             q = dx**2 + dy**2
             sq = max(np.sqrt(q), 1e-6)
-            r_pred = sq
-            b_pred = np.arctan2(dy, dx) - mu[2]
-            b_pred = (b_pred + np.pi) % (2 * np.pi) - np.pi
 
             H = np.zeros((2, full_dim))
             H[0, 0] = -dx / sq
@@ -173,57 +175,87 @@ def main() -> None:
             R = np.diag([RANGE_STD**2, BEARING_STD**2])
             S = H @ sigma @ H.T + R
             K = sigma @ H.T @ np.linalg.inv(S)
+            r_pred = sq
+            b_pred = np.arctan2(dy, dx) - mu[2]
+            b_pred = (b_pred + np.pi) % (2 * np.pi) - np.pi
             innov = np.array([r_meas - r_pred, b_meas - b_pred])
             innov[1] = (innov[1] + np.pi) % (2 * np.pi) - np.pi
             mu = mu + K @ innov
             sigma = (np.eye(full_dim) - K @ H) @ sigma
 
+        obs_record.append(observed)
         robot_est_hist[step] = mu[:3]
         for j in range(_N_LM):
             idx = _STATE_DIM + j * _LM_DIM
             lm_est_hist[step, j] = mu[idx : idx + 2]
             lm_cov_hist[step, j] = sigma[idx : idx + 2, idx : idx + 2]
+        seen_hist[step] = seen.copy()
+        n_seen_hist[step] = int(np.sum(seen))
+        pos_err_hist[step] = np.linalg.norm(true_xy - mu[:2])
 
-    # ── Animation ─────────────────────────────────────────────────────────
-    skip = max(1, n_steps // 200)
-    frames = list(range(0, n_steps, skip))
-    n_frames = len(frames)
+    # ── 3-Panel viz + insets ──────────────────────────────────────────
+    viz = ThreePanelViz(
+        title="EKF-SLAM — Landmark Mapping", world_size=WORLD_SIZE, figsize=(18, 9)
+    )
 
-    anim = SimAnimator("ekf_slam", out_dir=Path(__file__).parent)
-    fig = plt.figure(figsize=(10, 8))
-    anim._fig = fig
-    ax = fig.add_subplot(111)
-    ax.set_aspect("equal")
-    ax.set_xlim(-9, 9)
-    ax.set_ylim(-9, 9)
-    ax.set_xlabel("X [m]")
-    ax.set_ylabel("Y [m]")
-    ax.grid(True, alpha=0.2)
-    fig.suptitle("EKF-SLAM — Landmark Mapping", fontsize=13)
-
-    ax.scatter(
+    viz.ax3d.scatter(
         landmarks[:, 0],
         landmarks[:, 1],
+        lm_z,
         c="red",
-        s=100,
+        s=80,
         marker="*",
         zorder=10,
-        label="True Landmarks",
+        label="True LMs",
     )
-    (true_trail,) = ax.plot([], [], "k-", lw=1.0, alpha=0.5, label="True path")
-    (est_trail,) = ax.plot([], [], "b-", lw=1.0, alpha=0.8, label="EKF estimate")
+    viz.ax3d.legend(fontsize=6, loc="upper left")
+    viz.ax_top.scatter(
+        landmarks[:, 0], landmarks[:, 1], c="red", s=80, marker="*", zorder=10, label="True LMs"
+    )
+    lm_scats = viz.ax_top.scatter([], [], c="blue", s=40, marker="D", zorder=8, label="Est. LMs")
 
-    lm_scats = ax.scatter(
-        [], [], c="blue", s=60, marker="D", zorder=8, label="Est. LMs"
-    )
     ellipses: list[Ellipse] = []
     for _ in range(_N_LM):
         e = Ellipse((0, 0), 0, 0, fill=False, color="blue", lw=0.8, ls="--", alpha=0.5)
-        ax.add_patch(e)
+        viz.ax_top.add_patch(e)
+        e.set_visible(False)
         ellipses.append(e)
+    viz.ax_top.legend(fontsize=6, loc="upper left")
 
-    ax.legend(fontsize=7, loc="upper left")
-    vehicle_arts: list = []
+    anim = SimAnimator("ekf_slam", out_dir=Path(__file__).parent)
+    anim._fig = viz.fig
+
+    trail_true = viz.create_trail_artists(color="black")
+    trail_est = viz.create_trail_artists(color="dodgerblue")
+
+    times = np.arange(n_steps) * slam_dt
+    ax_err = viz.fig.add_axes([0.60, 0.03, 0.36, 0.12])
+    ax_err.set_xlim(0, times[-1])
+    ax_err.set_ylim(0, max(2.0, pos_err_hist.max() * 1.2))
+    ax_err.set_xlabel("Time [s]", fontsize=6)
+    ax_err.set_ylabel("Pos err [m]", fontsize=6)
+    ax_err.tick_params(labelsize=5)
+    ax_err.grid(True, alpha=0.2)
+    (err_line,) = ax_err.plot([], [], "r-", lw=0.7)
+    ax_lm = ax_err.twinx()
+    ax_lm.set_ylim(0, _N_LM + 1)
+    ax_lm.set_ylabel("# LMs", fontsize=6, color="seagreen")
+    ax_lm.tick_params(labelsize=5, colors="seagreen")
+    (lm_line,) = ax_lm.plot([], [], "seagreen", lw=0.7)
+
+    skip = max(1, n_steps // 200)
+    frames = list(range(0, n_steps, skip))
+    n_frames_anim = len(frames)
+
+    fov_arts: list = []
+    obs_arts: list = []
+    lm_3d_arts: list = []
+
+    true_3d = np.column_stack([robot_true_hist, np.full(n_steps, CRUISE_ALT)])
+    est_3d = np.column_stack([robot_est_hist[:, :2], np.full(n_steps, CRUISE_ALT)])
+
+    # Map from slam step to flight_states index for euler angles
+    slam_to_flight = [min(i * slam_skip, n_raw - 1) for i in range(n_steps)]
 
     def _update_ellipse(patch, mean, cov, n_std=2.0):
         vals, vecs = np.linalg.eigh(cov)
@@ -234,27 +266,71 @@ def main() -> None:
         patch.height = 2 * n_std * np.sqrt(vals[1])
         patch.angle = angle
 
-    def update(f):
+    def update(f: int) -> None:
         k = frames[f]
-        true_trail.set_data(robot_true_hist[:k, 0], robot_true_hist[:k, 1])
-        est_trail.set_data(robot_est_hist[:k, 0], robot_est_hist[:k, 1])
+        fi = slam_to_flight[k]
 
+        viz.update_trail(trail_true, true_3d, k)
+        viz.update_trail(trail_est, est_3d, k)
+        viz.update_vehicle(true_3d[k], flight_states[fi, 3:6], size=1.5)
+
+        vis_k = seen_hist[k]
         lm_pts = lm_est_hist[k]
-        vis = seen.copy()
-        lm_scats.set_offsets(lm_pts[vis])
+        vis_pts = lm_pts[vis_k]
+        lm_scats.set_offsets(vis_pts if len(vis_pts) > 0 else np.empty((0, 2)))
+
         for j in range(_N_LM):
-            if vis[j]:
+            if vis_k[j]:
                 _update_ellipse(ellipses[j], lm_pts[j], lm_cov_hist[k, j])
                 ellipses[j].set_visible(True)
             else:
                 ellipses[j].set_visible(False)
 
-        clear_vehicle_artists(vehicle_arts)
-        vehicle_arts.extend(
-            draw_quadrotor_2d(ax, robot_true_hist[k], flight_states[k, 5], size=0.4),
-        )
+        clear_vehicle_artists(lm_3d_arts)
+        if len(vis_pts) > 0:
+            sc = viz.ax3d.scatter(
+                vis_pts[:, 0],
+                vis_pts[:, 1],
+                np.full(len(vis_pts), 5.0),
+                c="blue",
+                s=30,
+                marker="D",
+                zorder=8,
+            )
+            lm_3d_arts.append(sc)
 
-    anim.animate(update, n_frames)
+        clear_vehicle_artists(fov_arts)
+        clear_vehicle_artists(obs_arts)
+        yaw_k = flight_states[fi, 5]
+        true_pos = robot_true_hist[k]
+
+        fov_start = np.degrees(yaw_k - SENSOR_FOV / 2)
+        wedge = Wedge(
+            true_pos,
+            SENSOR_MAX_RANGE,
+            fov_start,
+            fov_start + np.degrees(SENSOR_FOV),
+            color="gold",
+            alpha=0.06,
+            lw=0,
+        )
+        viz.ax_top.add_patch(wedge)
+        fov_arts.append(wedge)
+
+        for j in obs_record[min(k, len(obs_record) - 1)]:
+            (ln,) = viz.ax_top.plot(
+                [true_pos[0], landmarks[j, 0]],
+                [true_pos[1], landmarks[j, 1]],
+                "gold",
+                lw=0.7,
+                alpha=0.4,
+            )
+            obs_arts.append(ln)
+
+        err_line.set_data(times[:k], pos_err_hist[:k])
+        lm_line.set_data(times[:k], n_seen_hist[:k])
+
+    anim.animate(update, n_frames_anim)
     anim.save()
 
 

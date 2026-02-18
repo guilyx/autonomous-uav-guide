@@ -82,7 +82,9 @@ class RRT3D:
 
         return None
 
-    def _sample(self, goal: NDArray[np.floating], rng: np.random.Generator) -> NDArray[np.floating]:
+    def _sample(
+        self, goal: NDArray[np.floating], rng: np.random.Generator
+    ) -> NDArray[np.floating]:
         if rng.random() < self.goal_bias:
             return goal.copy()
         return rng.uniform(self.bounds_min, self.bounds_max)
