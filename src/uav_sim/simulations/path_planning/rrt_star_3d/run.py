@@ -32,9 +32,13 @@ WORLD_SIZE = 30.0
 
 
 def _box_to_sphere(b):
-    """Approximate a BoxObstacle with a bounding sphere for the RRT planner."""
+    """Approximate a BoxObstacle with a circumscribed 2D sphere (XY only).
+
+    The vertical extent is ignored so the planner can fly above buildings.
+    """
     centre = (b.min_corner + b.max_corner) / 2
-    radius = float(np.linalg.norm(b.max_corner - b.min_corner)) / 2
+    half_xy = (b.max_corner[:2] - b.min_corner[:2]) / 2
+    radius = float(np.linalg.norm(half_xy)) * 1.1
     return (centre, radius)
 
 
@@ -44,18 +48,18 @@ def main() -> None:
     # Convert box buildings to sphere obstacles for RRT collision checks
     sphere_obs = [_box_to_sphere(b) for b in buildings]
 
-    start = np.array([2.0, 2.0, 12.0])
-    goal = np.array([28.0, 28.0, 12.0])
+    start = np.array([2.0, 2.0, 15.0])
+    goal = np.array([28.0, 28.0, 15.0])
 
     planner = RRTStar3D(
         bounds_min=np.zeros(3),
         bounds_max=np.full(3, WORLD_SIZE),
         obstacles=sphere_obs,
-        step_size=2.5,
-        goal_radius=2.5,
-        max_iter=2000,
-        goal_bias=0.15,
-        gamma=12.0,
+        step_size=2.0,
+        goal_radius=3.0,
+        max_iter=5000,
+        goal_bias=0.20,
+        gamma=15.0,
     )
     path = planner.plan(start, goal, seed=42)
     if path is None:

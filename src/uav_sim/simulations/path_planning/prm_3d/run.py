@@ -34,8 +34,10 @@ WORLD_SIZE = 30.0
 
 
 def _box_to_sphere(b):
+    """Use XY-only bounding radius so planner can fly above buildings."""
     centre = (b.min_corner + b.max_corner) / 2
-    radius = float(np.linalg.norm(b.max_corner - b.min_corner)) / 2
+    half_xy = (b.max_corner[:2] - b.min_corner[:2]) / 2
+    radius = float(np.linalg.norm(half_xy)) * 1.1
     return (centre, radius)
 
 
@@ -43,15 +45,15 @@ def main() -> None:
     world, buildings = default_world()
     sphere_obs = [_box_to_sphere(b) for b in buildings]
 
-    start = np.array([2.0, 2.0, 12.0])
-    goal = np.array([28.0, 28.0, 12.0])
+    start = np.array([2.0, 2.0, 15.0])
+    goal = np.array([28.0, 28.0, 15.0])
 
     planner = PRM3D(
         bounds_min=np.zeros(3),
         bounds_max=np.full(3, WORLD_SIZE),
         obstacles=sphere_obs,
-        n_samples=300,
-        k_neighbours=12,
+        n_samples=600,
+        k_neighbours=15,
     )
     planner.build(seed=42)
     path = planner.plan(start, goal)

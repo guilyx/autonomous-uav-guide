@@ -34,8 +34,10 @@ CRUISE_ALT = 12.0
 
 
 def _box_to_sphere(b):
+    """Use XY-only bounding radius so planner can fly above buildings."""
     centre = (b.min_corner + b.max_corner) / 2
-    radius = float(np.linalg.norm(b.max_corner - b.min_corner)) / 2
+    half_xy = (b.max_corner[:2] - b.min_corner[:2]) / 2
+    radius = float(np.linalg.norm(half_xy)) * 1.1
     return (centre, radius)
 
 
