@@ -64,6 +64,7 @@ def main() -> None:
     target_hist = np.zeros((n_steps, 3))
     err_x_hist = np.zeros(n_steps)
     err_y_hist = np.zeros(n_steps)
+    size_hist = np.zeros(n_steps)
     visible_hist = np.zeros(n_steps, dtype=bool)
 
     for i in range(n_steps):
@@ -78,6 +79,7 @@ def main() -> None:
             bbox_ctrl.step(det.center_ndc, det.size_ratio, DT)
             err_x_hist[i] = det.center_ndc[0]
             err_y_hist[i] = det.center_ndc[1]
+            size_hist[i] = det.size_ratio
         else:
             des_p, des_t = gimbal.look_at(DRONE_POS, tgt, 0.0)
             gimbal.step(des_p, des_t, DT)
@@ -198,7 +200,7 @@ def main() -> None:
         if visible_hist[k]:
             cx_k = err_x_hist[k]
             cy_k = err_y_hist[k]
-            half = 0.15
+            half = max(size_hist[k] * 2.0, 0.05)
             xs = [cx_k - half, cx_k + half, cx_k + half, cx_k - half, cx_k - half]
             ys = [cy_k - half, cy_k - half, cy_k + half, cy_k + half, cy_k - half]
             bbox_art.set_data(xs, ys)
