@@ -1,8 +1,8 @@
 # Erwin Lejeune - 2026-02-19
 """Reynolds Flocking: 12 agents in 100m env with quad models + data panels.
 
-Agents are drawn as quad models with velocity arrows. 3-panel view
-plus a data panel for mean speed and flock cohesion.
+Agents are drawn as quad models with velocity arrows. 3D + top-down view
+plus data panels for mean speed and flock cohesion.
 
 Reference: C. W. Reynolds, "Flocks, Herds, and Schools: A Distributed
 Behavioral Model," SIGGRAPH, 1987.
@@ -67,13 +67,12 @@ def main() -> None:
     colors = plt.cm.tab10(np.linspace(0, 1, n_agents))
     c_rgb = [c[:3] for c in colors]
 
-    fig = plt.figure(figsize=(18, 10))
-    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[0, 2])
     ax_speed = fig.add_subplot(gs[1, 0])
-    ax_coh = fig.add_subplot(gs[1, 1:])
+    ax_coh = fig.add_subplot(gs[1, 1])
 
     fig.suptitle("Reynolds Flocking (100m env)", fontsize=13)
 
@@ -89,11 +88,6 @@ def main() -> None:
     ax_top.set_aspect("equal")
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.grid(True, alpha=0.15)
-
-    ax_side.set_xlim(0, WORLD_SIZE)
-    ax_side.set_ylim(0, WORLD_SIZE)
-    ax_side.set_title("Side View", fontsize=9)
-    ax_side.grid(True, alpha=0.15)
 
     ax_speed.set_xlim(0, n_steps * dt)
     ax_speed.set_ylim(0, max(1, mean_speed_hist.max() * 1.2))
@@ -112,7 +106,6 @@ def main() -> None:
     (lcoh,) = ax_coh.plot([], [], "m-", lw=0.8)
 
     sc_top = ax_top.scatter(pos[:, 0], pos[:, 1], c=colors, s=30, zorder=5)
-    sc_side = ax_side.scatter(pos[:, 0], pos[:, 2], c=colors, s=30, zorder=5)
 
     veh_arts: list = []
     quiver_top: list = []
@@ -130,11 +123,16 @@ def main() -> None:
         for i in range(n_agents):
             R = Quadrotor.rotation_matrix(0, 0, 0)
             veh_arts.extend(
-                draw_quadrotor_3d(ax3d, p[i], R, size=2.5, arm_colors=(c_rgb[i], c_rgb[i]))
+                draw_quadrotor_3d(
+                    ax3d,
+                    p[i],
+                    R,
+                    size=2.5,
+                    arm_colors=(c_rgb[i], c_rgb[i]),
+                )
             )
 
         sc_top.set_offsets(p[:, :2])
-        sc_side.set_offsets(np.column_stack([p[:, 0], p[:, 2]]))
 
         for q in quiver_top:
             q.remove()
@@ -144,7 +142,13 @@ def main() -> None:
             if s > 0.1:
                 vn = v[i, :2] / s * min(s, 3.0) * 2
                 q2 = ax_top.quiver(
-                    p[i, 0], p[i, 1], vn[0], vn[1], color=colors[i], scale=30, width=0.003
+                    p[i, 0],
+                    p[i, 1],
+                    vn[0],
+                    vn[1],
+                    color=colors[i],
+                    scale=30,
+                    width=0.003,
                 )
                 quiver_top.append(q2)
 
