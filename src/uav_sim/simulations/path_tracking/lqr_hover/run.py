@@ -40,7 +40,7 @@ def main() -> None:
         mass=quad.params.mass, gravity=quad.params.gravity, inertia=quad.params.inertia
     )
 
-    dt, duration = 0.005, 10.0
+    dt, duration = 0.005, 15.0
     steps = int(duration / dt)
     states = np.zeros((steps, 12))
     controls = np.zeros((steps, 4))

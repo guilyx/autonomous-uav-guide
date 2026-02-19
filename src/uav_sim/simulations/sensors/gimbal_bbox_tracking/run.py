@@ -36,13 +36,14 @@ V_FOV = 0.9
 
 
 def _moving_target(t: float) -> np.ndarray:
-    """Figure-eight ground pattern."""
+    """Slow figure-eight ground pattern."""
     cx, cy = 15.0, 15.0
-    r = 10.0
+    r = 8.0
+    omega = 0.05
     return np.array(
         [
-            cx + r * np.sin(0.12 * t),
-            cy + r * np.sin(0.12 * t) * np.cos(0.12 * t),
+            cx + r * np.sin(omega * t),
+            cy + r * np.sin(omega * t) * np.cos(omega * t),
             1.0,
         ]
     )
@@ -51,11 +52,11 @@ def _moving_target(t: float) -> np.ndarray:
 def main() -> None:
     _world, buildings = default_world()
 
-    gimbal = Gimbal(max_rate=1.5)
+    gimbal = Gimbal(max_rate=2.5)
     gimbal.reset(pan=0.0, tilt=-np.pi / 3)
 
     detector = SimulatedDetector(target_radius=0.8)
-    bbox_ctrl = BBoxTracker(gimbal, BBoxTrackerConfig(kp_pan=0.6, kp_tilt=0.6))
+    bbox_ctrl = BBoxTracker(gimbal, BBoxTrackerConfig(kp_pan=1.5, kp_tilt=1.5))
 
     n_steps = int(SIM_TIME / DT)
     pan_hist = np.zeros(n_steps)
@@ -85,14 +86,13 @@ def main() -> None:
         tilt_hist[i] = gimbal.tilt
 
     # ── Build custom figure layout ────────────────────────────────────
-    fig = matplotlib.pyplot.figure(figsize=(20, 10))
-    gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3)
+    fig = matplotlib.pyplot.figure(figsize=(16, 10))
+    gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
 
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[0, 2])
     ax_cam = fig.add_subplot(gs[1, 0])
-    ax_err = fig.add_subplot(gs[1, 1:])
+    ax_err = fig.add_subplot(gs[1, 1])
 
     ax3d.set_xlim(0, WORLD_SIZE)
     ax3d.set_ylim(0, WORLD_SIZE)
@@ -107,12 +107,6 @@ def main() -> None:
     ax_top.set_ylabel("Y")
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.set_aspect("equal")
-
-    ax_side.set_xlim(0, WORLD_SIZE)
-    ax_side.set_ylim(0, WORLD_SIZE)
-    ax_side.set_xlabel("X")
-    ax_side.set_ylabel("Z")
-    ax_side.set_title("Side View", fontsize=9)
 
     # Camera view panel
     ax_cam.set_xlim(-1.2, 1.2)
@@ -152,7 +146,6 @@ def main() -> None:
 
     ax3d.scatter(*DRONE_POS, c="black", s=80, marker="D", zorder=10, label="Drone")
     ax_top.plot(DRONE_POS[0], DRONE_POS[1], "kD", ms=8, zorder=10)
-    ax_side.plot(DRONE_POS[0], DRONE_POS[2], "kD", ms=8, zorder=10)
 
     tgt_track = target_hist
     ax_top.plot(tgt_track[:, 0], tgt_track[:, 1], "r--", lw=0.4, alpha=0.3)

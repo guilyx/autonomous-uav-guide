@@ -37,7 +37,7 @@ def main() -> None:
     pos = np.zeros((n_ag, 3))
     pos[0] = [50, 50, CRUISE_ALT]
     for i in range(ctrl.num_followers):
-        pos[1 + i] = pos[0] + offsets[i] + np.random.randn(3) * 3
+        pos[1 + i] = pos[0] + offsets[i] + np.random.randn(3) * 15
     vel = np.zeros((n_ag, 3))
     dt, n_steps = 0.1, 500
 

@@ -77,9 +77,8 @@ def main() -> None:
     )[:_N_LM]
     lm_z = np.full(_N_LM, 5.0)
 
-    # Two+ full orbits for slow, exploratory SLAM convergence
     radius = 10.0
-    n_wp = 160
+    n_wp = 80
     angles = np.linspace(0, 4.5 * np.pi, n_wp)
     path_3d = np.column_stack(
         [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
@@ -90,7 +89,7 @@ def main() -> None:
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=160.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=100.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
     # ── EKF-SLAM at reduced rate for efficiency ────────────────────────

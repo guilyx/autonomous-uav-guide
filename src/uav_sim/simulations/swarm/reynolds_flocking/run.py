@@ -33,8 +33,8 @@ CRUISE_ALT = 50.0
 def main() -> None:
     n_agents = 12
     rng = np.random.default_rng(42)
-    pos = rng.uniform(30, 70, (n_agents, 3))
-    pos[:, 2] = rng.uniform(40, 60, n_agents)
+    pos = rng.uniform(10, 90, (n_agents, 3))
+    pos[:, 2] = rng.uniform(30, 70, n_agents)
     vel = rng.uniform(-1.0, 1.0, (n_agents, 3))
 
     flock = ReynoldsFlocking(r_percept=20.0, r_sep=8.0, w_sep=2.0, w_ali=1.0, w_coh=1.2)

@@ -37,8 +37,8 @@ def _pd_attitude(
     phi, theta, psi = state[3], state[4], state[5]
     p, q, r = state[9], state[10], state[11]
 
-    kp_att = 3.0
-    kd_att = 1.0
+    kp_att = 5.0
+    kd_att = 2.0
 
     Ix, Iy, Iz = inertia[0, 0], inertia[1, 1], inertia[2, 2]
 
@@ -60,15 +60,15 @@ def main() -> None:
     p = vtol.vtol_params
     m, g = p.mass, p.gravity
 
-    dt, duration = 0.005, 25.0
+    dt, duration = 0.005, 35.0
     steps = int(duration / dt)
     positions = np.zeros((steps, 3))
     eulers = np.zeros((steps, 3))
     tilt_angles = np.zeros(steps)
 
     des_vx = 0.0
-    kp_alt = 2.0
-    kd_alt = 1.5
+    kp_alt = 3.0
+    kd_alt = 2.0
 
     for i in range(steps):
         positions[i] = vtol.state[:3]
@@ -77,21 +77,21 @@ def main() -> None:
         z = vtol.state[2]
         vz = vtol.state[8]
 
-        # Tilt schedule: hover -> transition -> cruise -> back -> hover
-        if t < 4:
+        # Tilt schedule: hover -> slow transition -> cruise -> back -> hover
+        if t < 5:
             tilt = 0.0
             des_vx = 0.0
-        elif t < 10:
-            blend = (t - 4) / 6.0
-            tilt = blend * np.pi / 4
-            des_vx = blend * 6.0
-        elif t < 17:
-            tilt = np.pi / 4
-            des_vx = 6.0
-        elif t < 23:
-            blend = (t - 17) / 6.0
-            tilt = np.pi / 4 * (1.0 - blend)
-            des_vx = 6.0 * (1.0 - blend)
+        elif t < 15:
+            blend = (t - 5) / 10.0
+            tilt = blend * np.pi / 6
+            des_vx = blend * 3.0
+        elif t < 22:
+            tilt = np.pi / 6
+            des_vx = 3.0
+        elif t < 32:
+            blend = (t - 22) / 10.0
+            tilt = np.pi / 6 * (1.0 - blend)
+            des_vx = 3.0 * (1.0 - blend)
         else:
             tilt = 0.0
             des_vx = 0.0
@@ -110,7 +110,7 @@ def main() -> None:
         vx = vtol.state[6]
         kp_vx = 0.03
         des_theta = -kp_vx * (des_vx - vx) * np.cos(tilt)
-        des_theta = float(np.clip(des_theta, -0.2, 0.2))
+        des_theta = float(np.clip(des_theta, -0.15, 0.15))
 
         tau = _pd_attitude(vtol.state, 0.0, des_theta, 0.0, p.inertia)
 

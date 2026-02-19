@@ -45,7 +45,7 @@ def main() -> None:
     coverage_path = planner.plan(region)
 
     cam = Camera(intrinsics=CameraIntrinsics(fx=200, fy=200, cx=320, cy=240))
-    gimbal = Gimbal(max_rate=1.0)
+    gimbal = Gimbal(max_rate=2.0)
     gimbal.reset(pan=0.0, tilt=-np.pi / 3)
 
     tracker = PointTracker(gimbal)
@@ -71,7 +71,7 @@ def main() -> None:
         direction = target - virtual_pos
         dist = float(np.linalg.norm(direction))
         if dist > 0.1:
-            virtual_pos += direction / dist * min(4.0 * dt, dist)
+            virtual_pos += direction / dist * min(2.0 * dt, dist)
 
         if pursuit.is_path_complete(virtual_pos, coverage_path):
             break

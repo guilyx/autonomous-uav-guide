@@ -25,9 +25,9 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CENTER = np.array([15.0, 15.0])
-RX, RY = 8.0, 5.0
+RX, RY = 6.0, 4.0
 ALT = 12.0
-OMEGA = 0.2
+OMEGA = 0.12
 
 
 def _ref(t: float) -> tuple[np.ndarray, np.ndarray]:
