@@ -47,7 +47,7 @@ def main() -> None:
     sm.arm()
     sm.run_takeoff(altitude=CRUISE_ALT, dt=0.005, timeout=10.0)
 
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=2.0, waypoint_threshold=1.5, adaptive=True, smoothing=0.3)
     sm.offboard()
     dt = 0.005
     for _ in range(int(60.0 / dt)):

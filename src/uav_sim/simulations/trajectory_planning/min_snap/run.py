@@ -44,14 +44,15 @@ def main() -> None:
         return
 
     # Reduce waypoints for min-snap (it needs a small number of knot points)
-    wps = rdp_simplify(planned, epsilon=3.0)
-    if len(wps) < 2:
-        wps = planned[:: max(1, len(planned) // 5)]
+    wps = rdp_simplify(planned, epsilon=1.5)
+    if len(wps) < 3:
+        wps = planned[:: max(1, len(planned) // 8)]
     # Ensure start and goal are exact
     wps[0] = START.copy()
     wps[-1] = GOAL.copy()
 
-    seg_times = np.full(len(wps) - 1, 3.0)
+    seg_lengths = np.array([np.linalg.norm(wps[i + 1] - wps[i]) for i in range(len(wps) - 1)])
+    seg_times = np.clip(seg_lengths / 2.0, 1.5, 6.0)
 
     ms = MinSnapTrajectory()
     coeffs = ms.generate(wps, seg_times)

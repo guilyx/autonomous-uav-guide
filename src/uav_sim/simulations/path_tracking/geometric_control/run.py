@@ -31,14 +31,14 @@ def main() -> None:
     world, buildings = default_world()
 
     quad = Quadrotor()
-    quad.reset(position=TARGET.copy(), euler=np.array([0.2, -0.15, 0.0]))
+    quad.reset(position=TARGET.copy(), euler=np.array([0.12, -0.10, 0.0]))
     hover_f = quad.hover_wrench()[0] / 4.0
     for m in quad.motors:
         m.reset(m.thrust_to_omega(hover_f))
 
     ctrl = GeometricController()
 
-    dt, dur = 0.005, 8.0
+    dt, dur = 0.005, 12.0
     steps = int(dur / dt)
     states = np.zeros((steps, 12))
     times = np.zeros(steps)

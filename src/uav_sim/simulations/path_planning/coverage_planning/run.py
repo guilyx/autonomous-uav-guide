@@ -53,7 +53,7 @@ def main() -> None:
     quad = Quadrotor()
     quad.reset(position=np.array([coverage_path[0, 0], coverage_path[0, 1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=2.5, waypoint_threshold=2.0, adaptive=True)
     flight_states = fly_mission(
         quad,
         ctrl,
@@ -61,9 +61,9 @@ def main() -> None:
         cruise_alt=CRUISE_ALT,
         dt=0.005,
         pursuit=pursuit,
-        takeoff_duration=2.0,
-        landing_duration=2.0,
-        loiter_duration=0.3,
+        takeoff_duration=3.0,
+        landing_duration=3.0,
+        loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
 

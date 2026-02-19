@@ -18,9 +18,9 @@ from numpy.typing import NDArray
 
 @dataclass
 class PositionControllerConfig:
-    kp: float = 1.2
-    kd: float = 0.5
-    max_velocity: float = 3.0
+    kp: float = 1.0
+    kd: float = 0.6
+    max_velocity: float = 2.0
 
 
 class PositionController:

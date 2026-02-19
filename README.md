@@ -29,7 +29,7 @@ uav_sim/
 ├── environment/     # World, obstacles, buildings, env presets (city/indoor/field)
 ├── swarm/           # Reynolds, Consensus, Virtual Structure, Leader-Follower
 ├── visualization/   # 3-panel viz, data panels, vehicle artists, sensor viz
-└── simulations/     # 43 runnable demos (python -m uav_sim.simulations.*)
+└── simulations/     # 42 runnable demos (python -m uav_sim.simulations.*)
 ```
 
 ## Quick Start
@@ -101,7 +101,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 |---|---|
 | **Feedback Linearisation** | <img src="src/uav_sim/simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif" width="280"/> |
 | **MPPI** | <img src="src/uav_sim/simulations/trajectory_tracking/mppi/mppi.gif" width="280"/> |
-| **NMPC + PRM** | <img src="src/uav_sim/simulations/trajectory_tracking/nmpc_prm/nmpc_prm.gif" width="280"/> |
+| **NMPC** | <img src="src/uav_sim/simulations/trajectory_tracking/nmpc/nmpc.gif" width="280"/> |
 
 ## Path Planning
 
@@ -137,8 +137,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 | Feature | Preview |
 |---|---|
 | **EKF-SLAM** | <img src="src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif" width="280"/> |
-| **Grid Mapping** | <img src="src/uav_sim/simulations/perception/grid_mapping/grid_mapping.gif" width="280"/> |
-| **Lidar Mapping** | <img src="src/uav_sim/simulations/perception/lidar_mapping/lidar_mapping.gif" width="280"/> |
+| **Occupancy Mapping** | <img src="src/uav_sim/simulations/perception/occupancy_mapping/occupancy_mapping.gif" width="280"/> |
 | **Sensor Suite Demo** | <img src="src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif" width="280"/> |
 | **Visual Servoing** | <img src="src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif" width="280"/> |
 

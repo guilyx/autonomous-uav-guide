@@ -45,14 +45,14 @@ def main() -> None:
     quad.reset(position=waypoints[0].copy())
 
     tracker = LQRPathTracker(
-        lookahead=3.0,
-        speed=1.5,
+        lookahead=2.5,
+        speed=1.0,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dt, timeout = 0.005, 50.0
+    dt, timeout = 0.005, 80.0
     max_steps = int(timeout / dt)
     states_list: list[np.ndarray] = []
     for _ in range(max_steps):
