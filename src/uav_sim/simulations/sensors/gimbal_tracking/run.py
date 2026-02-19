@@ -85,6 +85,18 @@ def main() -> None:
 
     viz = ThreePanelViz(title="Gimbal FOV Tracking — Coverage Survey", world_size=WORLD_SIZE)
 
+    # Data panel — pan/tilt angle history
+    times = np.arange(n_steps) * dt
+    viz.ax_data.set_xlim(0, times[n_steps - 1] if n_steps > 1 else 1.0)
+    viz.ax_data.set_ylim(-200, 200)
+    viz.ax_data.set_xlabel("Time [s]", fontsize=8)
+    viz.ax_data.set_ylabel("Angle [deg]", fontsize=8)
+    viz.ax_data.set_title("Gimbal Angles", fontsize=9)
+    viz.ax_data.grid(True, alpha=0.3)
+    (pan_line,) = viz.ax_data.plot([], [], "b-", lw=0.8, label="Pan")
+    (tilt_line,) = viz.ax_data.plot([], [], "r-", lw=0.8, label="Tilt")
+    viz.ax_data.legend(fontsize=7, loc="upper right")
+
     rx, ry = region.origin
     rect_top = mpatches.Rectangle(
         (rx, ry),
@@ -200,6 +212,11 @@ def main() -> None:
         scanned_x.append(tgt[0])
         scanned_y.append(tgt[1])
         scanned_top.set_data(scanned_x, scanned_y)
+
+        pan_deg = [np.degrees(pan_hist[j]) for j in range(k + 1)]
+        tilt_deg = [np.degrees(tilt_hist[j]) for j in range(k + 1)]
+        pan_line.set_data(times[: k + 1], pan_deg)
+        tilt_line.set_data(times[: k + 1], tilt_deg)
 
         pct = int(100 * (k + 1) / n_steps)
         title.set_text(
