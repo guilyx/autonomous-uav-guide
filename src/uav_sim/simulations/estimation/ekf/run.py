@@ -41,10 +41,14 @@ def main() -> None:
     )
 
     quad = Quadrotor()
-    quad.reset(position=np.array([cx + radius, cy, CRUISE_ALT]))
+    quad.reset(position=np.array([cx + radius, cy, 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
     states_list: list[np.ndarray] = []
+    from uav_sim.path_tracking.flight_ops import init_hover, takeoff
+
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states_list)
+    init_hover(quad)
     fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=120.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     n_steps = len(flight_states)
@@ -127,17 +131,17 @@ def main() -> None:
     viz.ax_top.scatter(gps_show[:, 0], gps_show[:, 1], c="lime", s=3, alpha=0.2, zorder=3)
     viz.ax3d.legend(fontsize=6, loc="upper left")
 
-    # Inset: error + covariance
-    ax_err = viz.fig.add_axes([0.62, 0.05, 0.34, 0.18])
+    # Data panel: error + covariance
+    ax_err = viz.setup_data_axes(
+        xlabel="Time [s]",
+        ylabel="Error [m]",
+        title="EKF Error & Covariance",
+    )
     ax_err.set_xlim(0, times[-1])
     ax_err.set_ylim(0, max(1.0, err.max() * 1.2))
-    ax_err.set_xlabel("Time [s]", fontsize=7)
-    ax_err.set_ylabel("Error [m]", fontsize=7)
-    ax_err.tick_params(labelsize=6)
-    ax_err.grid(True, alpha=0.2)
     (err_line,) = ax_err.plot([], [], "r-", lw=0.8, label="Pos err")
     (cov_line,) = ax_err.plot([], [], "b--", lw=0.6, label="tr(P)")
-    ax_err.legend(fontsize=5, ncol=2)
+    ax_err.legend(fontsize=7)
 
     skip = max(1, n_steps // 200)
     idx = list(range(0, n_steps, skip))

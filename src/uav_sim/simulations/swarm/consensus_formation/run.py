@@ -1,8 +1,8 @@
 # Erwin Lejeune - 2026-02-19
 """Consensus formation: 6 agents converging to a hexagon in 100 m env.
 
-Slowed-down physics with quad models, 3-panel + data (formation error
-+ neighbor distances).
+Slowed-down physics with quad models, 3D + top-down + data panels
+(formation error + neighbor distances).
 
 Reference: R. Olfati-Saber, R. M. Murray, "Consensus Problems in Networks of
 Agents with Switching Topology," IEEE TAC, 2004. DOI: 10.1109/TAC.2004.834113
@@ -27,7 +27,6 @@ from uav_sim.visualization.vehicle_artists import (
 matplotlib.use("Agg")
 
 WORLD_SIZE = 100.0
-CRUISE_ALT = 50.0
 
 
 def main() -> None:
@@ -73,13 +72,12 @@ def main() -> None:
     n_frames = len(idx)
     colors = plt.cm.Set2(np.linspace(0, 1, n_ag))
 
-    fig = plt.figure(figsize=(18, 10))
-    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[0, 2])
     ax_ferr = fig.add_subplot(gs[1, 0])
-    ax_dist = fig.add_subplot(gs[1, 1:])
+    ax_dist = fig.add_subplot(gs[1, 1])
 
     fig.suptitle("Consensus Formation Control (Hexagon, 100m env)", fontsize=13)
 
@@ -97,13 +95,6 @@ def main() -> None:
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.set_aspect("equal")
     ax_top.grid(True, alpha=0.15)
-
-    ax_side.set_xlim(0, WORLD_SIZE)
-    ax_side.set_ylim(0, WORLD_SIZE)
-    ax_side.set_xlabel("X")
-    ax_side.set_ylabel("Z")
-    ax_side.set_title("Side View", fontsize=9)
-    ax_side.grid(True, alpha=0.15)
 
     ax_ferr.set_xlim(0, n_steps * dt)
     ax_ferr.set_ylim(0, max(1.0, form_err.max() * 1.1))
@@ -131,11 +122,7 @@ def main() -> None:
     ax_dist.legend(fontsize=7)
 
     trails_top = [ax_top.plot([], [], color=colors[i], lw=0.6, alpha=0.4)[0] for i in range(n_ag)]
-    trails_side = [
-        ax_side.plot([], [], color=colors[i], lw=0.6, alpha=0.4)[0] for i in range(n_ag)
-    ]
     sc_top = ax_top.scatter(pos[:, 0], pos[:, 1], c=colors, s=40, zorder=5)
-    sc_side = ax_side.scatter(pos[:, 0], pos[:, 2], c=colors, s=40, zorder=5)
 
     veh_arts: list = []
     title = ax3d.set_title("t = 0.0 s")
@@ -152,17 +139,18 @@ def main() -> None:
             R = Quadrotor.rotation_matrix(0, 0, 0)
             veh_arts.extend(
                 draw_quadrotor_3d(
-                    ax3d, p[i], R, size=3.0, arm_colors=(colors[i][:3], colors[i][:3])
+                    ax3d,
+                    p[i],
+                    R,
+                    size=3.0,
+                    arm_colors=(colors[i][:3], colors[i][:3]),
                 )
             )
 
         sc_top.set_offsets(p[:, :2])
-        sc_side.set_offsets(np.column_stack([p[:, 0], p[:, 2]]))
-
         for i in range(n_ag):
             hist = np.array([snap[j][i] for j in range(0, k + 1, max(1, k // 50))])
             trails_top[i].set_data(hist[:, 0], hist[:, 1])
-            trails_side[i].set_data(hist[:, 0], hist[:, 2])
 
         lferr.set_data(times[:k], form_err[:k])
         ldist.set_data(times[:k], mean_dist[:k])

@@ -18,7 +18,8 @@ from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
-_MAX_CMD_DIST = 4.0  # metres — maximum effective distance to the target sent to PID
+_MAX_XY_CMD_DIST = 1.5  # metres — clamp horizontal target for smooth tilt
+_MAX_Z_CMD_DIST = 4.0  # metres — vertical can be larger (no tilt impact)
 
 
 def init_hover(quad: Quadrotor) -> None:
@@ -39,17 +40,28 @@ def _is_sane(state: NDArray) -> bool:
     return bool(not np.any(np.isnan(state[:3])) and np.all(np.abs(state[:3]) < 500))
 
 
-def _limit_target(pos: NDArray, target: NDArray, max_dist: float = _MAX_CMD_DIST) -> NDArray:
-    """Clamp effective target to *max_dist* from current position.
+def _limit_target(
+    pos: NDArray,
+    target: NDArray,
+    max_xy: float = _MAX_XY_CMD_DIST,
+    max_z: float = _MAX_Z_CMD_DIST,
+) -> NDArray:
+    """Clamp effective target separately for XY and Z.
 
-    Prevents the low-level PID from seeing large position errors that would
-    cause extreme roll/pitch commands on lightweight airframes.
+    Horizontal clamping prevents the PID from demanding extreme tilt;
+    vertical clamping can be looser because thrust adjustments don't
+    affect roll/pitch.
     """
-    delta = target - pos
-    dist = float(np.linalg.norm(delta))
-    if dist <= max_dist or dist < 1e-8:
-        return target
-    return pos + delta * (max_dist / dist)
+    out = target.copy()
+    dxy = target[:2] - pos[:2]
+    dist_xy = float(np.linalg.norm(dxy))
+    if dist_xy > max_xy and dist_xy > 1e-8:
+        out[:2] = pos[:2] + dxy * (max_xy / dist_xy)
+
+    dz = target[2] - pos[2]
+    if abs(dz) > max_z:
+        out[2] = pos[2] + np.sign(dz) * max_z
+    return out
 
 
 def takeoff(

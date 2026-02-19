@@ -1,5 +1,5 @@
 # Erwin Lejeune - 2026-02-19
-"""Virtual-structure formation: 100m env with quad models, 3-panel + data.
+"""Virtual-structure formation: 100m env with quad models, 3D + top + data.
 
 4 agents track a moving virtual structure. The structure follows a
 circular path in the 100m world.
@@ -72,13 +72,12 @@ def main() -> None:
     colors = plt.cm.Set2(np.linspace(0, 1, n_ag))
     c_rgb = [c[:3] for c in colors]
 
-    fig = plt.figure(figsize=(18, 10))
-    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[0, 2])
     ax_err = fig.add_subplot(gs[1, 0])
-    ax_dist = fig.add_subplot(gs[1, 1:])
+    ax_dist = fig.add_subplot(gs[1, 1])
 
     fig.suptitle("Virtual Structure Formation (100m env)", fontsize=13)
 
@@ -94,11 +93,6 @@ def main() -> None:
     ax_top.set_aspect("equal")
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.grid(True, alpha=0.15)
-
-    ax_side.set_xlim(0, WORLD_SIZE)
-    ax_side.set_ylim(0, WORLD_SIZE)
-    ax_side.set_title("Side View", fontsize=9)
-    ax_side.grid(True, alpha=0.15)
 
     ax_err.set_xlim(0, n_steps * dt)
     ax_err.set_ylim(0, max(1.0, form_err.max() * 1.1))
@@ -119,9 +113,15 @@ def main() -> None:
     ax_dist.grid(True, alpha=0.3)
     (ldist,) = ax_dist.plot([], [], "b-", lw=0.8)
 
-    (centroid_top,) = ax_top.plot([], [], "r*", ms=12, zorder=10, label="Virtual Centre")
+    (centroid_top,) = ax_top.plot(
+        [],
+        [],
+        "r*",
+        ms=12,
+        zorder=10,
+        label="Virtual Centre",
+    )
     sc_top = ax_top.scatter(pos[:, 0], pos[:, 1], c=colors, s=30, zorder=5)
-    sc_side = ax_side.scatter(pos[:, 0], pos[:, 2], c=colors, s=30, zorder=5)
     trails_top = [ax_top.plot([], [], color=colors[i], lw=0.4, alpha=0.3)[0] for i in range(n_ag)]
     ax_top.legend(fontsize=7)
 
@@ -141,12 +141,17 @@ def main() -> None:
         for i in range(n_ag):
             R = Quadrotor.rotation_matrix(0, 0, 0)
             veh_arts.extend(
-                draw_quadrotor_3d(ax3d, p[i], R, size=3.0, arm_colors=(c_rgb[i], c_rgb[i]))
+                draw_quadrotor_3d(
+                    ax3d,
+                    p[i],
+                    R,
+                    size=3.0,
+                    arm_colors=(c_rgb[i], c_rgb[i]),
+                )
             )
 
         centroid_top.set_data([c[0]], [c[1]])
         sc_top.set_offsets(p[:, :2])
-        sc_side.set_offsets(np.column_stack([p[:, 0], p[:, 2]]))
 
         for i in range(n_ag):
             trail = all_snap[: step + 1 : max(1, step // 50), i]

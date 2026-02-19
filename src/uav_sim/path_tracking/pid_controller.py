@@ -94,21 +94,21 @@ class CascadedPIDConfig:
     """
 
     pos_x: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=1.8, ki=0.05, kd=1.8, output_limit=4.0)
+        default_factory=lambda: PIDGains(kp=1.2, ki=0.04, kd=1.4, output_limit=2.0)
     )
     pos_y: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=1.8, ki=0.05, kd=1.8, output_limit=4.0)
+        default_factory=lambda: PIDGains(kp=1.2, ki=0.04, kd=1.4, output_limit=2.0)
     )
     pos_z: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=3.5, ki=0.2, kd=2.5, output_limit=6.0)
+        default_factory=lambda: PIDGains(kp=3.5, ki=0.2, kd=2.5, output_limit=5.0)
     )
-    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=7.0, ki=0.0, kd=1.5))
-    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=7.0, ki=0.0, kd=1.5))
+    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=0.0, kd=1.2))
+    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=6.0, ki=0.0, kd=1.2))
     att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=3.0, ki=0.05, kd=0.8))
     mass: float = 1.5
     gravity: float = 9.81
-    max_tilt: float = 0.40  # ~23°, conservative for smooth flight
-    max_thrust_ratio: float = 1.8
+    max_tilt: float = 0.25  # ~14°, smooth visual flight
+    max_thrust_ratio: float = 1.6
 
 
 class CascadedPIDController:

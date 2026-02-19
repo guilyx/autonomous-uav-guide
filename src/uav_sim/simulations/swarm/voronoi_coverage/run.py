@@ -34,8 +34,7 @@ CRUISE_ALT = 50.0
 
 def _clip_voronoi_region(vertices: np.ndarray, ws: float) -> np.ndarray:
     """Clip polygon vertices to [0, ws] box."""
-    clipped = np.clip(vertices, 0, ws)
-    return clipped
+    return np.clip(vertices, 0, ws)
 
 
 def main() -> None:
@@ -68,13 +67,12 @@ def main() -> None:
     n_frames = len(idx)
     colors = plt.cm.Set1(np.linspace(0, 1, n_ag))
 
-    fig = plt.figure(figsize=(18, 10))
-    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[0, 2])
     ax_cost = fig.add_subplot(gs[1, 0])
-    ax_dist = fig.add_subplot(gs[1, 1:])
+    ax_dist = fig.add_subplot(gs[1, 1])
 
     fig.suptitle("Voronoi Coverage (Lloyd's Algorithm, 100m env)", fontsize=13)
 
@@ -91,13 +89,6 @@ def main() -> None:
     ax_top.set_ylabel("Y")
     ax_top.set_title("Top Down — Voronoi Regions", fontsize=9)
     ax_top.set_aspect("equal")
-
-    ax_side.set_xlim(0, WORLD_SIZE)
-    ax_side.set_ylim(0, WORLD_SIZE)
-    ax_side.set_xlabel("X")
-    ax_side.set_ylabel("Z")
-    ax_side.set_title("Side View", fontsize=9)
-    ax_side.grid(True, alpha=0.15)
 
     ax_cost.set_xlim(0, n_steps * dt)
     ax_cost.set_ylim(0, max(1.0, coverage_cost.max() * 1.1))
@@ -131,7 +122,6 @@ def main() -> None:
 
         sc_top.set_offsets(p)
 
-        # Draw Voronoi regions
         for patch in voronoi_patches:
             patch.remove()
         voronoi_patches.clear()
@@ -152,7 +142,13 @@ def main() -> None:
                 region = vor.regions[region_idx]
                 if -1 not in region and len(region) > 0:
                     verts = _clip_voronoi_region(vor.vertices[region], WORLD_SIZE)
-                    poly = plt.Polygon(verts, alpha=0.15, fc=colors[i], ec=colors[i], lw=0.8)
+                    poly = plt.Polygon(
+                        verts,
+                        alpha=0.15,
+                        fc=colors[i],
+                        ec=colors[i],
+                        lw=0.8,
+                    )
                     ax_top.add_patch(poly)
                     voronoi_patches.append(poly)
         except Exception:
@@ -168,7 +164,11 @@ def main() -> None:
             pos3 = np.array([p[i, 0], p[i, 1], CRUISE_ALT])
             veh_arts.extend(
                 draw_quadrotor_3d(
-                    ax3d, pos3, R, size=3.0, arm_colors=(colors[i][:3], colors[i][:3])
+                    ax3d,
+                    pos3,
+                    R,
+                    size=3.0,
+                    arm_colors=(colors[i][:3], colors[i][:3]),
                 )
             )
 

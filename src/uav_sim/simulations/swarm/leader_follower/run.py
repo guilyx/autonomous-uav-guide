@@ -1,8 +1,8 @@
 # Erwin Lejeune - 2026-02-19
-"""Leader-follower: 100m env with quad models, 3-panel + data.
+"""Leader-follower: 100m env with quad models, 3D + top + data.
 
 Shows the leader on a circular path with 3 followers maintaining offsets.
-Uses quad models, 3D/top/side panels plus follower error + distances.
+Uses quad models, 3D/top panels plus follower error + distances.
 
 Reference: J. Desai et al., "Modeling and Control of Formations of
 Nonholonomic Mobile Robots," IEEE T-RA, 2001. DOI: 10.1109/70.976023
@@ -64,7 +64,6 @@ def main() -> None:
         for fi in range(ctrl.num_followers):
             desired = pos[0] + offsets[fi]
             follower_err[step, fi] = np.linalg.norm(pos[1 + fi] - desired)
-
         dists = [np.linalg.norm(pos[i] - pos[j]) for i in range(n_ag) for j in range(i + 1, n_ag)]
         mean_dist[step] = np.mean(dists)
 
@@ -76,13 +75,12 @@ def main() -> None:
     agent_colors = ["red", "steelblue", "green", "orange"]
     cmap_colors = [np.array(matplotlib.colors.to_rgba(c)[:3]) for c in agent_colors]
 
-    fig = plt.figure(figsize=(18, 10))
-    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[0, 2])
     ax_err = fig.add_subplot(gs[1, 0])
-    ax_dist = fig.add_subplot(gs[1, 1:])
+    ax_dist = fig.add_subplot(gs[1, 1])
 
     fig.suptitle("Leader-Follower Formation (100m env)", fontsize=13)
 
@@ -98,11 +96,6 @@ def main() -> None:
     ax_top.set_aspect("equal")
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.grid(True, alpha=0.15)
-
-    ax_side.set_xlim(0, WORLD_SIZE)
-    ax_side.set_ylim(0, WORLD_SIZE)
-    ax_side.set_title("Side View", fontsize=9)
-    ax_side.grid(True, alpha=0.15)
 
     ax_err.set_xlim(0, n_steps * dt)
     ax_err.set_ylim(0, max(1.0, follower_err.max() * 1.1))
@@ -127,9 +120,6 @@ def main() -> None:
     trails_top = [
         ax_top.plot([], [], color=agent_colors[i], lw=0.6, alpha=0.4)[0] for i in range(n_ag)
     ]
-    trails_side = [
-        ax_side.plot([], [], color=agent_colors[i], lw=0.6, alpha=0.4)[0] for i in range(n_ag)
-    ]
 
     veh_arts: list = []
     title = ax3d.set_title("t = 0.0 s")
@@ -147,14 +137,17 @@ def main() -> None:
             R = Quadrotor.rotation_matrix(0, 0, 0)
             veh_arts.extend(
                 draw_quadrotor_3d(
-                    ax3d, p[ai], R, size=3.0, arm_colors=(cmap_colors[ai], cmap_colors[ai])
+                    ax3d,
+                    p[ai],
+                    R,
+                    size=3.0,
+                    arm_colors=(cmap_colors[ai], cmap_colors[ai]),
                 )
             )
 
         for ai in range(n_ag):
             trail = all_snap[: step + 1 : max(1, step // 50), ai]
             trails_top[ai].set_data(trail[:, 0], trail[:, 1])
-            trails_side[ai].set_data(trail[:, 0], trail[:, 2])
 
         for fi in range(ctrl.num_followers):
             ferr_lines[fi].set_data(times[:step], follower_err[:step, fi])
