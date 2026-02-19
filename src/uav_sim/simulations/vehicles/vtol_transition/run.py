@@ -1,8 +1,9 @@
-# Erwin Lejeune - 2026-02-18
+# Erwin Lejeune - 2026-02-19
 """VTOL tilt-rotor transition: hover -> cruise -> hover.
 
-Three panels (3D, top-down, side) in a 30 m environment showing the VTOL
-performing a tilt transition from hover to forward flight and back.
+Closed-loop PD attitude and altitude controller prevents flipping.
+The tilt angle ramps linearly, and the controller adjusts thrust and
+torques to maintain stable flight through the transition.
 
 Reference: R. Bapst et al., "Design and Implementation of an Unmanned
 Tail-Sitter," IROS, 2015.
@@ -26,48 +27,94 @@ from uav_sim.visualization.vehicle_artists import (
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
+TARGET_ALT = 15.0
+
+
+def _pd_attitude(
+    state: np.ndarray, des_phi: float, des_theta: float, des_psi: float, inertia: np.ndarray
+) -> np.ndarray:
+    """Simple PD attitude controller — returns [tau_x, tau_y, tau_z]."""
+    phi, theta, psi = state[3], state[4], state[5]
+    p, q, r = state[9], state[10], state[11]
+
+    kp_att = 3.0
+    kd_att = 1.0
+
+    Ix, Iy, Iz = inertia[0, 0], inertia[1, 1], inertia[2, 2]
+
+    tx = Ix * (kp_att * (des_phi - phi) - kd_att * p)
+    ty = Iy * (kp_att * (des_theta - theta) - kd_att * q)
+
+    e_psi = (des_psi - psi + np.pi) % (2 * np.pi) - np.pi
+    tz = Iz * (kp_att * 0.5 * e_psi - kd_att * r)
+
+    return np.array([tx, ty, tz])
 
 
 def main() -> None:
     vtol = Tiltrotor()
     state = np.zeros(12)
-    state[:3] = [5.0, 15.0, 15.0]
+    state[:3] = [5.0, 15.0, TARGET_ALT]
     vtol.reset(state=state)
 
-    dt, duration = 0.005, 20.0
+    p = vtol.vtol_params
+    m, g = p.mass, p.gravity
+
+    dt, duration = 0.005, 25.0
     steps = int(duration / dt)
     positions = np.zeros((steps, 3))
     eulers = np.zeros((steps, 3))
     tilt_angles = np.zeros(steps)
 
-    g = vtol.vtol_params.gravity
-    m = vtol.vtol_params.mass
+    des_vx = 0.0
+    kp_alt = 2.0
+    kd_alt = 1.5
 
     for i in range(steps):
         positions[i] = vtol.state[:3]
         eulers[i] = vtol.state[3:6]
         t = i * dt
-        T = m * g * 1.02
-        if t < 5:
+        z = vtol.state[2]
+        vz = vtol.state[8]
+
+        # Tilt schedule: hover -> transition -> cruise -> back -> hover
+        if t < 4:
             tilt = 0.0
-            tx, ty, tz = 0.0, 0.1, 0.0
+            des_vx = 0.0
         elif t < 10:
-            blend = (t - 5) / 5.0
-            tilt = blend * np.pi / 3
-            T = m * g / max(np.cos(tilt), 0.3)
-            tx, ty, tz = 0.0, 0.0, 0.0
-        elif t < 15:
-            tilt = np.pi / 3
-            T = m * g / max(np.cos(tilt), 0.3) * 0.95
-            tx, ty, tz = 0.0, -0.05, 0.0
+            blend = (t - 4) / 6.0
+            tilt = blend * np.pi / 4
+            des_vx = blend * 6.0
+        elif t < 17:
+            tilt = np.pi / 4
+            des_vx = 6.0
+        elif t < 23:
+            blend = (t - 17) / 6.0
+            tilt = np.pi / 4 * (1.0 - blend)
+            des_vx = 6.0 * (1.0 - blend)
         else:
-            blend = (t - 15) / 5.0
-            tilt = np.pi / 3 * (1 - blend)
-            T = m * g * 1.02
-            tx, ty, tz = 0.0, 0.0, 0.0
+            tilt = 0.0
+            des_vx = 0.0
 
         tilt_angles[i] = tilt
-        vtol.step(np.array([T, tx, ty, tz, tilt]), dt)
+
+        ct = np.cos(tilt)
+        alt_err = TARGET_ALT - z
+        az_cmd = kp_alt * alt_err - kd_alt * vz
+
+        # Thrust along body z-axis must compensate gravity + altitude correction
+        T = m * (g + az_cmd) / max(ct, 0.3)
+        T = float(np.clip(T, 0.0, m * g * 2.5))
+
+        # Desired pitch: small nose-down to accelerate forward
+        vx = vtol.state[6]
+        kp_vx = 0.03
+        des_theta = -kp_vx * (des_vx - vx) * np.cos(tilt)
+        des_theta = float(np.clip(des_theta, -0.2, 0.2))
+
+        tau = _pd_attitude(vtol.state, 0.0, des_theta, 0.0, p.inertia)
+
+        vtol.step(np.array([T, tau[0], tau[1], tau[2], tilt]), dt)
 
         if np.any(np.isnan(vtol.state)):
             positions = positions[:i]
@@ -82,16 +129,17 @@ def main() -> None:
 
     viz = ThreePanelViz(title="VTOL Hover → Cruise Transition", world_size=WORLD_SIZE)
 
-    # Inset: tilt angle over time
     times = np.arange(n_steps) * dt
     ax_tilt = viz.fig.add_axes([0.60, 0.03, 0.36, 0.18])
     ax_tilt.set_xlim(0, times[-1])
-    ax_tilt.set_ylim(-5, 65)
+    ax_tilt.set_ylim(-5, 55)
     ax_tilt.set_xlabel("Time [s]", fontsize=7)
     ax_tilt.set_ylabel("Tilt [deg]", fontsize=7)
     ax_tilt.tick_params(labelsize=6)
     ax_tilt.grid(True, alpha=0.2)
-    (tilt_line,) = ax_tilt.plot([], [], "darkorange", lw=0.8)
+    (tilt_line,) = ax_tilt.plot([], [], "darkorange", lw=0.8, label="Tilt")
+    (alt_line,) = ax_tilt.plot([], [], "cyan", lw=0.8, label="Alt")
+    ax_tilt.legend(fontsize=6, loc="upper right")
 
     anim = SimAnimator("vtol_transition", out_dir=Path(__file__).parent)
     anim._fig = viz.fig
@@ -118,6 +166,7 @@ def main() -> None:
         viz._vehicle_arts_side.append(dt_s)
 
         tilt_line.set_data(times[:k], np.degrees(tilt_angles[:k]))
+        alt_line.set_data(times[:k], positions[:k, 2])
 
     anim.animate(update, len(idx))
     anim.save()

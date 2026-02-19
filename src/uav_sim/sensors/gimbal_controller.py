@@ -104,10 +104,10 @@ class BBoxTracker:
         err_x = -bbox_center_norm[0]
         err_y = -bbox_center_norm[1]
 
-        dpan = self.cfg.kp_pan * err_x * dt
-        dtilt = self.cfg.kp_tilt * err_y * dt
+        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_x
+        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_y
 
-        self.gimbal.step(self.gimbal.pan + dpan, self.gimbal.tilt + dtilt, dt)
+        self.gimbal.step(desired_pan, desired_tilt, dt)
 
 
 def project_to_image(

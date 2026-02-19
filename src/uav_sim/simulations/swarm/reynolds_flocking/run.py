@@ -1,8 +1,8 @@
-# Erwin Lejeune - 2026-02-17
-"""Reynolds Flocking: live multi-agent sim with velocity vectors and zones.
+# Erwin Lejeune - 2026-02-19
+"""Reynolds Flocking: 12 agents in 100m env with quad models + data panels.
 
-Each frame runs one simulation step. Agents are drawn with velocity arrows,
-separation radii, and distinct colours. The flock evolves in real-time.
+Agents are drawn as quad models with velocity arrows. 3-panel view
+plus a data panel for mean speed and flock cohesion.
 
 Reference: C. W. Reynolds, "Flocks, Herds, and Schools: A Distributed
 Behavioral Model," SIGGRAPH, 1987.
@@ -17,118 +17,140 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
+from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
+from uav_sim.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
+
+WORLD_SIZE = 100.0
+CRUISE_ALT = 50.0
 
 
 def main() -> None:
     n_agents = 12
     rng = np.random.default_rng(42)
-    pos = rng.uniform(-8, 8, (n_agents, 3))
-    pos[:, 2] = rng.uniform(2, 6, n_agents)
-    vel = rng.uniform(-0.5, 0.5, (n_agents, 3))
+    pos = rng.uniform(30, 70, (n_agents, 3))
+    pos[:, 2] = rng.uniform(40, 60, n_agents)
+    vel = rng.uniform(-1.0, 1.0, (n_agents, 3))
 
-    flock = ReynoldsFlocking(r_percept=6.0, r_sep=2.0, w_sep=2.5, w_ali=1.0, w_coh=1.2)
+    flock = ReynoldsFlocking(r_percept=20.0, r_sep=8.0, w_sep=2.0, w_ali=1.0, w_coh=1.2)
     dt = 0.1
-    n_steps = 200
-    skip = 1
-    n_frames = n_steps // skip
-
-    anim = SimAnimator("reynolds_flocking", out_dir=Path(__file__).parent, fps=20)
-    fig = plt.figure(figsize=(12, 6))
-    anim._fig = fig
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.3, 1], wspace=0.25)
-    ax3d = fig.add_subplot(gs[0], projection="3d")
-    ax2d = fig.add_subplot(gs[1])
-    fig.suptitle("Reynolds Flocking — Live Simulation", fontsize=13)
-
-    ax3d.set_xlabel("X [m]")
-    ax3d.set_ylabel("Y [m]")
-    ax3d.set_zlabel("Z [m]")
-    ax3d.set_xlim(-15, 15)
-    ax3d.set_ylim(-15, 15)
-    ax3d.set_zlim(0, 10)
-    ax2d.set_xlabel("X [m]")
-    ax2d.set_ylabel("Y [m]")
-    ax2d.set_xlim(-15, 15)
-    ax2d.set_ylim(-15, 15)
-    ax2d.set_aspect("equal")
-    ax2d.grid(True, alpha=0.2)
-
-    colors = plt.cm.tab10(np.linspace(0, 1, n_agents))
-    scat3d = ax3d.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c=colors, s=40, depthshade=True)
-    scat2d = ax2d.scatter(pos[:, 0], pos[:, 1], c=colors, s=30)
-
-    quiver_artists_3d = []
-    quiver_artists_2d = []
-    circle_artists = []
-    title = ax3d.set_title("t = 0.0 s")
+    n_steps = 400
+    max_speed = 5.0
 
     positions_hist = [pos.copy()]
     velocities_hist = [vel.copy()]
-    for _ in range(n_steps):
+    mean_speed_hist = np.zeros(n_steps)
+    cohesion_hist = np.zeros(n_steps)
+
+    for step in range(n_steps):
         forces = flock.compute_forces(pos, vel)
         vel = vel + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
-        vel = np.where(speed > 3.0, vel / speed * 3.0, vel)
+        vel = np.where(speed > max_speed, vel / speed * max_speed, vel)
         pos = pos + vel * dt
+        pos = np.clip(pos, 5, WORLD_SIZE - 5)
         positions_hist.append(pos.copy())
         velocities_hist.append(vel.copy())
+        mean_speed_hist[step] = np.mean(np.linalg.norm(vel, axis=1))
+        centroid = pos.mean(axis=0)
+        cohesion_hist[step] = np.mean(np.linalg.norm(pos - centroid, axis=1))
 
-    def update(f):
-        nonlocal quiver_artists_3d, quiver_artists_2d, circle_artists
-        for q in quiver_artists_3d:
-            q.remove()
-        for q in quiver_artists_2d:
-            q.remove()
-        for c in circle_artists:
-            c.remove()
-        quiver_artists_3d.clear()
-        quiver_artists_2d.clear()
-        circle_artists.clear()
+    times = np.arange(n_steps) * dt
+    skip = max(1, n_steps // 200)
+    idx = list(range(0, n_steps, skip))
+    n_frames = len(idx)
+    colors = plt.cm.tab10(np.linspace(0, 1, n_agents))
+    c_rgb = [c[:3] for c in colors]
 
-        step = f * skip
+    fig = plt.figure(figsize=(18, 10))
+    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    ax3d = fig.add_subplot(gs[0, 0], projection="3d")
+    ax_top = fig.add_subplot(gs[0, 1])
+    ax_side = fig.add_subplot(gs[0, 2])
+    ax_speed = fig.add_subplot(gs[1, 0])
+    ax_coh = fig.add_subplot(gs[1, 1:])
+
+    fig.suptitle("Reynolds Flocking (100m env)", fontsize=13)
+
+    ax3d.set_xlim(0, WORLD_SIZE)
+    ax3d.set_ylim(0, WORLD_SIZE)
+    ax3d.set_zlim(0, WORLD_SIZE)
+    ax3d.set_xlabel("X")
+    ax3d.set_ylabel("Y")
+    ax3d.set_zlabel("Z")
+
+    ax_top.set_xlim(0, WORLD_SIZE)
+    ax_top.set_ylim(0, WORLD_SIZE)
+    ax_top.set_aspect("equal")
+    ax_top.set_title("Top Down", fontsize=9)
+    ax_top.grid(True, alpha=0.15)
+
+    ax_side.set_xlim(0, WORLD_SIZE)
+    ax_side.set_ylim(0, WORLD_SIZE)
+    ax_side.set_title("Side View", fontsize=9)
+    ax_side.grid(True, alpha=0.15)
+
+    ax_speed.set_xlim(0, n_steps * dt)
+    ax_speed.set_ylim(0, max(1, mean_speed_hist.max() * 1.2))
+    ax_speed.set_xlabel("Time [s]", fontsize=8)
+    ax_speed.set_ylabel("Mean Speed [m/s]", fontsize=8)
+    ax_speed.set_title("Flock Speed", fontsize=9)
+    ax_speed.grid(True, alpha=0.3)
+    (lspd,) = ax_speed.plot([], [], "orange", lw=0.8)
+
+    ax_coh.set_xlim(0, n_steps * dt)
+    ax_coh.set_ylim(0, max(5, cohesion_hist.max() * 1.2))
+    ax_coh.set_xlabel("Time [s]", fontsize=8)
+    ax_coh.set_ylabel("Mean Distance to Centroid [m]", fontsize=8)
+    ax_coh.set_title("Flock Cohesion", fontsize=9)
+    ax_coh.grid(True, alpha=0.3)
+    (lcoh,) = ax_coh.plot([], [], "m-", lw=0.8)
+
+    sc_top = ax_top.scatter(pos[:, 0], pos[:, 1], c=colors, s=30, zorder=5)
+    sc_side = ax_side.scatter(pos[:, 0], pos[:, 2], c=colors, s=30, zorder=5)
+
+    veh_arts: list = []
+    quiver_top: list = []
+    title = ax3d.set_title("t = 0.0 s")
+
+    anim = SimAnimator("reynolds_flocking", out_dir=Path(__file__).parent, dpi=72)
+    anim._fig = fig
+
+    def update(f: int) -> None:
+        step = idx[f]
         p = positions_hist[step]
         v = velocities_hist[step]
-        t = step * dt
 
-        scat3d._offsets3d = (p[:, 0], p[:, 1], p[:, 2])
-        scat2d.set_offsets(p[:, :2])
-
+        clear_vehicle_artists(veh_arts)
         for i in range(n_agents):
-            s = np.linalg.norm(v[i])
-            if s > 0.05:
-                vn = v[i] / s * min(s, 2.0)
-                q3 = ax3d.quiver(
-                    p[i, 0],
-                    p[i, 1],
-                    p[i, 2],
-                    vn[0],
-                    vn[1],
-                    vn[2],
-                    color=colors[i],
-                    linewidth=1.2,
-                    arrow_length_ratio=0.3,
-                )
-                quiver_artists_3d.append(q3)
-                q2 = ax2d.quiver(
-                    p[i, 0],
-                    p[i, 1],
-                    vn[0],
-                    vn[1],
-                    color=colors[i],
-                    scale=15,
-                    width=0.004,
-                )
-                quiver_artists_2d.append(q2)
-            circle = plt.Circle(
-                p[i, :2], flock.r_sep, fill=False, color=colors[i], alpha=0.15, lw=0.5
+            R = Quadrotor.rotation_matrix(0, 0, 0)
+            veh_arts.extend(
+                draw_quadrotor_3d(ax3d, p[i], R, size=2.5, arm_colors=(c_rgb[i], c_rgb[i]))
             )
-            ax2d.add_patch(circle)
-            circle_artists.append(circle)
 
-        title.set_text(f"Reynolds Flocking — t = {t:.1f} s")
+        sc_top.set_offsets(p[:, :2])
+        sc_side.set_offsets(np.column_stack([p[:, 0], p[:, 2]]))
+
+        for q in quiver_top:
+            q.remove()
+        quiver_top.clear()
+        for i in range(n_agents):
+            s = np.linalg.norm(v[i, :2])
+            if s > 0.1:
+                vn = v[i, :2] / s * min(s, 3.0) * 2
+                q2 = ax_top.quiver(
+                    p[i, 0], p[i, 1], vn[0], vn[1], color=colors[i], scale=30, width=0.003
+                )
+                quiver_top.append(q2)
+
+        lspd.set_data(times[:step], mean_speed_hist[:step])
+        lcoh.set_data(times[:step], cohesion_hist[:step])
+        title.set_text(f"Reynolds Flocking — t = {step * dt:.1f} s")
 
     anim.animate(update, n_frames)
     anim.save()

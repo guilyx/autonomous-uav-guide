@@ -25,7 +25,14 @@ class PIDGains:
 
 
 class PIDAxis:
-    """Single-axis PID controller with anti-windup and output clamping."""
+    """Single-axis PID controller with anti-windup and output clamping.
+
+    Supports two D-term modes:
+    - ``measurement_rate=None``: classic error-derivative (fine for
+      attitude loops where setpoint is quasi-static).
+    - ``measurement_rate=value``: measurement-derivative, which avoids
+      noise amplification on the position loops.
+    """
 
     def __init__(self, gains: PIDGains) -> None:
         self.gains = gains
@@ -38,12 +45,20 @@ class PIDAxis:
         self.prev_error = 0.0
         self._first_call = True
 
-    def compute(self, error: float, dt: float) -> float:
+    def compute(
+        self,
+        error: float,
+        dt: float,
+        measurement_rate: float | None = None,
+    ) -> float:
         """Compute PID output for one time step.
 
         Args:
             error: Current error (setpoint - measurement).
             dt: Time step [s].
+            measurement_rate: If provided, the D-term uses
+                ``-kd * measurement_rate`` instead of differentiating
+                the error. This avoids derivative kick and noise.
 
         Returns:
             Control output.
@@ -52,7 +67,9 @@ class PIDAxis:
         self.integral += error * dt
         self.integral = np.clip(self.integral, -g.integral_limit, g.integral_limit)
 
-        if self._first_call:
+        if measurement_rate is not None:
+            derivative = -measurement_rate
+        elif self._first_call:
             derivative = 0.0
             self._first_call = False
         elif dt > 0:
@@ -77,21 +94,21 @@ class CascadedPIDConfig:
     """
 
     pos_x: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=2.0, ki=0.1, kd=1.5, output_limit=5.0)
+        default_factory=lambda: PIDGains(kp=1.8, ki=0.05, kd=1.8, output_limit=4.0)
     )
     pos_y: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=2.0, ki=0.1, kd=1.5, output_limit=5.0)
+        default_factory=lambda: PIDGains(kp=1.8, ki=0.05, kd=1.8, output_limit=4.0)
     )
     pos_z: PIDGains = field(
-        default_factory=lambda: PIDGains(kp=4.0, ki=0.3, kd=2.5, output_limit=8.0)
+        default_factory=lambda: PIDGains(kp=3.5, ki=0.2, kd=2.5, output_limit=6.0)
     )
-    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=2.0))
-    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=8.0, ki=0.0, kd=2.0))
-    att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=4.0, ki=0.1, kd=1.0))
+    att_phi: PIDGains = field(default_factory=lambda: PIDGains(kp=7.0, ki=0.0, kd=1.5))
+    att_theta: PIDGains = field(default_factory=lambda: PIDGains(kp=7.0, ki=0.0, kd=1.5))
+    att_psi: PIDGains = field(default_factory=lambda: PIDGains(kp=3.0, ki=0.05, kd=0.8))
     mass: float = 1.5
     gravity: float = 9.81
-    max_tilt: float = 0.52  # ~30°, allows responsive lateral motion
-    max_thrust_ratio: float = 2.0  # max thrust as multiple of hover thrust
+    max_tilt: float = 0.40  # ~23°, conservative for smooth flight
+    max_thrust_ratio: float = 1.8
 
 
 class CascadedPIDController:
@@ -146,15 +163,18 @@ class CascadedPIDController:
         """
         c = self.config
         x, y, z, phi, theta, psi = state[:6]
+        vx = state[6] if len(state) > 6 else 0.0
+        vy = state[7] if len(state) > 7 else 0.0
+        vz = state[8] if len(state) > 8 else 0.0
 
         # --- Outer loop: position PID → desired accelerations ---
         ex = target_pos[0] - x
         ey = target_pos[1] - y
         ez = target_pos[2] - z
 
-        ax_des = self.pid_x.compute(ex, dt)
-        ay_des = self.pid_y.compute(ey, dt)
-        az_des = self.pid_z.compute(ez, dt)
+        ax_des = self.pid_x.compute(ex, dt, measurement_rate=vx)
+        ay_des = self.pid_y.compute(ey, dt, measurement_rate=vy)
+        az_des = self.pid_z.compute(ez, dt, measurement_rate=vz)
 
         # Total thrust (along body z-axis).
         hover_T = c.mass * c.gravity
