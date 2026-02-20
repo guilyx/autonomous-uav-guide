@@ -40,16 +40,20 @@ class PurePursuit3D:
         speed: float = 1.0,
         *,
         adaptive: bool = True,
+        smoothing: float = 0.3,
     ) -> None:
         self.lookahead = lookahead
         self.waypoint_threshold = waypoint_threshold
         self.speed = speed
         self.adaptive = adaptive
+        self._smoothing = smoothing
         self._idx = 0
+        self._prev_target: NDArray[np.floating] | None = None
 
     def reset(self) -> None:
         """Reset internal waypoint index."""
         self._idx = 0
+        self._prev_target = None
 
     @property
     def current_index(self) -> int:
@@ -92,13 +96,23 @@ class PurePursuit3D:
             la = max(self.lookahead, self.lookahead * (1.0 + 0.15 * spd))
 
         # Search for look-ahead point along remaining path
+        raw_target: NDArray[np.floating] | None = None
         for i in range(self._idx, n - 1):
             pt = self._intersect_sphere_segment(position, la, path[i], path[i + 1])
             if pt is not None:
-                return pt
+                raw_target = pt
+                break
 
-        # Fall back: target the current waypoint
-        return path[min(self._idx, n - 1)].copy()
+        if raw_target is None:
+            raw_target = path[min(self._idx, n - 1)].copy()
+
+        # Temporal smoothing to prevent target jumping at segment transitions
+        if self._prev_target is not None and self._smoothing > 0:
+            alpha = self._smoothing
+            raw_target = alpha * self._prev_target + (1 - alpha) * raw_target
+        self._prev_target = raw_target.copy()
+
+        return raw_target
 
     def is_path_complete(
         self,

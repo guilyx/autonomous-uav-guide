@@ -40,11 +40,19 @@ class TestGimbal:
         )
         assert corners.shape == (4, 3)
 
-    def test_rotation_matrix_identity_at_zero(self):
+    def test_rotation_matrix_zero_looks_forward(self):
         g = Gimbal()
         g.reset(pan=0.0, tilt=0.0)
         R = g.rotation_matrix(yaw=0.0)
-        np.testing.assert_allclose(R, np.eye(3), atol=1e-10)
+        optical_axis = R @ np.array([0, 0, 1])
+        np.testing.assert_allclose(optical_axis, [1, 0, 0], atol=1e-10)
+
+    def test_rotation_matrix_down(self):
+        g = Gimbal()
+        g.reset(pan=0.0, tilt=-np.pi / 2)
+        R = g.rotation_matrix(yaw=0.0)
+        optical_axis = R @ np.array([0, 0, 1])
+        np.testing.assert_allclose(optical_axis, [0, 0, -1], atol=1e-10)
 
     def test_look_at_forward(self):
         g = Gimbal()

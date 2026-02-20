@@ -184,6 +184,7 @@ def fly_mission(
     takeoff_duration: float = 3.0,
     landing_duration: float = 4.0,
     loiter_duration: float = 1.0,
+    fly_timeout: float = 120.0,
 ) -> NDArray[np.floating]:
     """Execute a full mission: takeoff -> fly path -> loiter -> land.
 
@@ -194,8 +195,9 @@ def fly_mission(
     states: list[NDArray] = []
     alt = cruise_alt if cruise_alt is not None else float(np.mean(path[:, 2]))
 
+    init_hover(quad)
     takeoff(quad, ctrl, target_alt=alt, dt=dt, duration=takeoff_duration, states=states)
-    fly_path(quad, ctrl, path, dt=dt, pursuit=pursuit, states=states)
+    fly_path(quad, ctrl, path, dt=dt, pursuit=pursuit, timeout=fly_timeout, states=states)
     loiter(quad, ctrl, path[-1], dt=dt, duration=loiter_duration, states=states)
     landing(quad, ctrl, dt=dt, duration=landing_duration, states=states)
 

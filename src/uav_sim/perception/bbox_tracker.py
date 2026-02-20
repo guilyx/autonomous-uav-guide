@@ -108,13 +108,13 @@ class VisualServoController:
         if not detection.visible:
             return np.zeros(3)
 
-        err_x = -detection.center_ndc[0]
-        err_y = -detection.center_ndc[1]
+        err_lateral = detection.center_ndc[0]
+        err_vertical = -detection.center_ndc[1]
         size_err = self.cfg.desired_size_ratio - detection.size_ratio
 
         vx_body = self.cfg.kp_forward * size_err
-        vy_body = self.cfg.kp_lateral * err_x
-        vz = self.cfg.kp_lateral * err_y
+        vy_body = self.cfg.kp_lateral * err_lateral
+        vz = self.cfg.kp_lateral * err_vertical
 
         cy, sy = np.cos(yaw), np.sin(yaw)
         vx_world = vx_body * cy - vy_body * sy
