@@ -31,7 +31,7 @@ uav_sim/
 ├── environment/     # World, obstacles, buildings, env presets (city/indoor/field)
 ├── swarm/           # Reynolds, Consensus, Virtual Structure, Leader-Follower
 ├── visualization/   # 3-panel viz, data panels, vehicle artists, sensor viz
-└── simulations/     # 42 runnable demos (python -m uav_sim.simulations.*)
+└── simulations/     # 41 runnable demos (python -m uav_sim.simulations.*)
 ```
 
 ## Quick Start
@@ -154,8 +154,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 
 | Feature | Preview |
 |---|---|
-| **Costmap Layers** | <img src="src/uav_sim/simulations/environment/costmap_layers/costmap_layers.gif" width="280"/> |
-| **Costmap Navigation** | <img src="src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif" width="280"/> |
+| **Dynamic Costmap Navigation** | <img src="src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif" width="280"/> |
 
 ## Swarm Algorithms
 
