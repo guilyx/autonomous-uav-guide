@@ -30,12 +30,16 @@ WORLD_SIZE = 30.0
 def main() -> None:
     world, buildings = default_world()
 
-    start = np.array([8.0, 6.0, 5.0])
+    target_pos = np.array([15.0, 15.0, 12.0])
+    start = target_pos + np.array([-3.0, -3.0, -2.0])
     target_state = np.zeros(12)
-    target_state[:3] = [15.0, 15.0, 12.0]
+    target_state[:3] = target_pos
 
     quad = Quadrotor()
     quad.reset(position=start)
+    from uav_sim.path_tracking.flight_ops import init_hover
+
+    init_hover(quad)
     ctrl = LQRController(
         mass=quad.params.mass, gravity=quad.params.gravity, inertia=quad.params.inertia
     )

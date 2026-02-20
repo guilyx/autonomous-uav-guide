@@ -69,7 +69,7 @@ class VelocityController:
         ax_rot = ax * cy + ay * sy
         ay_rot = ax * sy - ay * cy
 
-        phi_des = float(np.clip(np.arctan2(-ay_rot, c.gravity + az), -c.max_tilt, c.max_tilt))
+        phi_des = float(np.clip(np.arctan2(ay_rot, c.gravity + az), -c.max_tilt, c.max_tilt))
         theta_des = float(np.clip(np.arctan2(ax_rot, c.gravity + az), -c.max_tilt, c.max_tilt))
 
         thrust = c.mass * (c.gravity + az) / (np.cos(phi_des) * np.cos(theta_des) + 1e-6)

@@ -55,6 +55,9 @@ def main() -> None:
     quad = Quadrotor()
     rp0, _ = _ref(0.0)
     quad.reset(position=rp0.copy())
+    from uav_sim.path_tracking.flight_ops import init_hover
+
+    init_hover(quad)
 
     ctrl = MPCController(
         horizon=10,

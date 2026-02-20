@@ -47,9 +47,9 @@ class LQRController:
         self.A, self.B = self._linearise()
 
         if Q is None:
-            Q = np.diag([8, 8, 15, 2, 2, 1, 2, 2, 2, 0.5, 0.5, 0.2])
+            Q = np.diag([10, 10, 20, 3, 3, 1, 4, 4, 4, 0.5, 0.5, 0.2])
         if R is None:
-            R = np.diag([0.02, 8.0, 8.0, 8.0])
+            R = np.diag([0.05, 0.5, 0.5, 0.5])
 
         self.Q = Q
         self.R = R
@@ -109,6 +109,6 @@ class LQRController:
         error = state - target_state
         wrench = self.hover_wrench - self.K @ error
         wrench[0] = float(np.clip(wrench[0], 0.0, self.mass * self.gravity * 2.0))
-        max_torque = 5e-3
+        max_torque = 0.5
         wrench[1:] = np.clip(wrench[1:], -max_torque, max_torque)
         return wrench

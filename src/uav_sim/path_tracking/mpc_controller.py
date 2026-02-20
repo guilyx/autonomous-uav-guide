@@ -51,8 +51,8 @@ class MPCController:
         self.A_d = np.eye(12) + A_c * dt
         self.B_d = B_c * dt
 
-        self.Q = Q if Q is not None else np.diag([15, 15, 25, 1, 1, 1, 2, 2, 2, 0.1, 0.1, 0.1])
-        self.R = R if R is not None else np.diag([0.01, 5.0, 5.0, 5.0])
+        self.Q = Q if Q is not None else np.diag([15, 15, 25, 3, 3, 1, 4, 4, 4, 0.5, 0.5, 0.2])
+        self.R = R if R is not None else np.diag([0.05, 0.5, 0.5, 0.5])
 
         # Terminal cost from DARE
         P = solve_continuous_are(A_c, B_c, self.Q, self.R)
@@ -100,7 +100,7 @@ class MPCController:
         for _ in range(H):
             bounds.append((0.0 - self.hover_wrench[0], self.mass * self.gravity * 1.5))
             for _ in range(3):
-                bounds.append((-1e-4, 1e-4))
+                bounds.append((-0.5, 0.5))
 
         result = minimize(
             self._cost,
