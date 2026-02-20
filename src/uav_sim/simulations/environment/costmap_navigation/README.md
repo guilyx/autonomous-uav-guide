@@ -1,14 +1,25 @@
-# Costmap Navigation
+# Dynamic Costmap Navigation
 
-End-to-end demonstration of planning a collision-free path through a layered costmap using A* on the inflated grid, then tracking that path with a PID controller.
+Reactive obstacle avoidance using a local costmap that is rebuilt every
+planning cycle.  The costmap includes:
+
+- **Footprint inflation** — obstacles expanded by the vehicle bounding radius.
+- **Speed-based dynamic inflation** — safety margin scales with drone speed
+  to account for braking distance.
+- **Dynamic obstacles** — three moving agents that the drone must avoid.
 
 ## Key Equations
 
 $$f(n) = g(n) + h(n), \quad h(n) = \| n - n_{\text{goal}} \|$$
 
+Inflation radius:
+
+$$r_{\text{infl}} = r_{\text{footprint}} + r_{\text{pad}} + k_v \cdot v$$
+
 ## Reference
 
-P. E. Hart, N. J. Nilsson, B. Raphael, "A Formal Basis for the Heuristic Determination of Minimum Cost Paths," IEEE Trans. SSC, 1968. [DOI](https://doi.org/10.1109/TSSC.1968.300136)
+D. Fox, W. Burgard, S. Thrun, "The Dynamic Window Approach to Collision
+Avoidance," IEEE RA Magazine, 1997.
 
 ## Usage
 
