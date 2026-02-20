@@ -17,12 +17,12 @@ from numpy.typing import NDArray
 
 @dataclass
 class VelocityControllerConfig:
-    kp_xy: float = 2.0
-    ki_xy: float = 0.05
+    kp_xy: float = 1.2
+    ki_xy: float = 0.03
     kp_z: float = 3.0
     ki_z: float = 0.1
     max_velocity: float = 5.0
-    max_tilt: float = 0.45  # ~26 deg
+    max_tilt: float = 0.25  # ~14 deg — matches CascadedPID tuning
     mass: float = 1.5
     gravity: float = 9.81
     integral_limit: float = 2.0
@@ -69,7 +69,7 @@ class VelocityController:
         ax_rot = ax * cy + ay * sy
         ay_rot = ax * sy - ay * cy
 
-        phi_des = float(np.clip(np.arctan2(-ay_rot, c.gravity + az), -c.max_tilt, c.max_tilt))
+        phi_des = float(np.clip(np.arctan2(ay_rot, c.gravity + az), -c.max_tilt, c.max_tilt))
         theta_des = float(np.clip(np.arctan2(ax_rot, c.gravity + az), -c.max_tilt, c.max_tilt))
 
         thrust = c.mass * (c.gravity + az) / (np.cos(phi_des) * np.cos(theta_des) + 1e-6)

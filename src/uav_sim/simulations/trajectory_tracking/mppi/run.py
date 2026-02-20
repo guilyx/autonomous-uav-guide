@@ -102,6 +102,7 @@ def main() -> None:
 
     states_list: list[np.ndarray] = []
     local_goals: list[np.ndarray] = []
+    rollout_snapshots: list[np.ndarray | None] = []
 
     takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT_SIM, duration=3.0, states=states_list)
 
@@ -109,7 +110,7 @@ def main() -> None:
     max_mppi_steps = 3000
     seed_counter = 0
 
-    for _ in range(max_mppi_steps):
+    for step_i in range(max_mppi_steps):
         s = quad.state
         if not (np.all(np.isfinite(s[:3])) and np.all(np.abs(s[:3]) < 500)):
             break
@@ -120,8 +121,12 @@ def main() -> None:
 
         mppi_state = np.concatenate([s[:3], s[6:9]])
         mppi_ref = np.concatenate([local_goal, np.zeros(3)])
-        u_mppi = tracker.compute(mppi_state, reference=mppi_ref, seed=seed_counter)
+        result = tracker.compute(
+            mppi_state, reference=mppi_ref, seed=seed_counter, return_rollouts=True
+        )
+        u_mppi, rollouts = result
         seed_counter += 1
+        rollout_snapshots.append(rollouts.copy())
 
         desired_pos = s[:3] + u_mppi * DT_MPPI * 2.0
         desired_pos = np.clip(desired_pos, 0.0, WORLD_SIZE)
@@ -151,6 +156,17 @@ def main() -> None:
     trail_arts = viz.create_trail_artists(color="orange")
     (lg_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10, label="Local Goal")
     (lg_top,) = viz.ax_top.plot([], [], "r*", ms=8, zorder=10)
+
+    n_show = 30
+    rollout_lines_3d = []
+    rollout_lines_top = []
+    for _ in range(n_show):
+        (ln3d,) = viz.ax3d.plot([], [], [], "c-", lw=0.3, alpha=0.15)
+        rollout_lines_3d.append(ln3d)
+        (lnt,) = viz.ax_top.plot([], [], "c-", lw=0.3, alpha=0.15)
+        rollout_lines_top.append(lnt)
+    (opt_3d,) = viz.ax3d.plot([], [], [], "lime", lw=1.5, alpha=0.8, label="MPPI Optimal")
+    (opt_top,) = viz.ax_top.plot([], [], "lime", lw=1.2, alpha=0.7)
     viz.ax3d.legend(fontsize=7, loc="upper left")
 
     anim = SimAnimator("mppi", out_dir=Path(__file__).parent, dpi=72)
@@ -168,6 +184,27 @@ def main() -> None:
         lg_3d.set_data([lg[0]], [lg[1]])
         lg_3d.set_3d_properties([lg[2]])
         lg_top.set_data([lg[0]], [lg[1]])
+
+        mppi_idx = min(k // sim_steps_per_mppi, len(rollout_snapshots) - 1)
+        rolls = rollout_snapshots[mppi_idx]
+        if rolls is not None:
+            rng_vis = np.random.default_rng(f)
+            sample_ids = rng_vis.choice(len(rolls), size=min(n_show, len(rolls)), replace=False)
+            for j, ln3d in enumerate(rollout_lines_3d):
+                if j < len(sample_ids):
+                    r = rolls[sample_ids[j]]
+                    ln3d.set_data(r[:, 0], r[:, 1])
+                    ln3d.set_3d_properties(r[:, 2])
+                    rollout_lines_top[j].set_data(r[:, 0], r[:, 1])
+                else:
+                    ln3d.set_data([], [])
+                    ln3d.set_3d_properties([])
+                    rollout_lines_top[j].set_data([], [])
+
+            mean_roll = np.mean(rolls, axis=0)
+            opt_3d.set_data(mean_roll[:, 0], mean_roll[:, 1])
+            opt_3d.set_3d_properties(mean_roll[:, 2])
+            opt_top.set_data(mean_roll[:, 0], mean_roll[:, 1])
 
     anim.animate(update, n_frames)
     anim.save()

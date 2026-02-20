@@ -18,7 +18,6 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
-from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import rdp_simplify
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -44,39 +43,47 @@ def main() -> None:
         return
 
     # Reduce waypoints for min-snap (it needs a small number of knot points)
-    wps = rdp_simplify(planned, epsilon=3.0)
-    if len(wps) < 2:
-        wps = planned[:: max(1, len(planned) // 5)]
+    wps = rdp_simplify(planned, epsilon=1.5)
+    if len(wps) < 3:
+        wps = planned[:: max(1, len(planned) // 8)]
     # Ensure start and goal are exact
     wps[0] = START.copy()
     wps[-1] = GOAL.copy()
 
-    seg_times = np.full(len(wps) - 1, 3.0)
+    seg_lengths = np.array([np.linalg.norm(wps[i + 1] - wps[i]) for i in range(len(wps) - 1)])
+    seg_times = np.clip(seg_lengths / 2.0, 1.5, 6.0)
 
     ms = MinSnapTrajectory()
     coeffs = ms.generate(wps, seg_times)
-    _, traj_pts = ms.evaluate(coeffs, seg_times, dt=0.05)
+    _, traj_pts_dense = ms.evaluate(coeffs, seg_times, dt=0.05)
+
+    # Resample to ~1 m spacing for path tracking
+    traj_pts = [traj_pts_dense[0]]
+    for p in traj_pts_dense[1:]:
+        if np.linalg.norm(p - traj_pts[-1]) >= 0.8:
+            traj_pts.append(p)
+    if np.linalg.norm(traj_pts[-1] - traj_pts_dense[-1]) > 0.1:
+        traj_pts.append(traj_pts_dense[-1])
+    traj_pts = np.array(traj_pts)
 
     # Phase 2: fly
+    from uav_sim.path_tracking.flight_ops import fly_path, init_hover, landing, loiter, takeoff
+
     quad = Quadrotor()
     quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
-    flight_states = fly_mission(
-        quad,
-        ctrl,
-        traj_pts,
-        cruise_alt=CRUISE_ALT,
-        dt=0.005,
-        pursuit=pursuit,
-        takeoff_duration=2.5,
-        landing_duration=2.5,
-        loiter_duration=0.5,
-    )
+    init_hover(quad)
+    states: list[np.ndarray] = []
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
+    fly_path(quad, ctrl, traj_pts, dt=0.005, pursuit=pursuit, timeout=90.0, states=states)
+    loiter(quad, ctrl, traj_pts[-1], dt=0.005, duration=0.5, states=states)
+    landing(quad, ctrl, dt=0.005, duration=2.5, states=states)
+    flight_states = np.array(states) if states else np.zeros((1, 12))
     flight_pos = flight_states[:, :3]
 
     # ── Animation ─────────────────────────────────────────────────────
-    n_traj = len(traj_pts)
+    n_traj = len(traj_pts_dense)
     traj_step = max(1, n_traj // 80)
     traj_frames = list(range(0, n_traj, traj_step))
     fly_step = max(1, len(flight_pos) // 100)
@@ -110,12 +117,12 @@ def main() -> None:
     def update(f: int) -> None:
         if f < n_tf:
             k = traj_frames[f]
-            traj_3d.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
-            traj_3d.set_3d_properties(traj_pts[: k + 1, 2])
-            traj_dot_3d.set_data([traj_pts[k, 0]], [traj_pts[k, 1]])
-            traj_dot_3d.set_3d_properties([traj_pts[k, 2]])
-            traj_top.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 1])
-            traj_side.set_data(traj_pts[: k + 1, 0], traj_pts[: k + 1, 2])
+            traj_3d.set_data(traj_pts_dense[: k + 1, 0], traj_pts_dense[: k + 1, 1])
+            traj_3d.set_3d_properties(traj_pts_dense[: k + 1, 2])
+            traj_dot_3d.set_data([traj_pts_dense[k, 0]], [traj_pts_dense[k, 1]])
+            traj_dot_3d.set_3d_properties([traj_pts_dense[k, 2]])
+            traj_top.set_data(traj_pts_dense[: k + 1, 0], traj_pts_dense[: k + 1, 1])
+            traj_side.set_data(traj_pts_dense[: k + 1, 0], traj_pts_dense[: k + 1, 2])
             seg = min(int(k / (n_traj / len(seg_times))), len(seg_times) - 1)
             title.set_text(f"Phase 1: Min-Snap — segment {seg + 1}/{len(seg_times)}")
         else:

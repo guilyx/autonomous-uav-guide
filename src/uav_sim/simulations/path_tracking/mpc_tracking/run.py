@@ -25,9 +25,9 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CENTER = np.array([15.0, 15.0])
-RX, RY = 8.0, 5.0
+RX, RY = 6.0, 4.0
 ALT = 12.0
-OMEGA = 0.2
+OMEGA = 0.12
 
 
 def _ref(t: float) -> tuple[np.ndarray, np.ndarray]:
@@ -55,17 +55,20 @@ def main() -> None:
     quad = Quadrotor()
     rp0, _ = _ref(0.0)
     quad.reset(position=rp0.copy())
+    from uav_sim.path_tracking.flight_ops import init_hover
+
+    init_hover(quad)
 
     ctrl = MPCController(
-        horizon=10,
-        dt=0.02,
+        horizon=8,
+        dt=0.05,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dt, dur = 0.005, 30.0
-    ctrl_dt = 0.02
+    dt, dur = 0.01, 20.0
+    ctrl_dt = 0.05
     steps = int(dur / dt)
     states = np.zeros((steps, 12))
     refs = np.zeros((steps, 3))

@@ -83,8 +83,12 @@ def main() -> None:
     flight_pos = flight_states[:, :3]
 
     # ── Animation ─────────────────────────────────────────────────────
-    roadmap_pause = 15
-    smooth_pause = 10
+    n_sample_frames = 20
+    n_edge_frames = 15
+    n_search_frames = 10
+    n_smooth_frames = 10
+    roadmap_pause = n_sample_frames + n_edge_frames + n_search_frames
+    smooth_pause = n_smooth_frames
     fly_step = max(1, len(flight_pos) // 60)
     fly_frames = list(range(0, len(flight_pos), fly_step))
     n_ff = len(fly_frames)
@@ -94,20 +98,18 @@ def main() -> None:
     viz.draw_buildings(buildings)
     viz.mark_start_goal(start, goal)
 
-    # Draw roadmap edges
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+    edge_segs = []
     for i, adj in enumerate(planner.edges):
         for j, _ in adj:
             if j > i:
-                p1, p2 = planner.nodes[i], planner.nodes[j]
-                viz.ax3d.plot(
-                    [p1[0], p2[0]],
-                    [p1[1], p2[1]],
-                    [p1[2], p2[2]],
-                    "c-",
-                    lw=0.2,
-                    alpha=0.0,
-                )
-    edge_lines = viz.ax3d.lines[-len([e for adj in planner.edges for e in adj if e[0] > 0]) // 2 :]
+                edge_segs.append([planner.nodes[i], planner.nodes[j]])
+
+    edge_col = None
+    if edge_segs:
+        edge_col = Line3DCollection(edge_segs, colors="cyan", linewidths=0.3, alpha=0.0)
+        viz.ax3d.add_collection3d(edge_col)
 
     viz.ax3d.scatter(
         planner.nodes[:, 0],
@@ -133,13 +135,33 @@ def main() -> None:
     anim = SimAnimator("prm_3d", out_dir=Path(__file__).parent, dpi=72)
     anim._fig = viz.fig
 
+    n_nodes = len(planner.nodes)
+    n_edges_total = len(edge_segs)
+
     def update(f: int) -> None:
-        if f < roadmap_pause:
-            frac = min(1.0, (f + 1) / (roadmap_pause * 0.6))
-            node_scat.set_alpha(frac * 0.5)
-            for ln in edge_lines:
-                ln.set_alpha(frac * 0.15)
-            if f >= roadmap_pause - 3:
+        p1_sample_end = n_sample_frames
+        p1_edge_end = p1_sample_end + n_edge_frames
+        p1_search_end = p1_edge_end + n_search_frames
+        p2_end = p1_search_end + smooth_pause
+
+        if f < p1_sample_end:
+            frac = min(1.0, (f + 1) / n_sample_frames)
+            node_scat.set_alpha(frac * 0.6)
+            n_show = max(1, int(frac * n_nodes))
+            title.set_text(f"Sampling — {n_show}/{n_nodes} nodes")
+        elif f < p1_edge_end:
+            node_scat.set_alpha(0.5)
+            ef = f - p1_sample_end
+            frac = min(1.0, (ef + 1) / n_edge_frames)
+            if edge_col:
+                edge_col.set_alpha(frac * 0.25)
+            n_show = max(1, int(frac * n_edges_total))
+            title.set_text(f"Building Edges — {n_show}/{n_edges_total}")
+        elif f < p1_search_end:
+            sf = f - p1_edge_end
+            if edge_col:
+                edge_col.set_alpha(0.1)
+            if sf >= n_search_frames // 2:
                 raw_line_3d.set_alpha(1.0)
                 raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
                 raw_line_3d.set_3d_properties(raw_path[:, 2])
@@ -147,12 +169,12 @@ def main() -> None:
                 raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
                 raw_line_side.set_alpha(1.0)
                 raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
-            title.set_text(f"Phase 1: PRM Roadmap — {int(100 * (f + 1) / roadmap_pause)}%")
-        elif f < roadmap_pause + smooth_pause:
-            sf = f - roadmap_pause
-            if sf < smooth_pause // 2:
-                title.set_text("Raw PRM Path (Dijkstra)")
+                title.set_text(f"Dijkstra Search — Path found ({len(raw_path)} nodes)")
             else:
+                title.set_text("Dijkstra Search...")
+        elif f < p2_end:
+            sf = f - p1_search_end
+            if sf >= smooth_pause // 2:
                 smooth_line_3d.set_alpha(1.0)
                 smooth_line_3d.set_data(smooth[:, 0], smooth[:, 1])
                 smooth_line_3d.set_3d_properties(smooth[:, 2])
@@ -164,12 +186,14 @@ def main() -> None:
                 raw_line_top.set_alpha(0.2)
                 raw_line_side.set_alpha(0.2)
                 title.set_text("Smoothed Path (RDP + Resample)")
+            else:
+                title.set_text("Raw PRM Path (Dijkstra)")
         else:
-            fi = f - roadmap_pause - smooth_pause
+            fi = f - p2_end
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
-            title.set_text("Phase 2: Quadrotor Following PRM Path")
+            title.set_text("Quadrotor Following PRM Path")
 
     anim.animate(update, total)
     anim.save()

@@ -31,8 +31,8 @@ WORLD_SIZE = 100.0
 def main() -> None:
     n_ag = 8
     rng = np.random.default_rng(3)
-    pos = rng.uniform(10, 40, (n_ag, 3))
-    pos[:, 2] = rng.uniform(40, 60, n_ag)
+    pos = rng.uniform(5, 35, (n_ag, 3))
+    pos[:, 2] = rng.uniform(35, 65, n_ag)
     vel = np.zeros_like(pos)
     goal = np.array([80.0, 80.0, 50.0])
     ctrl = PotentialSwarm(d_des=10.0, a=6, b=3, goal_gain=0.5)

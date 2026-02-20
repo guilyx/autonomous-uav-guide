@@ -1,11 +1,13 @@
 # Autonomous UAV Guide
 
 [![CI](https://github.com/guilyx/autonomous-uav-guide/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/autonomous-uav-guide/actions/workflows/ci.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/db279b02fee84675a89f6f4892f23d30)](https://app.codacy.com/gh/guilyx/autonomous-uav-guide/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![HitCount](https://hits.dwyl.com/guilyx/autonomous-uav-guide.svg)](https://hits.dwyl.com/guilyx/autonomous-uav-guide)
 
 From-scratch Python implementations of algorithms for **autonomous UAVs**: multirotor, VTOL, and fixed-wing. Every algorithm comes with a runnable simulation, academic references, and a GIF preview.
 
@@ -29,7 +31,7 @@ uav_sim/
 ├── environment/     # World, obstacles, buildings, env presets (city/indoor/field)
 ├── swarm/           # Reynolds, Consensus, Virtual Structure, Leader-Follower
 ├── visualization/   # 3-panel viz, data panels, vehicle artists, sensor viz
-└── simulations/     # 43 runnable demos (python -m uav_sim.simulations.*)
+└── simulations/     # 41 runnable demos (python -m uav_sim.simulations.*)
 ```
 
 ## Quick Start
@@ -101,7 +103,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 |---|---|
 | **Feedback Linearisation** | <img src="src/uav_sim/simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif" width="280"/> |
 | **MPPI** | <img src="src/uav_sim/simulations/trajectory_tracking/mppi/mppi.gif" width="280"/> |
-| **NMPC + PRM** | <img src="src/uav_sim/simulations/trajectory_tracking/nmpc_prm/nmpc_prm.gif" width="280"/> |
+| **NMPC** | <img src="src/uav_sim/simulations/trajectory_tracking/nmpc/nmpc.gif" width="280"/> |
 
 ## Path Planning
 
@@ -137,8 +139,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 | Feature | Preview |
 |---|---|
 | **EKF-SLAM** | <img src="src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif" width="280"/> |
-| **Grid Mapping** | <img src="src/uav_sim/simulations/perception/grid_mapping/grid_mapping.gif" width="280"/> |
-| **Lidar Mapping** | <img src="src/uav_sim/simulations/perception/lidar_mapping/lidar_mapping.gif" width="280"/> |
+| **Occupancy Mapping** | <img src="src/uav_sim/simulations/perception/occupancy_mapping/occupancy_mapping.gif" width="280"/> |
 | **Sensor Suite Demo** | <img src="src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif" width="280"/> |
 | **Visual Servoing** | <img src="src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif" width="280"/> |
 
@@ -153,8 +154,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 
 | Feature | Preview |
 |---|---|
-| **Costmap Layers** | <img src="src/uav_sim/simulations/environment/costmap_layers/costmap_layers.gif" width="280"/> |
-| **Costmap Navigation** | <img src="src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif" width="280"/> |
+| **Dynamic Costmap Navigation** | <img src="src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif" width="280"/> |
 
 ## Swarm Algorithms
 
@@ -169,7 +169,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 
 ---
 
-## Contributing
+## Contributing [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/guilyx/autonomous-uav-guide/issues)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). All contributions must pass `pre-commit run --all-files` and `uv run pytest`.
 

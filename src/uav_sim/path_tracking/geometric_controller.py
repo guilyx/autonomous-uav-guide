@@ -29,13 +29,13 @@ class GeometricControllerConfig:
     prevent extreme attitude commands.
     """
 
-    kx: float = 4.0
-    kv: float = 2.8
-    kR: float = 8.0
-    kw: float = 2.5
+    kx: float = 2.5
+    kv: float = 2.0
+    kR: float = 5.0
+    kw: float = 1.8
     mass: float = 1.5
     gravity: float = 9.81
-    max_acc: float = 5.0
+    max_acc: float = 3.0
     inertia: NDArray[np.floating] | None = None
 
     def __post_init__(self):

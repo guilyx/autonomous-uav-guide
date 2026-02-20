@@ -181,6 +181,8 @@ def main() -> None:
     fly_trail = viz.create_trail_artists(color="orange")
     (lg_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10, label="Local Goal")
     (lg_top,) = viz.ax_top.plot([], [], "r*", ms=8, zorder=10)
+    (arc_3d,) = viz.ax3d.plot([], [], [], "lime", lw=2.0, alpha=0.7, label="Local Arc")
+    (arc_top,) = viz.ax_top.plot([], [], "lime", lw=1.5, alpha=0.6)
     viz.ax3d.legend(fontsize=7, loc="upper left")
     title_art = viz.ax3d.set_title("Phase 1: Frenet Sampling")
 
@@ -188,6 +190,19 @@ def main() -> None:
     anim._fig = viz.fig
 
     local_goal_arr = np.array(local_goals) if local_goals else np.zeros((1, 3))
+    local_plan_arr = local_plans if local_plans else []
+
+    def _plan_for_step(k: int) -> np.ndarray | None:
+        """Find which local plan arc is active at step k."""
+        pos_k = flight_pos[k]
+        best_plan = None
+        best_dist = float("inf")
+        for plan in local_plan_arr:
+            d = np.min(np.linalg.norm(plan - pos_k, axis=1))
+            if d < best_dist:
+                best_dist = d
+                best_plan = plan
+        return best_plan if best_dist < 5.0 else None
 
     def update(f: int) -> None:
         if f < cand_pause:
@@ -207,6 +222,12 @@ def main() -> None:
             pct = int(100 * (f + 1) / cand_pause)
             title_art.set_text(f"Phase 1: Frenet — {len(valid_cands)} candidates — {pct}%")
         else:
+            for ln in cand_lines_3d:
+                ln.set_alpha(0.0)
+            best_3d.set_alpha(0.0)
+            best_top.set_alpha(0.0)
+            best_side.set_alpha(0.0)
+
             fi = f - cand_pause
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
@@ -218,7 +239,23 @@ def main() -> None:
             lg_3d.set_3d_properties([lg[2]])
             lg_top.set_data([lg[0]], [lg[1]])
 
-            title_art.set_text("Phase 2: Iterative Frenet Replanning")
+            plan = _plan_for_step(k)
+            if plan is not None:
+                arc_3d.set_data(plan[:, 0], plan[:, 1])
+                arc_3d.set_3d_properties(plan[:, 2])
+                arc_top.set_data(plan[:, 0], plan[:, 1])
+            else:
+                arc_3d.set_data([], [])
+                arc_3d.set_3d_properties([])
+                arc_top.set_data([], [])
+
+            if local_plan_arr:
+                step_per_plan = max(1, n_total // len(local_plan_arr))
+                replan_idx = min(len(local_plan_arr), k // step_per_plan + 1)
+            else:
+                replan_idx = 0
+            n_plans = len(local_plan_arr)
+            title_art.set_text(f"Phase 2: Frenet Replanning — arc {replan_idx}/{n_plans}")
 
     anim.animate(update, total_frames)
     anim.save()
