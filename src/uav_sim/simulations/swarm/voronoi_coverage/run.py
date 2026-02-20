@@ -41,10 +41,13 @@ def main() -> None:
     n_ag = 6
     rng = np.random.default_rng(4)
     bounds = np.array([[0.0, WORLD_SIZE], [0.0, WORLD_SIZE]])
-    pos_2d = rng.uniform(10, WORLD_SIZE - 10, (n_ag, 2))
+    pos_2d = rng.uniform(10, 90, (n_ag, 2))
+    vel_2d = np.zeros((n_ag, 2))
     ctrl = CoverageController(bounds=bounds, resolution=2.0, gain=0.5)
 
-    dt, n_steps = 0.1, 500
+    dt, n_steps = 0.1, 300
+    damping = 0.85
+    max_speed = 5.0
 
     snap: list[np.ndarray] = [pos_2d.copy()]
     coverage_cost = np.zeros(n_steps)
@@ -52,7 +55,11 @@ def main() -> None:
 
     for step in range(n_steps):
         forces = ctrl.compute_forces(pos_2d)
-        pos_2d = pos_2d + forces * dt
+        vel_2d = vel_2d * damping + forces * dt
+        speed = np.linalg.norm(vel_2d, axis=1, keepdims=True)
+        speed_safe = np.maximum(speed, 1e-8)
+        vel_2d = np.where(speed > max_speed, vel_2d / speed_safe * max_speed, vel_2d)
+        pos_2d = pos_2d + vel_2d * dt
         pos_2d = np.clip(pos_2d, 1.0, WORLD_SIZE - 1.0)
         snap.append(pos_2d.copy())
         coverage_cost[step] = np.sum(np.linalg.norm(forces, axis=1))
@@ -62,7 +69,7 @@ def main() -> None:
         mean_dist[step] = np.mean(dists) if dists else 0.0
 
     times = np.arange(n_steps) * dt
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
     colors = plt.cm.Set1(np.linspace(0, 1, n_ag))

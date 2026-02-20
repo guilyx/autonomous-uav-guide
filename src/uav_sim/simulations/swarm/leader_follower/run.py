@@ -37,9 +37,10 @@ def main() -> None:
     pos = np.zeros((n_ag, 3))
     pos[0] = [50, 50, CRUISE_ALT]
     for i in range(ctrl.num_followers):
-        pos[1 + i] = pos[0] + offsets[i] + np.random.randn(3) * 3
+        pos[1 + i] = pos[0] + offsets[i] + np.random.randn(3) * 15
     vel = np.zeros((n_ag, 3))
-    dt, n_steps = 0.1, 500
+    dt, n_steps = 0.1, 300
+    damping = 0.85
 
     snap = [pos.copy()]
     follower_err = np.zeros((n_steps, ctrl.num_followers))
@@ -58,7 +59,7 @@ def main() -> None:
         leader_vel = (new_leader - pos[0]) / dt
         pos[0] = new_leader
         forces = ctrl.compute_forces(pos[0], leader_vel, pos[1:], vel[1:])
-        vel[1:] = vel[1:] + forces * dt
+        vel[1:] = vel[1:] * damping + forces * dt
         pos[1:] = pos[1:] + vel[1:] * dt
         snap.append(pos.copy())
         for fi in range(ctrl.num_followers):
@@ -68,7 +69,7 @@ def main() -> None:
         mean_dist[step] = np.mean(dists)
 
     times = np.arange(n_steps) * dt
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
 
