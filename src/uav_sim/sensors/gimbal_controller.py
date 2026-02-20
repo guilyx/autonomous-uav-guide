@@ -103,11 +103,11 @@ class BBoxTracker:
         bbox_size_ratio : bbox diagonal / image diagonal.
         dt : timestep.
         """
-        err_x = -bbox_center_norm[0]
-        err_y = -bbox_center_norm[1]
+        err_pan = bbox_center_norm[0]
+        err_tilt = -bbox_center_norm[1]
 
-        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_x
-        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_y
+        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_pan
+        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_tilt
 
         self.gimbal.step(desired_pan, desired_tilt, dt)
 

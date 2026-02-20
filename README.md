@@ -1,11 +1,13 @@
 # Autonomous UAV Guide
 
 [![CI](https://github.com/guilyx/autonomous-uav-guide/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/autonomous-uav-guide/actions/workflows/ci.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/db279b02fee84675a89f6f4892f23d30)](https://app.codacy.com/gh/guilyx/autonomous-uav-guide/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![HitCount](https://hits.dwyl.com/guilyx/autonomous-uav-guide.svg)](https://hits.dwyl.com/guilyx/autonomous-uav-guide)
 
 From-scratch Python implementations of algorithms for **autonomous UAVs**: multirotor, VTOL, and fixed-wing. Every algorithm comes with a runnable simulation, academic references, and a GIF preview.
 
@@ -168,7 +170,7 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 
 ---
 
-## Contributing
+## Contributing [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/guilyx/autonomous-uav-guide/issues)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). All contributions must pass `pre-commit run --all-files` and `uv run pytest`.
 

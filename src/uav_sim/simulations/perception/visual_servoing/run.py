@@ -40,35 +40,38 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 DT = 0.02
-SIM_TIME = 50.0
+SIM_TIME = 60.0
+H_FOV = 0.8
+V_FOV = 0.6
 
 
 def _moving_target(t: float) -> np.ndarray:
     """Slow elliptical ground-level path for the target."""
     cx, cy = 15.0, 15.0
-    rx, ry = 6.0, 4.0
-    omega = 0.08
+    rx, ry = 7.0, 5.0
+    omega = 0.06
     return np.array([cx + rx * np.cos(omega * t), cy + ry * np.sin(omega * t), 0.5])
 
 
 def main() -> None:
     world, buildings = default_world()
 
-    gimbal = Gimbal(max_rate=2.0)
-    gimbal.reset(pan=0.0, tilt=-np.pi / 4)
+    gimbal = Gimbal(max_rate=3.0)
+    init_tgt = _moving_target(0.0)
+    init_pos = np.array([15.0, 15.0, 10.0])
+    init_pan, init_tilt = gimbal.look_at(init_pos, init_tgt, 0.0)
+    gimbal.reset(pan=init_pan, tilt=init_tilt)
     tracker = PointTracker(gimbal)
 
     detector = SimulatedDetector(target_radius=0.5)
     servo = VisualServoController(
         VisualServoConfig(
-            kp_lateral=2.0,
-            kp_forward=1.5,
-            desired_size_ratio=0.15,
-            max_velocity=1.5,
+            kp_lateral=3.0,
+            kp_forward=2.0,
+            desired_size_ratio=0.08,
+            max_velocity=2.5,
         )
     )
-
-    h_fov, v_fov = 1.2, 0.9
 
     n_steps = int(SIM_TIME / DT)
     drone_pos = np.zeros((n_steps, 3))
@@ -79,7 +82,7 @@ def main() -> None:
     visible_hist = np.zeros(n_steps, dtype=bool)
     dist_hist = np.zeros(n_steps)
 
-    pos = np.array([15.0, 15.0, 10.0])
+    pos = init_pos.copy()
     vel = np.zeros(3)
 
     for i in range(n_steps):
@@ -90,7 +93,7 @@ def main() -> None:
 
         tracker.step(pos, tgt, yaw, DT)
 
-        det = detector.detect(tgt, pos, gimbal, h_fov, v_fov, yaw)
+        det = detector.detect(tgt, pos, gimbal, H_FOV, V_FOV, yaw)
         vel_cmd = servo.compute(det, yaw)
 
         bbox_cx[i] = det.center_ndc[0] if det.visible else 0.0
@@ -99,7 +102,7 @@ def main() -> None:
         visible_hist[i] = det.visible
         dist_hist[i] = np.linalg.norm(pos - tgt)
 
-        alpha = 0.15
+        alpha = 0.35
         vel = (1 - alpha) * vel + alpha * vel_cmd
         pos = pos + vel * DT
         pos[2] = np.clip(pos[2], 3.0, 20.0)
@@ -143,7 +146,6 @@ def main() -> None:
     (drone_trail_top,) = ax_top.plot([], [], "dodgerblue", lw=0.8, alpha=0.5)
     ax3d.legend(fontsize=7, loc="upper left")
 
-    # Camera view panel
     ax_cam.set_xlim(-1.2, 1.2)
     ax_cam.set_ylim(-1.0, 1.0)
     ax_cam.set_facecolor("black")
@@ -155,7 +157,6 @@ def main() -> None:
     (crosshair,) = ax_cam.plot([0], [0], "w+", ms=12, mew=1)
     (target_dot,) = ax_cam.plot([], [], "r.", ms=10)
 
-    # Error data
     times = np.arange(n_steps) * DT
     ax_data.set_xlim(0, SIM_TIME)
     ax_data.set_ylim(0, max(20, dist_hist.max() * 1.2))
@@ -197,8 +198,20 @@ def main() -> None:
             cy_k = bbox_cy[k]
             sr = bbox_size[k] * 2
             half = max(sr, 0.05)
-            xs = [cx_k - half, cx_k + half, cx_k + half, cx_k - half, cx_k - half]
-            ys = [cy_k - half, cy_k - half, cy_k + half, cy_k + half, cy_k - half]
+            xs = [
+                cx_k - half,
+                cx_k + half,
+                cx_k + half,
+                cx_k - half,
+                cx_k - half,
+            ]
+            ys = [
+                cy_k - half,
+                cy_k - half,
+                cy_k + half,
+                cy_k + half,
+                cy_k - half,
+            ]
             bbox_rect_art.set_data(xs, ys)
             target_dot.set_data([cx_k], [cy_k])
         else:
