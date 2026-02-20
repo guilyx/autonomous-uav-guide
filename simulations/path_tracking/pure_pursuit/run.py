@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
 """Pure Pursuit 3D path tracking: 3-panel demonstration.
 
-Plans an obstacle-aware path with A*, then demonstrates the adaptive
-pure-pursuit controller following it through an urban environment.
-The carrot (look-ahead) point is visualised on all three views.
+Plans an obstacle-aware path with A*, then uses the StateManager to arm,
+take off, and fly the path with adaptive pure pursuit.  The carrot
+(look-ahead) point is visualised on all three views.
 
 Reference: R. C. Coulter, "Implementation of the Pure Pursuit Path
 Tracking Algorithm," CMU-RI-TR-92-01, 1992.
@@ -16,10 +16,9 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import World, add_urban_buildings
+from uav_sim.control import StateManager
+from uav_sim.environment import default_world
 from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
-from uav_sim.path_tracking.flight_ops import fly_path, takeoff
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -34,11 +33,7 @@ GOAL = np.array([27.0, 27.0, CRUISE_ALT])
 
 
 def main() -> None:
-    world = World(
-        bounds_min=np.zeros(3),
-        bounds_max=np.full(3, WORLD_SIZE),
-    )
-    buildings = add_urban_buildings(world, world_size=WORLD_SIZE, n_buildings=5, seed=17)
+    _, buildings = default_world()
 
     waypoints = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
     if waypoints is None:
@@ -47,30 +42,38 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=np.array([START[0], START[1], 0.0]))
-    ctrl = CascadedPIDController()
+
+    sm = StateManager(quad)
+    sm.arm()
+    sm.run_takeoff(altitude=CRUISE_ALT, dt=0.005, timeout=10.0)
+
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    sm.offboard()
+    dt = 0.005
+    for _ in range(int(60.0 / dt)):
+        vel = quad.velocity
+        target = pursuit.compute_target(quad.position, waypoints, velocity=vel)
+        sm.set_position_target(target)
+        sm.step(dt)
+        if pursuit.is_path_complete(quad.position, waypoints):
+            break
 
-    states: list[np.ndarray] = []
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
-    fly_path(quad, ctrl, waypoints, dt=0.005, pursuit=pursuit, timeout=60.0, states=states)
+    sm.run_land(dt=dt, timeout=8.0)
 
-    all_states = np.array(states) if states else np.zeros((1, 12))
-    pos = all_states[:, :3]
+    states = np.array(sm.states)
+    pos = states[:, :3]
 
-    # Recompute carrot points for visualisation
     pursuit_viz = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     pursuit_viz.reset()
-    carrot_points = np.zeros((len(all_states), 3))
-    for i in range(len(all_states)):
-        vel = all_states[i, 6:9]
-        carrot_points[i] = pursuit_viz.compute_target(pos[i], waypoints, velocity=vel)
+    carrot_points = np.zeros((len(states), 3))
+    for i in range(len(states)):
+        carrot_points[i] = pursuit_viz.compute_target(pos[i], waypoints, velocity=states[i, 6:9])
         if pursuit_viz.is_path_complete(pos[i], waypoints):
             carrot_points[i:] = waypoints[-1]
             break
 
-    # ── visualisation ──────────────────────────────────────────────────
-    skip = max(1, len(all_states) // 200)
-    idx = list(range(0, len(all_states), skip))
+    skip = max(1, len(states) // 200)
+    idx = list(range(0, len(states), skip))
     n_frames = len(idx)
 
     viz = ThreePanelViz(title="Pure Pursuit 3D — Carrot Tracking", world_size=WORLD_SIZE)
@@ -90,7 +93,7 @@ def main() -> None:
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail, pos, k)
-        viz.update_vehicle(pos[k], all_states[k, 3:6], size=1.5)
+        viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
         cp = carrot_points[k]
         carrot_3d.set_data([cp[0]], [cp[1]])
         carrot_3d.set_3d_properties([cp[2]])
