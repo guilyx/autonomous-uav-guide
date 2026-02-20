@@ -78,93 +78,92 @@ world, obs = create_environment(EnvironmentPreset.OPEN_FIELD)  # 60m clear
 
 | Model | Preview |
 |---|---|
-| **Quadrotor** (6DOF + motor dynamics) | <img src="src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif" width="280"/> |
-| **Fixed-Wing** (aerodynamic) | <img src="src/uav_sim/simulations/vehicles/fixed_wing_flight/fixed_wing_flight.gif" width="280"/> |
-| **Tilt-Rotor VTOL** (hover to cruise) | <img src="src/uav_sim/simulations/vehicles/vtol_transition/vtol_transition.gif" width="280"/> |
+| **Quadrotor** (6DOF + motor dynamics) | <img src="src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif" width="560"/> |
+| **Fixed-Wing** (aerodynamic) | <img src="src/uav_sim/simulations/vehicles/fixed_wing_flight/fixed_wing_flight.gif" width="560"/> |
+| **Tilt-Rotor VTOL** (hover to cruise) | <img src="src/uav_sim/simulations/vehicles/vtol_transition/vtol_transition.gif" width="560"/> |
 
 ## Path Tracking
 
 | Algorithm | Preview |
 |---|---|
-| **Cascaded PID Hover** | <img src="src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif" width="280"/> |
-| **LQR Hover** | <img src="src/uav_sim/simulations/path_tracking/lqr_hover/lqr_hover.gif" width="280"/> |
-| **Pure Pursuit 3D** | <img src="src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif" width="280"/> |
-| **Geometric SO(3)** | <img src="src/uav_sim/simulations/path_tracking/geometric_control/geometric_control.gif" width="280"/> |
-| **Waypoint Tracking** | <img src="src/uav_sim/simulations/path_tracking/waypoint_tracking/waypoint_tracking.gif" width="280"/> |
-| **LQR Path Tracking** | <img src="src/uav_sim/simulations/path_tracking/lqr_tracking/lqr_tracking.gif" width="280"/> |
-| **MPC Tracking** | <img src="src/uav_sim/simulations/path_tracking/mpc_tracking/mpc_tracking.gif" width="280"/> |
-| **Path Smoothing Demo** | <img src="src/uav_sim/simulations/path_tracking/path_smoothing_demo/path_smoothing_demo.gif" width="280"/> |
-| **Flight Ops Demo** | <img src="src/uav_sim/simulations/path_tracking/flight_ops_demo/flight_ops_demo.gif" width="280"/> |
+| **Cascaded PID Hover** | <img src="src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif" width="560"/> |
+| **LQR Hover** | <img src="src/uav_sim/simulations/path_tracking/lqr_hover/lqr_hover.gif" width="560"/> |
+| **Pure Pursuit 3D** | <img src="src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif" width="560"/> |
+| **Geometric SO(3)** | <img src="src/uav_sim/simulations/path_tracking/geometric_control/geometric_control.gif" width="560"/> |
+| **LQR Path Tracking** | <img src="src/uav_sim/simulations/path_tracking/lqr_tracking/lqr_tracking.gif" width="560"/> |
+| **MPC Tracking** | <img src="src/uav_sim/simulations/path_tracking/mpc_tracking/mpc_tracking.gif" width="560"/> |
+| **Path Smoothing Demo** | <img src="src/uav_sim/simulations/path_tracking/path_smoothing_demo/path_smoothing_demo.gif" width="560"/> |
+| **Flight Ops Demo** | <img src="src/uav_sim/simulations/path_tracking/flight_ops_demo/flight_ops_demo.gif" width="560"/> |
 
 ## Trajectory Tracking
 
 | Algorithm | Preview |
 |---|---|
-| **Feedback Linearisation** | <img src="src/uav_sim/simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif" width="280"/> |
-| **MPPI** | <img src="src/uav_sim/simulations/trajectory_tracking/mppi/mppi.gif" width="280"/> |
-| **NMPC** | <img src="src/uav_sim/simulations/trajectory_tracking/nmpc/nmpc.gif" width="280"/> |
+| **Feedback Linearisation** | <img src="src/uav_sim/simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif" width="560"/> |
+| **MPPI** | <img src="src/uav_sim/simulations/trajectory_tracking/mppi/mppi.gif" width="560"/> |
+| **NMPC** | <img src="src/uav_sim/simulations/trajectory_tracking/nmpc/nmpc.gif" width="560"/> |
 
 ## Path Planning
 
 | Algorithm | Preview |
 |---|---|
-| **3D A\*** | <img src="src/uav_sim/simulations/path_planning/astar_3d/astar_3d.gif" width="280"/> |
-| **RRT\*** | <img src="src/uav_sim/simulations/path_planning/rrt_star_3d/rrt_star_3d.gif" width="280"/> |
-| **PRM 3D** | <img src="src/uav_sim/simulations/path_planning/prm_3d/prm_3d.gif" width="280"/> |
-| **Potential Field** | <img src="src/uav_sim/simulations/path_planning/potential_field_3d/potential_field_3d.gif" width="280"/> |
-| **Coverage Planning** | <img src="src/uav_sim/simulations/path_planning/coverage_planning/coverage_planning.gif" width="280"/> |
+| **3D A\*** | <img src="src/uav_sim/simulations/path_planning/astar_3d/astar_3d.gif" width="560"/> |
+| **RRT\*** | <img src="src/uav_sim/simulations/path_planning/rrt_star_3d/rrt_star_3d.gif" width="560"/> |
+| **PRM 3D** | <img src="src/uav_sim/simulations/path_planning/prm_3d/prm_3d.gif" width="560"/> |
+| **Potential Field** | <img src="src/uav_sim/simulations/path_planning/potential_field_3d/potential_field_3d.gif" width="560"/> |
+| **Coverage Planning** | <img src="src/uav_sim/simulations/path_planning/coverage_planning/coverage_planning.gif" width="560"/> |
 
 ## Trajectory Planning
 
 | Algorithm | Preview |
 |---|---|
-| **Minimum-Snap** | <img src="src/uav_sim/simulations/trajectory_planning/min_snap/min_snap.gif" width="280"/> |
-| **Polynomial Trajectory** | <img src="src/uav_sim/simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif" width="280"/> |
-| **Quintic Polynomial** | <img src="src/uav_sim/simulations/trajectory_planning/quintic_polynomial_demo/quintic_polynomial_demo.gif" width="280"/> |
-| **Frenet Optimal** | <img src="src/uav_sim/simulations/trajectory_planning/frenet_optimal/frenet_optimal.gif" width="280"/> |
+| **Minimum-Snap** | <img src="src/uav_sim/simulations/trajectory_planning/min_snap/min_snap.gif" width="560"/> |
+| **Polynomial Trajectory** | <img src="src/uav_sim/simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif" width="560"/> |
+| **Quintic Polynomial** | <img src="src/uav_sim/simulations/trajectory_planning/quintic_polynomial_demo/quintic_polynomial_demo.gif" width="560"/> |
+| **Frenet Optimal** | <img src="src/uav_sim/simulations/trajectory_planning/frenet_optimal/frenet_optimal.gif" width="560"/> |
 
 ## State Estimation
 
 | Algorithm | Preview |
 |---|---|
-| **EKF** | <img src="src/uav_sim/simulations/estimation/ekf/ekf.gif" width="280"/> |
-| **UKF** | <img src="src/uav_sim/simulations/estimation/ukf/ukf.gif" width="280"/> |
-| **Particle Filter** | <img src="src/uav_sim/simulations/estimation/particle_filter/particle_filter.gif" width="280"/> |
-| **Complementary Filter** | <img src="src/uav_sim/simulations/estimation/complementary_filter/complementary_filter.gif" width="280"/> |
-| **GPS/IMU Fusion** | <img src="src/uav_sim/simulations/estimation/gps_imu_fusion/gps_imu_fusion.gif" width="280"/> |
+| **EKF** | <img src="src/uav_sim/simulations/estimation/ekf/ekf.gif" width="560"/> |
+| **UKF** | <img src="src/uav_sim/simulations/estimation/ukf/ukf.gif" width="560"/> |
+| **Particle Filter** | <img src="src/uav_sim/simulations/estimation/particle_filter/particle_filter.gif" width="560"/> |
+| **Complementary Filter** | <img src="src/uav_sim/simulations/estimation/complementary_filter/complementary_filter.gif" width="560"/> |
+| **GPS/IMU Fusion** | <img src="src/uav_sim/simulations/estimation/gps_imu_fusion/gps_imu_fusion.gif" width="560"/> |
 
 ## Perception
 
 | Feature | Preview |
 |---|---|
-| **EKF-SLAM** | <img src="src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif" width="280"/> |
-| **Occupancy Mapping** | <img src="src/uav_sim/simulations/perception/occupancy_mapping/occupancy_mapping.gif" width="280"/> |
-| **Sensor Suite Demo** | <img src="src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif" width="280"/> |
-| **Visual Servoing** | <img src="src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif" width="280"/> |
+| **EKF-SLAM** | <img src="src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif" width="560"/> |
+| **Occupancy Mapping** | <img src="src/uav_sim/simulations/perception/occupancy_mapping/occupancy_mapping.gif" width="560"/> |
+| **Sensor Suite Demo** | <img src="src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif" width="560"/> |
+| **Visual Servoing** | <img src="src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif" width="560"/> |
 
 ## Sensors
 
 | Feature | Preview |
 |---|---|
-| **Gimbal FOV Tracking** | <img src="src/uav_sim/simulations/sensors/gimbal_tracking/gimbal_tracking.gif" width="280"/> |
-| **Gimbal BBox Tracking** | <img src="src/uav_sim/simulations/sensors/gimbal_bbox_tracking/gimbal_bbox_tracking.gif" width="280"/> |
+| **Gimbal FOV Tracking** | <img src="src/uav_sim/simulations/sensors/gimbal_tracking/gimbal_tracking.gif" width="560"/> |
+| **Gimbal BBox Tracking** | <img src="src/uav_sim/simulations/sensors/gimbal_bbox_tracking/gimbal_bbox_tracking.gif" width="560"/> |
 
 ## Environment & Costmaps
 
 | Feature | Preview |
 |---|---|
-| **Dynamic Costmap Navigation** | <img src="src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif" width="280"/> |
+| **Dynamic Costmap Navigation** | <img src="src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif" width="560"/> |
 
 ## Swarm Algorithms
 
 | Algorithm | Preview |
 |---|---|
-| **Reynolds Flocking** | <img src="src/uav_sim/simulations/swarm/reynolds_flocking/reynolds_flocking.gif" width="280"/> |
-| **Consensus Formation** | <img src="src/uav_sim/simulations/swarm/consensus_formation/consensus_formation.gif" width="280"/> |
-| **Virtual Structure** | <img src="src/uav_sim/simulations/swarm/virtual_structure/virtual_structure.gif" width="280"/> |
-| **Leader-Follower** | <img src="src/uav_sim/simulations/swarm/leader_follower/leader_follower.gif" width="280"/> |
-| **Potential Swarm** | <img src="src/uav_sim/simulations/swarm/potential_swarm/potential_swarm.gif" width="280"/> |
-| **Voronoi Coverage** | <img src="src/uav_sim/simulations/swarm/voronoi_coverage/voronoi_coverage.gif" width="280"/> |
+| **Reynolds Flocking** | <img src="src/uav_sim/simulations/swarm/reynolds_flocking/reynolds_flocking.gif" width="560"/> |
+| **Consensus Formation** | <img src="src/uav_sim/simulations/swarm/consensus_formation/consensus_formation.gif" width="560"/> |
+| **Virtual Structure** | <img src="src/uav_sim/simulations/swarm/virtual_structure/virtual_structure.gif" width="560"/> |
+| **Leader-Follower** | <img src="src/uav_sim/simulations/swarm/leader_follower/leader_follower.gif" width="560"/> |
+| **Potential Swarm** | <img src="src/uav_sim/simulations/swarm/potential_swarm/potential_swarm.gif" width="560"/> |
+| **Voronoi Coverage** | <img src="src/uav_sim/simulations/swarm/voronoi_coverage/voronoi_coverage.gif" width="560"/> |
 
 ---
 
