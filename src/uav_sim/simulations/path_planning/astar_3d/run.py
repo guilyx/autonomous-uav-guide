@@ -117,14 +117,15 @@ def main() -> None:
     flight_pos = flight_states[:, :3]
 
     # ── Animation frames ──────────────────────────────────────────────
-    explore_step = max(1, len(explored) // 80)
+    explore_step = max(1, len(explored) // 120)
     explore_frames = list(range(0, len(explored), explore_step))
-    smooth_pause = 20  # frames to show smoothing transition
-    fly_step = max(1, len(flight_pos) // 100)
+    raw_pause = 15
+    smooth_pause = 15
+    fly_step = max(1, len(flight_pos) // 80)
     fly_frames = list(range(0, len(flight_pos), fly_step))
     n_explore = len(explore_frames)
     n_fly = len(fly_frames)
-    total = n_explore + smooth_pause + n_fly
+    total = n_explore + raw_pause + smooth_pause + n_fly
 
     viz = ThreePanelViz(title="A* 3D — Search → Smooth → Flight", world_size=float(WORLD_SIZE))
     viz.draw_buildings(buildings)
@@ -145,43 +146,45 @@ def main() -> None:
     anim = SimAnimator("astar_3d", out_dir=Path(__file__).parent)
     anim._fig = viz.fig
 
+    n_explored_total = len(explored)
+
     def update(f: int) -> None:
-        if f < n_explore:
+        p1_end = n_explore
+        p2_end = p1_end + raw_pause
+        p3_end = p2_end + smooth_pause
+
+        if f < p1_end:
             k = explore_frames[f]
             pts = explored_arr[: k + 1]
             explore_scat._offsets3d = (pts[:, 0], pts[:, 1], pts[:, 2])
-            pct = int(100 * (f + 1) / n_explore)
-            title.set_text(f"Phase 1: A* Exploration — {pct}%")
-        elif f < n_explore + smooth_pause:
-            sf = f - n_explore
-            # Show raw path, then smoothed
-            if sf < smooth_pause // 2:
-                raw_line_3d.set_alpha(1.0)
-                raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
-                raw_line_3d.set_3d_properties(raw_path[:, 2])
-                raw_line_top.set_alpha(1.0)
-                raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
-                raw_line_side.set_alpha(1.0)
-                raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
-                title.set_text("Raw A* Path")
-            else:
-                smooth_line_3d.set_alpha(1.0)
-                smooth_line_3d.set_data(smooth_path[:, 0], smooth_path[:, 1])
-                smooth_line_3d.set_3d_properties(smooth_path[:, 2])
-                smooth_line_top.set_alpha(1.0)
-                smooth_line_top.set_data(smooth_path[:, 0], smooth_path[:, 1])
-                smooth_line_side.set_alpha(1.0)
-                smooth_line_side.set_data(smooth_path[:, 0], smooth_path[:, 2])
-                raw_line_3d.set_alpha(0.2)
-                raw_line_top.set_alpha(0.2)
-                raw_line_side.set_alpha(0.2)
-                title.set_text("Smoothed Path (RDP + Resample)")
+            title.set_text(f"A* Exploration — {k + 1}/{n_explored_total} nodes")
+        elif f < p2_end:
+            raw_line_3d.set_alpha(1.0)
+            raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
+            raw_line_3d.set_3d_properties(raw_path[:, 2])
+            raw_line_top.set_alpha(1.0)
+            raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
+            raw_line_side.set_alpha(1.0)
+            raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
+            title.set_text(f"Raw A* Path ({len(raw_path)} nodes)")
+        elif f < p3_end:
+            smooth_line_3d.set_alpha(1.0)
+            smooth_line_3d.set_data(smooth_path[:, 0], smooth_path[:, 1])
+            smooth_line_3d.set_3d_properties(smooth_path[:, 2])
+            smooth_line_top.set_alpha(1.0)
+            smooth_line_top.set_data(smooth_path[:, 0], smooth_path[:, 1])
+            smooth_line_side.set_alpha(1.0)
+            smooth_line_side.set_data(smooth_path[:, 0], smooth_path[:, 2])
+            raw_line_3d.set_alpha(0.2)
+            raw_line_top.set_alpha(0.2)
+            raw_line_side.set_alpha(0.2)
+            title.set_text("Smoothed Path (RDP + Resample)")
         else:
-            fi = f - n_explore - smooth_pause
+            fi = f - p3_end
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
-            title.set_text("Phase 2: Quadrotor Following Smoothed A* Path")
+            title.set_text("Quadrotor Following Smoothed A* Path")
 
     anim.animate(update, total)
     anim.save()

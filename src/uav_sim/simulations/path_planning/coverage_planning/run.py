@@ -21,7 +21,6 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
-from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -54,17 +53,15 @@ def main() -> None:
     quad.reset(position=np.array([coverage_path[0, 0], coverage_path[0, 1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=2.5, waypoint_threshold=2.0, adaptive=True)
-    flight_states = fly_mission(
-        quad,
-        ctrl,
-        coverage_path,
-        cruise_alt=CRUISE_ALT,
-        dt=0.005,
-        pursuit=pursuit,
-        takeoff_duration=3.0,
-        landing_duration=3.0,
-        loiter_duration=0.5,
-    )
+    from uav_sim.path_tracking.flight_ops import fly_path, init_hover, landing, loiter, takeoff
+
+    init_hover(quad)
+    states: list[np.ndarray] = []
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
+    fly_path(quad, ctrl, coverage_path, dt=0.005, pursuit=pursuit, timeout=180.0, states=states)
+    loiter(quad, ctrl, coverage_path[-1], dt=0.005, duration=0.5, states=states)
+    landing(quad, ctrl, dt=0.005, duration=3.0, states=states)
+    flight_states = np.array(states) if states else np.zeros((1, 12))
     flight_pos = flight_states[:, :3]
 
     # ── Animation ─────────────────────────────────────────────────────

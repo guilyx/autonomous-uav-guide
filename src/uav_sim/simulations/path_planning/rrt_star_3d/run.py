@@ -100,12 +100,13 @@ def main() -> None:
         if pi >= 0:
             tree_segs.append([tree_nodes[pi], tree_nodes[i]])
 
-    n_reveal = 15
+    n_tree_grow = 40
+    n_raw_pause = 15
     smooth_pause = 15
-    fly_step = max(1, len(flight_pos) // 100)
+    fly_step = max(1, len(flight_pos) // 80)
     fly_frames = list(range(0, len(flight_pos), fly_step))
     n_ff = len(fly_frames)
-    total = n_reveal + smooth_pause + n_ff
+    total = n_tree_grow + n_raw_pause + smooth_pause + n_ff
 
     viz = ThreePanelViz(title="RRT* 3D — Tree → Smooth → Flight", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
@@ -128,43 +129,48 @@ def main() -> None:
     anim = SimAnimator("rrt_star_3d", out_dir=Path(__file__).parent)
     anim._fig = viz.fig
 
+    n_segs = len(tree_segs)
+
     def update(f: int) -> None:
-        if f < n_reveal:
-            alpha = min(1.0, (f + 1) / (n_reveal * 0.6))
+        p1_end = n_tree_grow
+        p2_end = p1_end + n_raw_pause
+        p3_end = p2_end + smooth_pause
+
+        if f < p1_end:
+            frac = min(1.0, (f + 1) / n_tree_grow)
             if tree_segs:
-                tree_col.set_alpha(alpha * 0.4)
-            if f >= n_reveal - 2:
-                raw_line_3d.set_alpha(1.0)
-                raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
-                raw_line_3d.set_3d_properties(raw_path[:, 2])
-                raw_line_top.set_alpha(1.0)
-                raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
-                raw_line_side.set_alpha(1.0)
-                raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
-            pct = int(100 * (f + 1) / n_reveal)
-            title.set_text(f"Phase 1: RRT* Tree — {pct}%")
-        elif f < n_reveal + smooth_pause:
-            sf = f - n_reveal
-            if sf < smooth_pause // 2:
-                title.set_text("Raw RRT* Path")
-            else:
-                smooth_line_3d.set_alpha(1.0)
-                smooth_line_3d.set_data(smooth_path[:, 0], smooth_path[:, 1])
-                smooth_line_3d.set_3d_properties(smooth_path[:, 2])
-                smooth_line_top.set_alpha(1.0)
-                smooth_line_top.set_data(smooth_path[:, 0], smooth_path[:, 1])
-                smooth_line_side.set_alpha(1.0)
-                smooth_line_side.set_data(smooth_path[:, 0], smooth_path[:, 2])
-                raw_line_3d.set_alpha(0.2)
-                raw_line_top.set_alpha(0.2)
-                raw_line_side.set_alpha(0.2)
-                title.set_text("Smoothed Path (RDP + Resample)")
+                tree_col.set_alpha(frac * 0.4)
+            n_show = max(1, int(frac * len(tree_nodes)))
+            title.set_text(
+                f"RRT* Growing — {n_show}/{len(tree_nodes)} nodes, {int(frac * n_segs)} edges"
+            )
+        elif f < p2_end:
+            raw_line_3d.set_alpha(1.0)
+            raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
+            raw_line_3d.set_3d_properties(raw_path[:, 2])
+            raw_line_top.set_alpha(1.0)
+            raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
+            raw_line_side.set_alpha(1.0)
+            raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
+            title.set_text(f"Raw RRT* Path ({len(raw_path)} nodes)")
+        elif f < p3_end:
+            smooth_line_3d.set_alpha(1.0)
+            smooth_line_3d.set_data(smooth_path[:, 0], smooth_path[:, 1])
+            smooth_line_3d.set_3d_properties(smooth_path[:, 2])
+            smooth_line_top.set_alpha(1.0)
+            smooth_line_top.set_data(smooth_path[:, 0], smooth_path[:, 1])
+            smooth_line_side.set_alpha(1.0)
+            smooth_line_side.set_data(smooth_path[:, 0], smooth_path[:, 2])
+            raw_line_3d.set_alpha(0.2)
+            raw_line_top.set_alpha(0.2)
+            raw_line_side.set_alpha(0.2)
+            title.set_text("Smoothed Path (RDP + Resample)")
         else:
-            fi = f - n_reveal - smooth_pause
+            fi = f - p3_end
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
-            title.set_text("Phase 2: Quadrotor Following RRT* Path")
+            title.set_text("Quadrotor Following RRT* Path")
 
     anim.animate(update, total)
     anim.save()
