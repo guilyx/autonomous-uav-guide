@@ -83,13 +83,13 @@ def main() -> None:
     flight_pos = flight_states[:, :3]
 
     # ── Animation ─────────────────────────────────────────────────────
-    n_sample_frames = 40
-    n_edge_frames = 30
-    n_search_frames = 20
-    n_smooth_frames = 15
+    n_sample_frames = 20
+    n_edge_frames = 15
+    n_search_frames = 10
+    n_smooth_frames = 10
     roadmap_pause = n_sample_frames + n_edge_frames + n_search_frames
     smooth_pause = n_smooth_frames
-    fly_step = max(1, len(flight_pos) // 80)
+    fly_step = max(1, len(flight_pos) // 60)
     fly_frames = list(range(0, len(flight_pos), fly_step))
     n_ff = len(fly_frames)
     total = roadmap_pause + smooth_pause + n_ff
@@ -98,20 +98,18 @@ def main() -> None:
     viz.draw_buildings(buildings)
     viz.mark_start_goal(start, goal)
 
-    # Draw roadmap edges
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+    edge_segs = []
     for i, adj in enumerate(planner.edges):
         for j, _ in adj:
             if j > i:
-                p1, p2 = planner.nodes[i], planner.nodes[j]
-                viz.ax3d.plot(
-                    [p1[0], p2[0]],
-                    [p1[1], p2[1]],
-                    [p1[2], p2[2]],
-                    "c-",
-                    lw=0.2,
-                    alpha=0.0,
-                )
-    edge_lines = viz.ax3d.lines[-len([e for adj in planner.edges for e in adj if e[0] > 0]) // 2 :]
+                edge_segs.append([planner.nodes[i], planner.nodes[j]])
+
+    edge_col = None
+    if edge_segs:
+        edge_col = Line3DCollection(edge_segs, colors="cyan", linewidths=0.3, alpha=0.0)
+        viz.ax3d.add_collection3d(edge_col)
 
     viz.ax3d.scatter(
         planner.nodes[:, 0],
@@ -138,7 +136,7 @@ def main() -> None:
     anim._fig = viz.fig
 
     n_nodes = len(planner.nodes)
-    n_edges_total = len(edge_lines)
+    n_edges_total = len(edge_segs)
 
     def update(f: int) -> None:
         p1_sample_end = n_sample_frames
@@ -155,14 +153,14 @@ def main() -> None:
             node_scat.set_alpha(0.5)
             ef = f - p1_sample_end
             frac = min(1.0, (ef + 1) / n_edge_frames)
+            if edge_col:
+                edge_col.set_alpha(frac * 0.25)
             n_show = max(1, int(frac * n_edges_total))
-            for i, ln in enumerate(edge_lines):
-                ln.set_alpha(0.2 if i < n_show else 0.0)
             title.set_text(f"Building Edges — {n_show}/{n_edges_total}")
         elif f < p1_search_end:
             sf = f - p1_edge_end
-            for ln in edge_lines:
-                ln.set_alpha(0.1)
+            if edge_col:
+                edge_col.set_alpha(0.1)
             if sf >= n_search_frames // 2:
                 raw_line_3d.set_alpha(1.0)
                 raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])

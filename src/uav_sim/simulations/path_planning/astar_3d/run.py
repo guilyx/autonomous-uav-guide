@@ -117,11 +117,11 @@ def main() -> None:
     flight_pos = flight_states[:, :3]
 
     # ── Animation frames ──────────────────────────────────────────────
-    explore_step = max(1, len(explored) // 120)
+    explore_step = max(1, len(explored) // 60)
     explore_frames = list(range(0, len(explored), explore_step))
-    raw_pause = 15
-    smooth_pause = 15
-    fly_step = max(1, len(flight_pos) // 80)
+    raw_pause = 10
+    smooth_pause = 10
+    fly_step = max(1, len(flight_pos) // 60)
     fly_frames = list(range(0, len(flight_pos), fly_step))
     n_explore = len(explore_frames)
     n_fly = len(fly_frames)

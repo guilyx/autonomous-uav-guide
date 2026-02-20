@@ -60,15 +60,15 @@ def main() -> None:
     init_hover(quad)
 
     ctrl = MPCController(
-        horizon=10,
-        dt=0.02,
+        horizon=8,
+        dt=0.05,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dt, dur = 0.005, 30.0
-    ctrl_dt = 0.02
+    dt, dur = 0.01, 20.0
+    ctrl_dt = 0.05
     steps = int(dur / dt)
     states = np.zeros((steps, 12))
     refs = np.zeros((steps, 3))

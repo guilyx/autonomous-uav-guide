@@ -108,7 +108,7 @@ class MPCController:
             args=(x0,),
             method="L-BFGS-B",
             bounds=bounds,
-            options={"maxiter": 30, "ftol": 1e-6},
+            options={"maxiter": 15, "ftol": 1e-5},
         )
         u_opt = result.x.reshape(H, u_dim)
 

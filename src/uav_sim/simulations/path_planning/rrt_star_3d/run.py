@@ -100,10 +100,10 @@ def main() -> None:
         if pi >= 0:
             tree_segs.append([tree_nodes[pi], tree_nodes[i]])
 
-    n_tree_grow = 40
-    n_raw_pause = 15
-    smooth_pause = 15
-    fly_step = max(1, len(flight_pos) // 80)
+    n_tree_grow = 25
+    n_raw_pause = 10
+    smooth_pause = 10
+    fly_step = max(1, len(flight_pos) // 60)
     fly_frames = list(range(0, len(flight_pos), fly_step))
     n_ff = len(fly_frames)
     total = n_tree_grow + n_raw_pause + smooth_pause + n_ff
