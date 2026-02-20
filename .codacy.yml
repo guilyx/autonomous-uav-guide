@@ -1,6 +1,0 @@
-engines:
-  bandit:
-    enabled: true
-    # S101 is the specific code for "Use of assert detected"
-    skips: ["S101"]
-
