@@ -1,9 +1,9 @@
 # Erwin Lejeune - 2026-02-15
 """LQR path tracking: 3-panel live simulation.
 
-The quadrotor tracks a waypoint sequence using the LQR path tracker
-which feeds time-varying references (position + heading velocity)
-to the full-state LQR controller.
+The quadrotor tracks a figure-8 reference using the LQR controller with
+time-varying position and velocity references. The smooth Lissajous path
+keeps errors within the linear regime where LQR is effective.
 
 Reference: B. D. O. Anderson, J. B. Moore, "Optimal Control: Linear
 Quadratic Methods," Prentice-Hall, 1990.
@@ -17,80 +17,104 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
-from uav_sim.path_tracking.lqr_path_tracker import LQRPathTracker
+from uav_sim.path_tracking.flight_ops import init_hover
+from uav_sim.path_tracking.lqr_controller import LQRController
+from uav_sim.simulations.common import (
+    STANDARD_DURATION,
+    WORLD_SIZE,
+    figure_8_ref,
+    frame_indices,
+)
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.three_panel import ThreePanelViz
 
 matplotlib.use("Agg")
 
-WORLD_SIZE = 30.0
-CRUISE_ALT = 12.0
-
 
 def main() -> None:
     world, buildings = default_world()
 
-    waypoints = np.array(
-        [
-            [4.0, 4.0, CRUISE_ALT],
-            [12.0, 6.0, CRUISE_ALT + 2],
-            [20.0, 14.0, CRUISE_ALT],
-            [25.0, 22.0, CRUISE_ALT + 3],
-            [20.0, 27.0, CRUISE_ALT],
-        ]
-    )
-
     quad = Quadrotor()
-    quad.reset(position=waypoints[0].copy())
+    rp0, _ = figure_8_ref(0.0)
+    quad.reset(position=rp0.copy())
+    init_hover(quad)
 
-    tracker = LQRPathTracker(
-        lookahead=3.0,
-        speed=1.5,
+    ctrl = LQRController(
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dt, timeout = 0.005, 50.0
-    max_steps = int(timeout / dt)
-    states_list: list[np.ndarray] = []
-    for _ in range(max_steps):
-        s = quad.state
-        if np.any(np.isnan(s[:3])) or np.any(np.abs(s[:3]) > 500):
-            break
-        states_list.append(s.copy())
-        if tracker.is_path_complete(s[:3], waypoints, threshold=1.5):
-            break
-        wrench = tracker.compute(s, waypoints)
+    dt, dur = 0.01, STANDARD_DURATION
+    ctrl_dt = 0.02
+    steps = int(dur / dt)
+    states = np.zeros((steps, 12))
+    refs = np.zeros((steps, 3))
+    times = np.zeros(steps)
+
+    ctrl_counter = 0.0
+    wrench = quad.hover_wrench()
+
+    for i in range(steps):
+        t = i * dt
+        rp, rv = figure_8_ref(t)
+        refs[i] = rp
+        states[i] = quad.state
+        times[i] = t
+
+        ctrl_counter += dt
+        if ctrl_counter >= ctrl_dt - 1e-8:
+            target_state = np.zeros(12)
+            target_state[:3] = rp
+            target_state[6:9] = rv
+            wrench = ctrl.compute(quad.state, target_state)
+            ctrl_counter = 0.0
         quad.step(wrench, dt)
 
-    states = np.array(states_list) if states_list else np.zeros((1, 12))
     pos = states[:, :3]
+    err = np.linalg.norm(pos - refs, axis=1)
 
     # ── Visualisation ─────────────────────────────────────────────────
-    skip = max(1, len(states) // 200)
-    idx = list(range(0, len(states), skip))
+    idx = frame_indices(steps)
     n_frames = len(idx)
 
-    viz = ThreePanelViz(title="LQR Path Tracking", world_size=WORLD_SIZE)
+    viz = ThreePanelViz(title="LQR Path Tracking — Figure-8", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
-    viz.draw_path(waypoints, color="red", lw=1.0, alpha=0.5, label="Path")
-
-    for i, wp in enumerate(waypoints):
-        viz.ax3d.scatter(*wp, c="red", s=60, marker="D", zorder=5)
-        viz.ax_top.plot(wp[0], wp[1], "rD", ms=5)
-        viz.ax_side.plot(wp[0], wp[2], "rD", ms=5)
-    viz.ax3d.legend(fontsize=7, loc="upper left")
+    viz.draw_path(refs, color="red", lw=1.0, alpha=0.3, label="Reference")
 
     trail = viz.create_trail_artists()
+    (ref_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10)
+    (ref_top,) = viz.ax_top.plot([], [], "r*", ms=8, zorder=10)
+    viz.ax3d.legend(fontsize=7, loc="upper left")
+
+    ax_d = viz.setup_data_axes(title="Tracking Error [m]", ylabel="Error")
+    ax_d.set_xlim(0, dur)
+    ax_d.set_ylim(0, max(0.5, err.max() * 1.1))
+    (l_err,) = ax_d.plot([], [], "r-", lw=0.8, label="||e||")
+    ax_v = ax_d.twinx()
+    ax_v.set_ylabel("Speed [m/s]", fontsize=7)
+    ax_v.tick_params(labelsize=6)
+    speed = np.linalg.norm(states[:, 6:9], axis=1)
+    ax_v.set_ylim(0, max(1.0, speed.max() * 1.2))
+    (l_spd,) = ax_v.plot([], [], "b-", lw=0.5, alpha=0.6, label="speed")
+    ax_d.legend(fontsize=5, loc="upper right")
+    ax_v.legend(fontsize=5, loc="lower right")
+
     anim = SimAnimator("lqr_tracking", out_dir=Path(__file__).parent)
     anim._fig = viz.fig
+    title = viz.ax3d.set_title("LQR Tracking")
 
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail, pos, k)
         viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
+        ref_3d.set_data([refs[k, 0]], [refs[k, 1]])
+        ref_3d.set_3d_properties([refs[k, 2]])
+        ref_top.set_data([refs[k, 0]], [refs[k, 1]])
+        l_err.set_data(times[:k], err[:k])
+        l_spd.set_data(times[:k], speed[:k])
+        title.set_text(f"LQR Tracking — t={times[k]:.1f}s  err={err[k]:.2f}m")
 
     anim.animate(update, n_frames)
     anim.save()

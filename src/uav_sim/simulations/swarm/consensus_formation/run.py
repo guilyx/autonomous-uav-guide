@@ -32,8 +32,8 @@ WORLD_SIZE = 100.0
 def main() -> None:
     n_ag = 6
     rng = np.random.default_rng(1)
-    pos = rng.uniform(15, 85, (n_ag, 3))
-    pos[:, 2] = rng.uniform(35, 65, n_ag)
+    pos = rng.uniform(5, 95, (n_ag, 3))
+    pos[:, 2] = rng.uniform(25, 75, n_ag)
 
     r = 20.0
     angles = np.linspace(0, 2 * np.pi, n_ag, endpoint=False)
