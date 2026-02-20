@@ -1,9 +1,9 @@
-# Erwin Lejeune - 2026-02-18
+# Erwin Lejeune - 2026-02-19
 """Particle filter localisation: quadrotor with GPS in 30 m urban world.
 
-Three panels (3D, top-down, side) showing the quadrotor flying a circle.
-The particle cloud is rendered in the top-down panel as colour-coded dots
-(weight = colour intensity).  Inset panels show N_eff and position error.
+The drone takes off and flies a slow circular orbit.  The particle cloud
+is rendered in the top-down view.  The data panel shows N_eff and position
+error over time.
 
 Reference: M. S. Arulampalam et al., "A Tutorial on Particle Filters," IEEE
 TSP, 2002.
@@ -18,7 +18,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.particle_filter import ParticleFilter
-from uav_sim.path_tracking.flight_ops import fly_path
+from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
@@ -27,43 +27,52 @@ from uav_sim.visualization import SimAnimator, ThreePanelViz
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-CRUISE_ALT = 12.0
+CRUISE_ALT = 15.0
 GPS_STD = 0.6
 N_PARTICLES = 200
+DT = 0.005
 
 
-def _f_single(x, _u, dt_):
+def _f_single(
+    x: np.ndarray,
+    _u: np.ndarray,
+    dt_: float,
+) -> np.ndarray:
     return np.array([x[0] + x[2] * dt_, x[1] + x[3] * dt_, x[2], x[3]])
 
 
-def _likelihood(z, x):
+def _likelihood(z: np.ndarray, x: np.ndarray) -> float:
     diff = z[:2] - x[:2]
     return float(np.exp(-0.5 * np.dot(diff, diff) / GPS_STD**2))
 
 
 def main() -> None:
     rng = np.random.default_rng(42)
-
     world, buildings = default_world()
 
-    cx, cy, radius = 15.0, 15.0, 8.0
-    n_wp = 60
-    angles = np.linspace(0, 1.8 * np.pi, n_wp)
+    cx, cy, radius = 15.0, 15.0, 10.0
+    n_wp = 100
+    angles = np.linspace(0, 2.5 * np.pi, n_wp)
     path_3d = np.column_stack(
-        [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
+        [
+            cx + radius * np.cos(angles),
+            cy + radius * np.sin(angles),
+            np.full(n_wp, CRUISE_ALT),
+        ]
     )
 
     quad = Quadrotor()
-    quad.reset(position=np.array([cx + radius, cy, CRUISE_ALT]))
+    quad.reset(position=np.array([cx + radius, cy, 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=60.0, states=states_list)
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT, duration=3.0, states=states_list)
+    init_hover(quad)
+    fly_path(quad, ctrl, path_3d, dt=DT, pursuit=pursuit, timeout=80.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
-    # Downsample for PF (PF at 20 Hz)
     pf_dt = 0.05
-    pf_skip = max(1, int(pf_dt / 0.005))
+    pf_skip = max(1, int(pf_dt / DT))
     pf_states = flight_states[::pf_skip]
     n_steps = len(pf_states)
 
@@ -101,12 +110,31 @@ def main() -> None:
     pos_3d_true = np.column_stack([true_xy, np.full(n_steps, CRUISE_ALT)])
     pos_3d_est = np.column_stack([est_xy, np.full(n_steps, CRUISE_ALT)])
 
-    # ── 3-Panel viz ────────────────────────────────────────────────────
+    # ── Visualisation ────────────────────────────────────────────────
     viz = ThreePanelViz(
-        title="Particle Filter Localisation", world_size=WORLD_SIZE, figsize=(18, 9)
+        title="Particle Filter Localisation",
+        world_size=WORLD_SIZE,
+        figsize=(18, 9),
     )
     viz.draw_buildings(world.obstacles)
     viz.draw_path(path_3d, color="cyan", lw=0.7, alpha=0.3, label="Plan")
+
+    # Data panel: error + N_eff
+    ax_d = viz.setup_data_axes(
+        xlabel="Time [s]",
+        ylabel="Pos. Error [m]",
+        title="PF Error & N_eff",
+    )
+    ax_d.set_xlim(0, times[-1])
+    ax_d.set_ylim(0, max(2.0, err.max() * 1.2))
+    (err_line,) = ax_d.plot([], [], "r-", lw=0.8, label="Error")
+    ax_d.legend(fontsize=7, loc="upper left")
+
+    ax_neff = ax_d.twinx()
+    ax_neff.set_ylim(0, N_PARTICLES * 1.2)
+    ax_neff.set_ylabel("N_eff", fontsize=8, color="blue")
+    ax_neff.tick_params(labelsize=7, colors="blue")
+    (neff_line,) = ax_neff.plot([], [], "b--", lw=0.6)
 
     anim = SimAnimator("particle_filter", out_dir=Path(__file__).parent)
     anim._fig = viz.fig
@@ -114,30 +142,22 @@ def main() -> None:
     trail_true = viz.create_trail_artists(color="black")
     trail_est = viz.create_trail_artists(color="dodgerblue")
 
-    # Particle cloud in top-down view (dynamic)
-    cloud = viz.ax_top.scatter([], [], s=3, c=[], cmap="cool", alpha=0.4, vmin=0, vmax=1, zorder=4)
-    # Inset: error + N_eff
-    ax_inset = viz.fig.add_axes([0.58, 0.03, 0.38, 0.22])
-    ax_inset.set_xlim(0, times[-1])
-    ax_inset.set_ylim(0, max(2.0, err.max() * 1.2))
-    ax_inset.set_xlabel("Time [s]", fontsize=7)
-    ax_inset.set_ylabel("Pos. Error [m]", fontsize=7)
-    ax_inset.tick_params(labelsize=6)
-    ax_inset.grid(True, alpha=0.2)
-    (err_line,) = ax_inset.plot([], [], "r-", lw=0.8, label="Error")
-    ax_inset.legend(fontsize=5)
-
-    ax_neff = ax_inset.twinx()
-    ax_neff.set_ylim(0, N_PARTICLES * 1.2)
-    ax_neff.set_ylabel("N_eff", fontsize=7, color="blue")
-    ax_neff.tick_params(labelsize=6, colors="blue")
-    (neff_line,) = ax_neff.plot([], [], "b--", lw=0.6, label="N_eff")
+    cloud = viz.ax_top.scatter(
+        [],
+        [],
+        s=3,
+        c=[],
+        cmap="cool",
+        alpha=0.4,
+        vmin=0,
+        vmax=1,
+        zorder=4,
+    )
 
     skip = max(1, n_steps // 200)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
 
-    # Map PF indices to flight_states indices for euler angles
     pf_to_flight = [min(i * pf_skip, len(flight_states) - 1) for i in range(n_steps)]
 
     def update(f: int) -> None:
@@ -151,7 +171,6 @@ def main() -> None:
             size=1.5,
         )
 
-        # Particle cloud update
         pts = part_hist[k]
         w = weight_hist[k]
         w_norm = w / (w.max() + 1e-12)
