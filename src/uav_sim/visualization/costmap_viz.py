@@ -130,16 +130,17 @@ def create_four_panel_figure(
     world_size: float = 30.0,
     figsize: tuple[float, float] = (18, 9),
 ) -> tuple[Figure, Axes3D, Any, Any, Any]:
-    """Create a 4-panel figure: 3D | top-down | side | sensor.
+    """Create a 3-panel figure: 3D | top-down | sensor + data.
 
-    Returns (fig, ax3d, ax_top, ax_side, ax_sensor).
+    Returns ``(fig, ax3d, ax_top, ax_data, ax_sensor)``.
+    The third return was previously a side view; it is now a data panel.
     """
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(2, 3, width_ratios=[1.3, 1, 1], hspace=0.30, wspace=0.28)
 
     ax3d = fig.add_subplot(gs[:, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
-    ax_side = fig.add_subplot(gs[1, 1])
+    ax_data = fig.add_subplot(gs[1, 1])
     ax_sensor = fig.add_subplot(gs[:, 2])
 
     fig.suptitle(title, fontsize=13)
@@ -151,21 +152,20 @@ def create_four_panel_figure(
     ax3d.set_ylabel("Y [m]")
     ax3d.set_zlabel("Z [m]")
 
-    for ax, ylabel, title_s in [
-        (ax_top, "Y [m]", "Top View (XY)"),
-        (ax_side, "Z [m]", "Side View (XZ)"),
-    ]:
-        ax.set_xlim(0, world_size)
-        ax.set_ylim(0, world_size)
-        ax.set_xlabel("X [m]", fontsize=8)
-        ax.set_ylabel(ylabel, fontsize=8)
-        ax.set_title(title_s, fontsize=9)
-        ax.grid(True, alpha=0.2)
-        ax.tick_params(labelsize=7)
-
+    ax_top.set_xlim(0, world_size)
+    ax_top.set_ylim(0, world_size)
+    ax_top.set_xlabel("X [m]", fontsize=8)
+    ax_top.set_ylabel("Y [m]", fontsize=8)
+    ax_top.set_title("Top View (XY)", fontsize=9)
     ax_top.set_aspect("equal")
+    ax_top.grid(True, alpha=0.2)
+    ax_top.tick_params(labelsize=7)
+
+    ax_data.grid(True, alpha=0.2)
+    ax_data.tick_params(labelsize=7)
+    ax_data.set_title("Data", fontsize=9)
 
     ax_sensor.set_title("Sensor Data", fontsize=9)
     ax_sensor.tick_params(labelsize=7)
 
-    return fig, ax3d, ax_top, ax_side, ax_sensor
+    return fig, ax3d, ax_top, ax_data, ax_sensor

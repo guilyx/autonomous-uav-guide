@@ -89,7 +89,7 @@ class PurePursuit3D:
         la = self.lookahead
         if self.adaptive and velocity is not None:
             spd = float(np.linalg.norm(velocity))
-            la = max(self.lookahead, self.lookahead * (1.0 + 0.3 * spd))
+            la = max(self.lookahead, self.lookahead * (1.0 + 0.15 * spd))
 
         # Search for look-ahead point along remaining path
         for i in range(self._idx, n - 1):

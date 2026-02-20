@@ -105,10 +105,11 @@ class FeedbackLinearisationTracker:
         b1d = np.cross(b2d, b3d)
         Rd = np.column_stack([b1d, b2d, b3d])
 
-        # SO(3) attitude error → torques (gains for Crazyflie inertia).
+        # SO(3) attitude error → torques, scaled to vehicle inertia.
         eR = 0.5 * self._vee(Rd.T @ R - R.T @ Rd)
-        kR = 0.005
-        kw = 0.002
+        J_avg = float(np.mean(np.diag(self.inertia)))
+        kR = 30.0 * J_avg
+        kw = 10.0 * J_avg
         tau = -kR * eR - kw * omega + np.cross(omega, self.inertia @ omega)
 
         return np.array([T, tau[0], tau[1], tau[2]])

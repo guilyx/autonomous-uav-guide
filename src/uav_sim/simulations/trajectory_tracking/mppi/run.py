@@ -1,10 +1,13 @@
-# Erwin Lejeune - 2026-02-15
-"""MPPI trajectory tracking: 3-panel point-mass planning + quadrotor flight.
+# Erwin Lejeune - 2026-02-19
+"""MPPI as an online local planner tracking a global reference path.
 
-Phase 1 — Algorithm: MPPI sampling on a point-mass model plans a path to
-           the target through the urban environment.
-Phase 2 — Platform: quadrotor follows the MPPI-planned path using pure
-           pursuit + PID for stable execution.
+A global path is generated via A* (or provided), then MPPI runs as a
+*local planner* at 50 Hz on a point-mass model. At each step it picks
+a look-ahead sub-goal from the global path and optimises a short
+horizon trajectory towards it. The resulting velocity command is sent
+to the cascaded PID controller.
+
+The drone takes off, then follows the path all the way to the goal.
 
 Reference: G. Williams et al., "Information Theoretic MPC for Model-Based
 Reinforcement Learning," ICRA, 2017. DOI: 10.1109/ICRA.2017.7989202
@@ -19,7 +22,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.environment.obstacles import BoxObstacle
-from uav_sim.path_tracking.flight_ops import fly_mission
+from uav_sim.path_tracking.flight_ops import takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.trajectory_tracking.mppi import MPPITracker
@@ -30,15 +33,17 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-START = np.array([3.0, 3.0, 12.0, 0.0, 0.0, 0.0])
-GOAL = np.array([27.0, 27.0, 12.0, 0.0, 0.0, 0.0])
+CRUISE_ALT = 15.0
+DT_SIM = 0.005
+DT_MPPI = 0.02  # 50 Hz local planning
 
 _OBS_SPHERES: list[tuple[np.ndarray, float]] = []
 
 
 def _box_to_sphere(b: BoxObstacle) -> tuple[np.ndarray, float]:
     centre = (b.min_corner + b.max_corner) / 2
-    radius = float(np.linalg.norm(b.max_corner - b.min_corner)) / 2
+    half_xy = (b.max_corner[:2] - b.min_corner[:2]) / 2
+    radius = float(np.linalg.norm(half_xy)) * 1.1
     return (centre, radius)
 
 
@@ -49,16 +54,17 @@ def _dyn(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
     return np.concatenate([np_, nv])
 
 
-def _cost(x: np.ndarray, _u: np.ndarray, ref: np.ndarray | None) -> float:
+def _cost(x: np.ndarray, u: np.ndarray, ref: np.ndarray | None) -> float:
     if ref is None:
         return 0.0
-    goal_cost = float(np.sum((x[:3] - ref[:3]) ** 2) + 0.1 * np.sum((x[3:6] - ref[3:6]) ** 2))
+    goal_cost = float(np.sum((x[:3] - ref[:3]) ** 2))
+    vel_cost = 0.05 * float(np.sum(u**2))
     obs_cost = 0.0
     for c, r in _OBS_SPHERES:
         dist = float(np.linalg.norm(x[:3] - c))
-        if dist < r + 1.0:
-            obs_cost += 1e4 * max(0.0, r + 1.0 - dist) ** 2
-    return goal_cost + obs_cost
+        if dist < r + 1.5:
+            obs_cost += 5e3 * max(0.0, r + 1.5 - dist) ** 2
+    return goal_cost + vel_cost + obs_cost
 
 
 def main() -> None:
@@ -66,88 +72,104 @@ def main() -> None:
     world, buildings = default_world()
     _OBS_SPHERES = [_box_to_sphere(b) for b in buildings]
 
+    global_path = np.array(
+        [
+            [3.0, 3.0, CRUISE_ALT],
+            [10.0, 5.0, CRUISE_ALT],
+            [15.0, 15.0, CRUISE_ALT],
+            [20.0, 25.0, CRUISE_ALT],
+            [27.0, 27.0, CRUISE_ALT],
+        ]
+    )
+
     tracker = MPPITracker(
         state_dim=6,
         control_dim=3,
-        horizon=20,
-        num_samples=256,
-        lambda_=0.3,
-        control_std=np.array([1.5, 1.5, 0.8]),
+        horizon=15,
+        num_samples=200,
+        lambda_=0.5,
+        control_std=np.array([1.0, 1.0, 0.5]),
         dynamics=_dyn,
         cost_fn=_cost,
-        dt=0.1,
+        dt=DT_MPPI,
     )
 
-    # Phase 1: point-mass MPPI planning towards goal
-    state = START.copy()
-    dt_mppi = 0.1
-    max_steps = 400
-    mppi_hist: list[np.ndarray] = []
-    for i in range(max_steps):
-        u = tracker.compute(state, reference=GOAL, seed=i)
-        state = _dyn(state, u, dt_mppi)
-        mppi_hist.append(state.copy())
-        if np.linalg.norm(state[:3] - GOAL[:3]) < 1.5:
+    pursuit = PurePursuit3D(lookahead=5.0, waypoint_threshold=2.0, adaptive=True)
+
+    quad = Quadrotor()
+    quad.reset(position=np.array([global_path[0, 0], global_path[0, 1], 0.0]))
+    ctrl = CascadedPIDController()
+
+    states_list: list[np.ndarray] = []
+    local_goals: list[np.ndarray] = []
+
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT_SIM, duration=3.0, states=states_list)
+
+    sim_steps_per_mppi = max(1, int(DT_MPPI / DT_SIM))
+    max_mppi_steps = 3000
+    seed_counter = 0
+
+    for _ in range(max_mppi_steps):
+        s = quad.state
+        if not (np.all(np.isfinite(s[:3])) and np.all(np.abs(s[:3]) < 500)):
             break
 
-    mppi_arr = np.array(mppi_hist)
-    mppi_path = mppi_arr[:, :3]
-    n_steps = len(mppi_path)
+        vel = s[6:9] if len(s) >= 9 else None
+        local_goal = pursuit.compute_target(s[:3], global_path, velocity=vel)
+        local_goals.append(local_goal.copy())
 
-    # Phase 2: quadrotor follows MPPI path using pure pursuit
-    quad = Quadrotor()
-    quad.reset(position=np.array([START[0], START[1], 0.0]))
-    ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+        mppi_state = np.concatenate([s[:3], s[6:9]])
+        mppi_ref = np.concatenate([local_goal, np.zeros(3)])
+        u_mppi = tracker.compute(mppi_state, reference=mppi_ref, seed=seed_counter)
+        seed_counter += 1
 
-    flight_states = fly_mission(
-        quad,
-        ctrl,
-        mppi_path,
-        cruise_alt=12.0,
-        dt=0.005,
-        pursuit=pursuit,
-        takeoff_duration=2.0,
-        landing_duration=2.0,
-        loiter_duration=0.5,
-    )
+        desired_pos = s[:3] + u_mppi * DT_MPPI * 2.0
+        desired_pos = np.clip(desired_pos, 0.0, WORLD_SIZE)
+
+        for _ in range(sim_steps_per_mppi):
+            states_list.append(quad.state.copy())
+            wrench = ctrl.compute(quad.state, desired_pos, dt=DT_SIM)
+            quad.step(wrench, DT_SIM)
+
+        if pursuit.is_path_complete(s[:3], global_path):
+            break
+
+    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     flight_pos = flight_states[:, :3]
+    n_total = len(flight_pos)
 
     # ── Animation ─────────────────────────────────────────────────────
-    mppi_skip = max(1, n_steps // 100)
-    mppi_idx = list(range(0, n_steps, mppi_skip))
-    fly_skip = max(1, len(flight_pos) // 100)
-    fly_idx = list(range(0, len(flight_pos), fly_skip))
-    n_mf = len(mppi_idx)
-    n_ff = len(fly_idx)
-    total = n_mf + n_ff
+    skip = max(1, n_total // 200)
+    frames = list(range(0, n_total, skip))
+    n_frames = len(frames)
 
-    viz = ThreePanelViz(title="MPPI Trajectory Tracking", world_size=WORLD_SIZE)
+    viz = ThreePanelViz(title="MPPI Local Planner — Online Tracking", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
-    viz.mark_start_goal(START[:3], GOAL[:3])
+    viz.draw_path(global_path, color="cyan", lw=1.5, alpha=0.4, label="Global Path")
+    viz.mark_start_goal(global_path[0], global_path[-1])
 
-    mppi_trail = viz.create_trail_artists(color="cyan")
-    fly_trail = viz.create_trail_artists(color="orange")
+    trail_arts = viz.create_trail_artists(color="orange")
+    (lg_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10, label="Local Goal")
+    (lg_top,) = viz.ax_top.plot([], [], "r*", ms=8, zorder=10)
+    viz.ax3d.legend(fontsize=7, loc="upper left")
 
-    title = viz.ax3d.set_title("Phase 1: MPPI Planning")
-
-    anim = SimAnimator("mppi", out_dir=Path(__file__).parent)
+    anim = SimAnimator("mppi", out_dir=Path(__file__).parent, dpi=72)
     anim._fig = viz.fig
 
-    def update(f: int) -> None:
-        if f < n_mf:
-            k = mppi_idx[f]
-            viz.update_trail(mppi_trail, mppi_path, k + 1)
-            pct = int(100 * (f + 1) / n_mf)
-            title.set_text(f"Phase 1: MPPI Planning — {pct}%")
-        else:
-            fi = f - n_mf
-            k = fly_idx[min(fi, len(fly_idx) - 1)]
-            viz.update_trail(fly_trail, flight_pos, k)
-            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
-            title.set_text("Phase 2: Quadrotor Following MPPI Path")
+    local_goal_arr = np.array(local_goals) if local_goals else np.zeros((1, 3))
 
-    anim.animate(update, total)
+    def update(f: int) -> None:
+        k = frames[f]
+        viz.update_trail(trail_arts, flight_pos, k)
+        viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
+
+        lg_idx = min(k // sim_steps_per_mppi, len(local_goal_arr) - 1)
+        lg = local_goal_arr[lg_idx]
+        lg_3d.set_data([lg[0]], [lg[1]])
+        lg_3d.set_3d_properties([lg[2]])
+        lg_top.set_data([lg[0]], [lg[1]])
+
+    anim.animate(update, n_frames)
     anim.save()
 
 
