@@ -51,9 +51,11 @@ class PointTracker:
         yaw: float,
         dt: float,
     ) -> None:
-        """Command the gimbal to point at *target*."""
+        """Command the gimbal to point at *target* using P-control on look-at error."""
         des_pan, des_tilt = self.gimbal.look_at(camera_pos, target, yaw)
-        self.gimbal.step(des_pan, des_tilt, dt)
+        cmd_pan = self.gimbal.pan + self.cfg.kp_pan * (des_pan - self.gimbal.pan)
+        cmd_tilt = self.gimbal.tilt + self.cfg.kp_tilt * (des_tilt - self.gimbal.tilt)
+        self.gimbal.step(cmd_pan, cmd_tilt, dt)
 
 
 @dataclass
@@ -101,11 +103,11 @@ class BBoxTracker:
         bbox_size_ratio : bbox diagonal / image diagonal.
         dt : timestep.
         """
-        err_x = -bbox_center_norm[0]
-        err_y = -bbox_center_norm[1]
+        err_pan = bbox_center_norm[0]
+        err_tilt = -bbox_center_norm[1]
 
-        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_x
-        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_y
+        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_pan
+        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_tilt
 
         self.gimbal.step(desired_pan, desired_tilt, dt)
 

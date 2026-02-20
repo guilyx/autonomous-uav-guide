@@ -65,16 +65,21 @@ class MPPITracker:
         state: NDArray[np.floating],
         reference: NDArray[np.floating] | None = None,
         seed: int | None = None,
-    ) -> NDArray[np.floating]:
+        return_rollouts: bool = False,
+    ) -> NDArray[np.floating] | tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Compute optimal control for the current state.
 
         Args:
             state: Current state vector.
             reference: Reference trajectory or target (passed to cost_fn).
             seed: Random seed for reproducibility.
+            return_rollouts: If True, also return ``(K, H, state_dim)``
+                array of sampled state rollouts (positions only: first 3
+                dims).
 
         Returns:
-            Control input for the current time step.
+            Control input for the current time step.  When
+            *return_rollouts* is True, returns ``(u_opt, rollouts)``.
         """
         if self.dynamics is None or self.cost_fn is None:
             raise RuntimeError("dynamics and cost_fn must be set before calling compute.")
@@ -83,6 +88,10 @@ class MPPITracker:
         noise = rng.normal(0, 1, (self.K, self.horizon, self.control_dim)) * self.control_std
         costs = np.zeros(self.K)
 
+        rollouts: NDArray[np.floating] | None = None
+        if return_rollouts:
+            rollouts = np.zeros((self.K, self.horizon, 3))
+
         for k in range(self.K):
             x = state.copy()
             sample_cost = 0.0
@@ -90,6 +99,8 @@ class MPPITracker:
                 u = self.U[t] + noise[k, t]
                 sample_cost += self.cost_fn(x, u, reference)
                 x = self.dynamics(x, u, self.dt)
+                if return_rollouts:
+                    rollouts[k, t] = x[:3]
             costs[k] = sample_cost
 
         # Compute weights.
@@ -106,4 +117,6 @@ class MPPITracker:
         self.U[:-1] = self.U[1:]
         self.U[-1] = np.zeros(self.control_dim)
 
+        if return_rollouts:
+            return u_opt, rollouts
         return u_opt

@@ -87,18 +87,21 @@ class Gimbal:
     def rotation_matrix(self, yaw: float = 0.0) -> NDArray[np.floating]:
         """3x3 rotation from gimbal (camera) frame to world frame.
 
-        Composition: Rz(yaw) @ Rz(pan) @ Ry(-tilt).
-        Camera frame convention: +Z = optical axis, +X = right, +Y = down.
+        Camera frame: +Z = optical axis, +X = right, +Y = down.
+        World frame: +Z = up.
+
+        The optical axis direction in world is
+        ``[cos(h)cos(t), sin(h)cos(t), sin(t)]`` where ``h = yaw + pan``
+        and ``t = tilt`` (negative tilt → looking down).
         """
         heading = yaw + self.pan
         ch, sh = np.cos(heading), np.sin(heading)
         ct, st = np.cos(self.tilt), np.sin(self.tilt)
-        # Rz(heading) @ Ry(-tilt)
         return np.array(
             [
-                [ch * ct, -sh, ch * st],
-                [sh * ct, ch, sh * st],
-                [-st, 0, ct],
+                [-sh, ch * st, ch * ct],
+                [ch, sh * st, sh * ct],
+                [0.0, -ct, st],
             ]
         )
 
