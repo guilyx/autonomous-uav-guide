@@ -36,7 +36,8 @@ def main() -> None:
     rng = np.random.default_rng(2)
     pos = np.array([[50, 50, 50.0]] * n_ag) + rng.uniform(-5, 5, (n_ag, 3))
     vel = np.zeros((n_ag, 3))
-    dt, n_steps = 0.1, 500
+    dt, n_steps = 0.1, 300
+    damping = 0.85
 
     snap = [pos.copy()]
     form_err = np.zeros((n_steps, n_ag))
@@ -55,7 +56,7 @@ def main() -> None:
         )
         centroid_hist[step] = body_pos
         forces = ctrl.compute_forces(pos, vel, body_pos, body_yaw=0.0)
-        vel = vel + forces * dt
+        vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > 8.0, vel / speed * 8.0, vel)
         pos = pos + vel * dt
@@ -66,7 +67,7 @@ def main() -> None:
         mean_dist[step] = np.mean(dists)
 
     times = np.arange(n_steps) * dt
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
     colors = plt.cm.Set2(np.linspace(0, 1, n_ag))

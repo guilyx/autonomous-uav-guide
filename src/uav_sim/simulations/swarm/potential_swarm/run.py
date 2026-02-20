@@ -31,12 +31,13 @@ WORLD_SIZE = 100.0
 def main() -> None:
     n_ag = 8
     rng = np.random.default_rng(3)
-    pos = rng.uniform(10, 40, (n_ag, 3))
-    pos[:, 2] = rng.uniform(40, 60, n_ag)
+    pos = rng.uniform(5, 35, (n_ag, 3))
+    pos[:, 2] = rng.uniform(35, 65, n_ag)
     vel = np.zeros_like(pos)
     goal = np.array([80.0, 80.0, 50.0])
     ctrl = PotentialSwarm(d_des=10.0, a=6, b=3, goal_gain=0.5)
-    dt, n_steps = 0.1, 500
+    dt, n_steps = 0.1, 300
+    damping = 0.85
 
     snap = [pos.copy()]
     dist_to_goal = np.zeros((n_steps, n_ag))
@@ -44,7 +45,7 @@ def main() -> None:
 
     for step in range(n_steps):
         forces = ctrl.compute_forces(pos, goal=goal)
-        vel = vel + forces * dt
+        vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > 5.0, vel / speed * 5.0, vel)
         pos = pos + vel * dt
@@ -56,7 +57,7 @@ def main() -> None:
         mean_dist[step] = np.mean(dists)
 
     times = np.arange(n_steps) * dt
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
     colors = plt.cm.tab10(np.linspace(0, 1, n_ag))
