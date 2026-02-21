@@ -258,14 +258,20 @@ and roughly prioritised within each section (high → low).
 
 ## 11. Code Quality Debt
 
+- [x] Extract magic numbers (world sizes, cruise altitudes, DT values)
+      into shared `simulations/common.py` module (done: figure_8_ref,
+      line_to_goal, STANDARD_DURATION, frame_indices, COSTMAP_CMAP)
+- [x] Add data panels to all simulations (tracking error, speed, stats)
+- [x] Standardize double-integrator dynamics across all swarm simulations
+- [x] Remove duplicate waypoint_tracking simulation
+- [x] Slow down search algorithm visualization with frame duplication
+- [x] Fix LQR/geometric/flight_ops broken controllers
 - [ ] Unify `CascadedPIDController` and `FlightController` stacks
 - [ ] Remove `ax_side` backward-compatibility shim from `ThreePanelViz`
       and clean all sims that still reference it
 - [ ] Replace `fig.add_axes([...])` manual positioning with `gridspec`
       everywhere
 - [ ] Add type stubs for `mpl_toolkits.mplot3d` to silence mypy
-- [ ] Extract magic numbers (world sizes, cruise altitudes, DT values)
-      into per-sim config dataclasses
 - [ ] De-duplicate visualization boilerplate across simulation `run.py`
       files (many share identical update-function patterns)
 - [ ] Add `__all__` exports to all `__init__.py` files

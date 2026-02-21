@@ -81,10 +81,17 @@ def main() -> None:
 
     pan_hist = np.zeros(n_steps)
     tilt_hist = np.zeros(n_steps)
+    cmd_noise_std = np.radians(1.5)
+    rng = np.random.default_rng(42)
 
     for i in range(n_steps):
         tgt = target_positions[i]
-        tracker.step(DRONE_POS, tgt, yaw=0.0, dt=dt)
+        des_pan, des_tilt = gimbal.look_at(DRONE_POS, tgt, 0.0)
+        noisy_pan = des_pan + rng.normal(0, cmd_noise_std)
+        noisy_tilt = des_tilt + rng.normal(0, cmd_noise_std)
+        cmd_pan = gimbal.pan + tracker.cfg.kp_pan * (noisy_pan - gimbal.pan)
+        cmd_tilt = gimbal.tilt + tracker.cfg.kp_tilt * (noisy_tilt - gimbal.tilt)
+        gimbal.step(cmd_pan, cmd_tilt, dt)
         pan_hist[i] = gimbal.pan
         tilt_hist[i] = gimbal.tilt
 
