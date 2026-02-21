@@ -104,6 +104,10 @@ def main() -> None:
     size_hist = np.zeros(n_steps)
     visible_hist = np.zeros(n_steps, dtype=bool)
 
+    ema_alpha = 0.3
+    smooth_center = np.zeros(2)
+    smooth_size = 0.0
+
     for i in range(n_steps):
         t = i * DT
         tgt = _moving_target(t)
@@ -113,10 +117,12 @@ def main() -> None:
         visible_hist[i] = det.visible
 
         if det.visible:
-            bbox_ctrl.step(det.center_ndc, det.size_ratio, DT)
-            err_x_hist[i] = det.center_ndc[0]
-            err_y_hist[i] = det.center_ndc[1]
-            size_hist[i] = det.size_ratio
+            smooth_center = ema_alpha * det.center_ndc + (1 - ema_alpha) * smooth_center
+            smooth_size = ema_alpha * det.size_ratio + (1 - ema_alpha) * smooth_size
+            bbox_ctrl.step(smooth_center, smooth_size, DT)
+            err_x_hist[i] = smooth_center[0]
+            err_y_hist[i] = smooth_center[1]
+            size_hist[i] = smooth_size
         else:
             des_p, des_t = gimbal.look_at(DRONE_POS, tgt, 0.0)
             gimbal.step(des_p, des_t, DT)

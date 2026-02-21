@@ -7,6 +7,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![HitCount](https://hits.dwyl.com/guilyx/autonomous-uav-guide.svg)](https://hits.dwyl.com/guilyx/autonomous-uav-guide)
 
 From-scratch Python implementations of algorithms for **autonomous UAVs**: multirotor, VTOL, and fixed-wing. Every algorithm comes with a runnable simulation, academic references, and a GIF preview.
 
@@ -30,7 +31,7 @@ uav_sim/
 ├── environment/     # World, obstacles, buildings, env presets (city/indoor/field)
 ├── swarm/           # Reynolds, Consensus, Virtual Structure, Leader-Follower
 ├── visualization/   # 3-panel viz, data panels, vehicle artists, sensor viz
-└── simulations/     # 41 runnable demos (python -m uav_sim.simulations.*)
+└── simulations/     # 40 runnable demos (python -m uav_sim.simulations.*)
 ```
 
 ## Quick Start
