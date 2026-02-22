@@ -16,6 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from uav_sim.logging import SimLogger
 from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -62,6 +63,23 @@ def main() -> None:
         cohesion_hist[step] = np.mean(np.linalg.norm(pos - centroid, axis=1))
 
     times = np.arange(n_steps) * dt
+
+    logger = SimLogger("reynolds_flocking", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Reynolds Flocking")
+    logger.log_metadata("n_agents", n_agents)
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for step in range(n_steps):
+        logger.log_step(
+            t=times[step],
+            positions=positions_hist[step],
+            mean_speed=mean_speed_hist[step],
+            cohesion=cohesion_hist[step],
+        )
+    logger.log_summary("mean_speed_mps", float(mean_speed_hist.mean()))
+    logger.log_summary("final_cohesion_m", float(cohesion_hist[-1]))
+    logger.save()
+
     skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)

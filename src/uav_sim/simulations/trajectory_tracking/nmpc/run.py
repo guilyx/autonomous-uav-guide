@@ -18,6 +18,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.simulations.common import (
     WORLD_SIZE,
@@ -80,6 +81,24 @@ def main() -> None:
     times = np.arange(n_total) * DT_SIM
     err = np.linalg.norm(pos - refs, axis=1)
     speed = np.linalg.norm(states[:, 6:9], axis=1)
+
+    logger = SimLogger("nmpc", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "NMPC")
+    logger.log_metadata("dt_sim", DT_SIM)
+    logger.log_metadata("dt_ctrl", DT_CTRL)
+    logger.log_metadata("duration", times[-1] if len(times) > 0 else 0.0)
+    for i in range(n_total):
+        logger.log_step(
+            t=times[i],
+            position=pos[i],
+            velocity=states[i, 6:9],
+            tracking_error=err[i],
+            reference=refs[i],
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.log_summary("mean_speed_mps", float(speed.mean()))
+    logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
     idx = frame_indices(n_total, max_frames=60)

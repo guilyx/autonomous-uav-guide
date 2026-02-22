@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -123,6 +124,20 @@ def main() -> None:
         coverage_pct.append(100.0 * known / (n_cells * n_cells))
 
     pos = flight_states[:, :3]
+
+    logger = SimLogger("occupancy_mapping", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Occupancy Grid Mapping")
+    logger.log_metadata("grid_res", GRID_RES)
+    logger.log_metadata("n_scans", n_frames)
+    logger.log_metadata("final_coverage_pct", coverage_pct[-1] if coverage_pct else 0.0)
+    for i, si in enumerate(scan_indices):
+        logger.log_step(
+            scan_idx=i,
+            position=pos[si].tolist(),
+            coverage_pct=coverage_pct[i] if i < len(coverage_pct) else 0.0,
+        )
+    logger.log_summary("final_coverage_pct", coverage_pct[-1] if coverage_pct else 0.0)
+    logger.save()
 
     # ── 2x2 gridspec layout ─────────────────────────────────────────────
     fig = plt.figure(figsize=(16, 10))

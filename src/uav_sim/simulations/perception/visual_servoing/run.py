@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.perception.bbox_tracker import (
     SimulatedDetector,
     VisualServoConfig,
@@ -106,6 +107,23 @@ def main() -> None:
         pos = pos + vel * DT
         pos[2] = np.clip(pos[2], 3.0, 20.0)
         drone_pos[i] = pos
+
+    logger = SimLogger("visual_servoing", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Visual Servoing")
+    logger.log_metadata("dt", DT)
+    logger.log_metadata("n_steps", n_steps)
+    for i in range(n_steps):
+        logger.log_step(
+            t=i * DT,
+            drone_position=drone_pos[i].tolist(),
+            target_position=target_pos[i].tolist(),
+            distance=float(dist_hist[i]),
+            visible=bool(visible_hist[i]),
+        )
+    vis_mask = visible_hist.astype(bool)
+    logger.log_summary("mean_distance_m", float(dist_hist.mean()))
+    logger.log_summary("visibility_pct", float(vis_mask.sum() / n_steps * 100))
+    logger.save()
 
     # ── 2x2 gridspec layout ──────────────────────────────────────────
     fig = plt.figure(figsize=(16, 10))

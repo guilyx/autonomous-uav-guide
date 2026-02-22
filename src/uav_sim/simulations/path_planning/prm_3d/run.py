@@ -22,6 +22,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_planning.prm_3d import PRM3D
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
@@ -91,6 +92,17 @@ def main() -> None:
         loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
+
+    logger = SimLogger("prm_3d", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "PRM")
+    logger.log_metadata("roadmap_nodes", len(planner.nodes))
+    logger.log_metadata("raw_path_length", len(raw_path))
+    logger.log_metadata("smooth_path_length", len(smooth))
+    raw_len = float(np.sum(np.linalg.norm(np.diff(raw_path, axis=0), axis=1)))
+    smooth_len = float(np.sum(np.linalg.norm(np.diff(smooth, axis=0), axis=1)))
+    logger.log_summary("raw_path_m", raw_len)
+    logger.log_summary("smooth_path_m", smooth_len)
+    logger.save()
 
     # ── Edge collections ──────────────────────────────────────────────
     edge_segs_3d, edge_segs_2d = [], []

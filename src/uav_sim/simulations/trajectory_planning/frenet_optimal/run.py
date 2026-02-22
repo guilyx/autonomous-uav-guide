@@ -22,6 +22,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -152,6 +153,23 @@ def main() -> None:
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     flight_pos = flight_states[:, :3]
     n_total = len(flight_pos)
+
+    flight_speed = np.linalg.norm(flight_states[:, 6:9], axis=1)
+    flight_times = np.arange(n_total) * 0.005
+    logger = SimLogger("frenet_optimal", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Frenet Optimal")
+    logger.log_metadata("n_replans", len(local_plans))
+    logger.log_metadata("duration", flight_times[-1] if n_total > 0 else 0.0)
+    for i in range(n_total):
+        logger.log_step(
+            t=flight_times[i],
+            position=flight_pos[i],
+            velocity=flight_states[i, 6:9],
+            speed=flight_speed[i],
+        )
+    logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
+    logger.log_summary("n_local_plans", len(local_plans))
+    logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
     valid_cands = [c for c in candidates if c.cost < float("inf")]

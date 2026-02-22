@@ -16,6 +16,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
+from uav_sim.logging import SimLogger
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.vehicles.vtol import Tiltrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
@@ -126,6 +127,22 @@ def main() -> None:
     if n_steps < 2:
         print("VTOL simulation too short — skipping")
         return
+
+    times_arr = np.arange(n_steps) * dt
+    logger = SimLogger("vtol_transition", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "VTOL Tilt-Rotor")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", times_arr[-1])
+    for i in range(n_steps):
+        logger.log_step(
+            t=times_arr[i],
+            position=positions[i],
+            euler=eulers[i],
+            tilt_angle=tilt_angles[i],
+        )
+    logger.log_summary("max_tilt_deg", float(np.degrees(tilt_angles.max())))
+    logger.log_summary("final_altitude_m", float(positions[-1, 2]))
+    logger.save()
 
     viz = ThreePanelViz(title="VTOL Hover → Cruise Transition", world_size=WORLD_SIZE)
 

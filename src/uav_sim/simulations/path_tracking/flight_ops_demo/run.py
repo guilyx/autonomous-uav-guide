@@ -16,6 +16,7 @@ import numpy as np
 
 from uav_sim.control import StateManager
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.simulations.common import CRUISE_ALT, WORLD_SIZE, frame_indices
@@ -71,6 +72,24 @@ def main() -> None:
 
     speed = np.linalg.norm(states[:, 6:9], axis=1)
     dist_to_goal = np.linalg.norm(pos - GOAL, axis=1)
+
+    times = np.arange(len(states)) * dt
+
+    logger = SimLogger("flight_ops_demo", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "StateManager + Pure Pursuit")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", float(times[-1]))
+    for i in range(len(states)):
+        logger.log_step(
+            t=times[i],
+            position=pos[i],
+            velocity=states[i, 6:9],
+            speed=speed[i],
+            dist_to_goal=dist_to_goal[i],
+        )
+    logger.log_summary("mean_speed_mps", float(speed.mean()))
+    logger.log_summary("final_dist_to_goal_m", float(dist_to_goal[-1]))
+    logger.save()
 
     idx = frame_indices(len(states))
     n_frames = len(idx)
