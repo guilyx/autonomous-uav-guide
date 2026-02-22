@@ -1,9 +1,12 @@
-# Erwin Lejeune - 2026-02-18
+# Erwin Lejeune - 2026-02-21
 """Gimbal pointing controllers.
 
 Provides closed-loop controllers that command a :class:`Gimbal` to:
 - Track a static/moving world-frame point (``PointTracker``)
 - Keep a bounding box centred in the image (``BBoxTracker``)
+
+``BBoxTracker`` now includes EMA filtering + derivative damping to
+reduce jitter caused by noisy or quantised detections.
 """
 
 from __future__ import annotations
@@ -64,20 +67,22 @@ class BBoxTrackerConfig:
 
     kp_pan: float = 1.5
     kp_tilt: float = 1.5
-    desired_size_ratio: float = 0.3  # target bbox / image fraction
+    kd_pan: float = 0.3
+    kd_tilt: float = 0.3
+    ema_alpha: float = 0.3
+    desired_size_ratio: float = 0.3
 
 
 class BBoxTracker:
     """Commands gimbal to centre a bounding box in the camera image.
 
-    The controller receives the bounding box centre in normalised image
-    coordinates ([-1, 1] x [-1, 1], where (0,0) = image centre) and
-    adjusts pan/tilt to null the error.
+    Uses EMA filtering on the raw detection and PD control to reduce
+    jitter from noisy measurements.
 
     Parameters
     ----------
     gimbal : the gimbal to control.
-    config : proportional gains.
+    config : PD gains and EMA smoothing coefficient.
     """
 
     def __init__(
@@ -87,6 +92,9 @@ class BBoxTracker:
     ) -> None:
         self.gimbal = gimbal
         self.cfg = config or BBoxTrackerConfig()
+        self._prev_err_pan: float = 0.0
+        self._prev_err_tilt: float = 0.0
+        self._filtered: NDArray[np.floating] | None = None
 
     def step(
         self,
@@ -103,11 +111,22 @@ class BBoxTracker:
         bbox_size_ratio : bbox diagonal / image diagonal.
         dt : timestep.
         """
-        err_pan = bbox_center_norm[0]
-        err_tilt = -bbox_center_norm[1]
+        a = self.cfg.ema_alpha
+        if self._filtered is None:
+            self._filtered = np.array(bbox_center_norm, dtype=float)
+        else:
+            self._filtered = a * bbox_center_norm + (1.0 - a) * self._filtered
 
-        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_pan
-        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_tilt
+        err_pan = float(self._filtered[0])
+        err_tilt = float(-self._filtered[1])
+
+        d_pan = (err_pan - self._prev_err_pan) / max(dt, 1e-6)
+        d_tilt = (err_tilt - self._prev_err_tilt) / max(dt, 1e-6)
+        self._prev_err_pan = err_pan
+        self._prev_err_tilt = err_tilt
+
+        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_pan + self.cfg.kd_pan * d_pan
+        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_tilt + self.cfg.kd_tilt * d_tilt
 
         self.gimbal.step(desired_pan, desired_tilt, dt)
 

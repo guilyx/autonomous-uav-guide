@@ -25,6 +25,7 @@ from uav_sim.environment import default_world
 from uav_sim.perception.bbox_tracker import SimulatedDetector
 from uav_sim.sensors.gimbal import Gimbal
 from uav_sim.sensors.gimbal_controller import BBoxTracker, BBoxTrackerConfig
+from uav_sim.simulations.common import figure_8_ref
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.vehicle_artists import clear_vehicle_artists
 
@@ -40,48 +41,12 @@ V_FOV = 0.45
 
 
 def _moving_target(t: float) -> np.ndarray:
-    """Target path with slow cruise phases and two fast dashes that escape FOV.
-
-    Phase 1 (0–ACQUIRE): stationary — gimbal acquires.
-    Phase 2 (ACQUIRE–20s): slow circle — steady tracking.
-    Phase 3 (20–24s): fast straight dash — escapes FOV.
-    Phase 4 (24–40s): slow circle elsewhere — re-acquisition + tracking.
-    Phase 5 (40–44s): second fast dash back.
-    Phase 6 (44–end): slow circle at origin — re-acquire again.
-    """
-    cx, cy = 15.0, 18.0
+    """Figure-8 ground target with initial stationary acquisition phase."""
     if t < ACQUIRE_TIME:
-        return np.array([cx, cy, 1.0])
-
-    t1 = t - ACQUIRE_TIME
-    if t1 < 17.0:
-        omega = 0.15
-        r = 4.0
-        return np.array([cx + r * np.sin(omega * t1), cy + r * np.cos(omega * t1), 1.0])
-
-    if t1 < 21.0:
-        frac = (t1 - 17.0) / 4.0
-        start = np.array([cx, cy + 4.0, 1.0])
-        end = np.array([cx + 12.0, cy - 6.0, 1.0])
-        return start + frac * (end - start)
-
-    cx2, cy2 = cx + 12.0, cy - 6.0
-    if t1 < 37.0:
-        t2 = t1 - 21.0
-        omega = 0.15
-        r = 3.0
-        return np.array([cx2 + r * np.sin(omega * t2), cy2 + r * np.cos(omega * t2), 1.0])
-
-    if t1 < 41.0:
-        frac = (t1 - 37.0) / 4.0
-        start = np.array([cx2, cy2 + 3.0, 1.0])
-        end = np.array([cx, cy, 1.0])
-        return start + frac * (end - start)
-
-    t3 = t1 - 41.0
-    omega = 0.12
-    r = 3.5
-    return np.array([cx + r * np.sin(omega * t3), cy + r * np.cos(omega * t3), 1.0])
+        pos, _ = figure_8_ref(0.0, altitude=1.0, speed=0.25)
+        return pos
+    pos, _ = figure_8_ref(t - ACQUIRE_TIME, altitude=1.0, speed=0.25)
+    return pos
 
 
 def main() -> None:
@@ -92,21 +57,22 @@ def main() -> None:
     init_pan, init_tilt = gimbal.look_at(DRONE_POS, init_target, 0.0)
     gimbal.reset(pan=init_pan + 0.3, tilt=init_tilt + 0.2)
 
-    detector = SimulatedDetector(target_radius=0.8)
-    bbox_ctrl = BBoxTracker(gimbal, BBoxTrackerConfig(kp_pan=2.5, kp_tilt=2.5))
+    detector = SimulatedDetector(target_radius=0.8, ndc_noise_std=0.03, seed=42)
+    bbox_ctrl = BBoxTracker(
+        gimbal,
+        BBoxTrackerConfig(kp_pan=2.0, kp_tilt=2.0, kd_pan=0.3, kd_tilt=0.3, ema_alpha=0.3),
+    )
 
     n_steps = int(SIM_TIME / DT)
     pan_hist = np.zeros(n_steps)
     tilt_hist = np.zeros(n_steps)
     target_hist = np.zeros((n_steps, 3))
+    raw_err_x_hist = np.zeros(n_steps)
+    raw_err_y_hist = np.zeros(n_steps)
     err_x_hist = np.zeros(n_steps)
     err_y_hist = np.zeros(n_steps)
     size_hist = np.zeros(n_steps)
     visible_hist = np.zeros(n_steps, dtype=bool)
-
-    ema_alpha = 0.3
-    smooth_center = np.zeros(2)
-    smooth_size = 0.0
 
     for i in range(n_steps):
         t = i * DT
@@ -117,12 +83,13 @@ def main() -> None:
         visible_hist[i] = det.visible
 
         if det.visible:
-            smooth_center = ema_alpha * det.center_ndc + (1 - ema_alpha) * smooth_center
-            smooth_size = ema_alpha * det.size_ratio + (1 - ema_alpha) * smooth_size
-            bbox_ctrl.step(smooth_center, smooth_size, DT)
-            err_x_hist[i] = smooth_center[0]
-            err_y_hist[i] = smooth_center[1]
-            size_hist[i] = smooth_size
+            raw_err_x_hist[i] = det.center_ndc[0]
+            raw_err_y_hist[i] = det.center_ndc[1]
+            bbox_ctrl.step(det.center_ndc, det.size_ratio, DT)
+            if bbox_ctrl._filtered is not None:
+                err_x_hist[i] = bbox_ctrl._filtered[0]
+                err_y_hist[i] = bbox_ctrl._filtered[1]
+            size_hist[i] = det.size_ratio
         else:
             des_p, des_t = gimbal.look_at(DRONE_POS, tgt, 0.0)
             gimbal.step(des_p, des_t, DT)
@@ -168,12 +135,14 @@ def main() -> None:
     ax_err.set_ylim(-1.1, 1.1)
     ax_err.set_xlabel("Time [s]", fontsize=9)
     ax_err.set_ylabel("BBox Centre Error (NDC)", fontsize=9)
-    ax_err.set_title("Tracking Error History", fontsize=9)
+    ax_err.set_title("Tracking Error — Raw vs Filtered", fontsize=9)
     ax_err.grid(True, alpha=0.2)
-    (err_x_line,) = ax_err.plot([], [], "r-", lw=0.8, label="err_x (pan)")
-    (err_y_line,) = ax_err.plot([], [], "b-", lw=0.8, label="err_y (tilt)")
+    (raw_x_line,) = ax_err.plot([], [], "r-", lw=0.3, alpha=0.35, label="raw_x")
+    (raw_y_line,) = ax_err.plot([], [], "b-", lw=0.3, alpha=0.35, label="raw_y")
+    (err_x_line,) = ax_err.plot([], [], "r-", lw=1.0, label="filtered_x (pan)")
+    (err_y_line,) = ax_err.plot([], [], "b-", lw=1.0, label="filtered_y (tilt)")
     ax_err.axhline(0, color="gray", lw=0.5, ls="--", alpha=0.5)
-    ax_err.legend(fontsize=8, loc="upper right")
+    ax_err.legend(fontsize=6, loc="upper right")
 
     for b in buildings:
         sz = b.max_corner - b.min_corner
@@ -276,6 +245,8 @@ def main() -> None:
             cam_status.set_text("TARGET LOST — RE-ACQUIRING")
             cam_status.set_color("red")
 
+        raw_x_line.set_data(times[:k], raw_err_x_hist[:k])
+        raw_y_line.set_data(times[:k], raw_err_y_hist[:k])
         err_x_line.set_data(times[:k], err_x_hist[:k])
         err_y_line.set_data(times[:k], err_y_hist[:k])
 

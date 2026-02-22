@@ -20,6 +20,7 @@ import numpy as np
 from matplotlib.collections import LineCollection
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
+from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
 from uav_sim.path_planning.prm_3d import PRM3D
 from uav_sim.path_tracking.flight_ops import fly_mission
@@ -51,6 +52,9 @@ def _box_to_sphere(b):
 def main() -> None:
     world, buildings = default_world()
     sphere_obs = [_box_to_sphere(b) for b in buildings]
+    costmap = LayeredCostmap.from_obstacles(
+        buildings, world_size=WORLD_SIZE, resolution=0.5, inflation_radius=2.0
+    )
 
     start = np.array([2.0, 2.0, 15.0])
     goal = np.array([28.0, 28.0, 15.0])
@@ -104,6 +108,7 @@ def main() -> None:
 
     viz = ThreePanelViz(title="PRM 3D — Roadmap → Smooth → Flight", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
+    costmap.grid.visualize_2d(viz.ax_top, alpha=0.35)
     viz.mark_start_goal(start, goal)
 
     edge_col_3d = None

@@ -1,9 +1,12 @@
-# Erwin Lejeune - 2026-02-15
+# Erwin Lejeune - 2026-02-21
 """LQR-based path tracking controller for quadrotor UAVs.
 
 Extends the hover LQR to track a sequence of waypoints by constructing
 a time-varying reference state along the path and applying the
 full-state LQR feedback at each step.
+
+Uses sphere-segment intersection (identical to PurePursuit3D) for robust
+local look-ahead -- never skipping path segments.
 
 Reference: B. D. O. Anderson, J. B. Moore, "Optimal Control: Linear
 Quadratic Methods," Prentice-Hall, 1990, Ch. 8.
@@ -15,14 +18,15 @@ import numpy as np
 from numpy.typing import NDArray
 
 from uav_sim.path_tracking.lqr_controller import LQRController
+from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 
 
 class LQRPathTracker:
     """LQR controller that follows a 3-D waypoint path.
 
-    At each call the tracker selects the nearest upcoming waypoint,
-    builds a full 12-state reference (desired position + heading
-    velocity), and delegates to the underlying :class:`LQRController`.
+    At each call the tracker finds a local look-ahead point on the path
+    (sphere-segment intersection), builds a full 12-state reference, and
+    delegates to the underlying :class:`LQRController`.
 
     Parameters
     ----------
@@ -68,17 +72,14 @@ class LQRPathTracker:
         if n == 0:
             return self._lqr.compute(state)
 
-        # Advance waypoint index
         while self._idx < n - 1:
             if np.linalg.norm(pos - path[self._idx]) < self.lookahead * 0.5:
                 self._idx += 1
             else:
                 break
 
-        # Find look-ahead target along path
         target_pos = self._lookahead_point(pos, path)
 
-        # Build 12-state reference: position + heading velocity
         ref = np.zeros(12)
         ref[:3] = target_pos
 
@@ -102,11 +103,10 @@ class LQRPathTracker:
     def _lookahead_point(
         self, pos: NDArray[np.floating], path: NDArray[np.floating]
     ) -> NDArray[np.floating]:
-        best = path[min(self._idx, len(path) - 1)]
-        best_dist = float("inf")
-        for i in range(self._idx, min(self._idx + 5, len(path))):
-            d = np.linalg.norm(path[i] - pos)
-            if abs(d - self.lookahead) < best_dist:
-                best_dist = abs(d - self.lookahead)
-                best = path[i]
-        return best.copy()
+        """Sphere-segment intersection search from current segment forward."""
+        n = len(path)
+        for i in range(self._idx, n - 1):
+            pt = PurePursuit3D._intersect_sphere_segment(pos, self.lookahead, path[i], path[i + 1])
+            if pt is not None:
+                return pt
+        return path[min(self._idx, n - 1)].copy()

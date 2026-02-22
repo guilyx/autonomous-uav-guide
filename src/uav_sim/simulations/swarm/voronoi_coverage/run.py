@@ -41,11 +41,11 @@ def main() -> None:
     n_ag = 6
     rng = np.random.default_rng(4)
     bounds = np.array([[0.0, WORLD_SIZE], [0.0, WORLD_SIZE]])
-    pos_2d = rng.uniform(10, 90, (n_ag, 2))
+    pos_2d = rng.uniform(2, WORLD_SIZE - 2, (n_ag, 2))
     vel_2d = np.zeros((n_ag, 2))
     ctrl = CoverageController(bounds=bounds, resolution=2.0, gain=0.5)
 
-    dt, n_steps = 0.1, 300
+    dt, n_steps = 0.1, 600
     damping = 0.85
     max_speed = 5.0
 
