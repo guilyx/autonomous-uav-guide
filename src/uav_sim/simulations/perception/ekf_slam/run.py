@@ -19,6 +19,7 @@ import matplotlib
 import numpy as np
 from matplotlib.patches import Ellipse, Wedge
 
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -186,6 +187,24 @@ def main() -> None:
         seen_hist[step] = seen.copy()
         n_seen_hist[step] = int(np.sum(seen))
         pos_err_hist[step] = np.linalg.norm(true_xy - mu[:2])
+
+    logger = SimLogger("ekf_slam", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "EKF-SLAM")
+    logger.log_metadata("slam_dt", slam_dt)
+    logger.log_metadata("n_landmarks", _N_LM)
+    logger.log_metadata("n_steps", n_steps)
+    for i in range(n_steps):
+        logger.log_step(
+            t=i * slam_dt,
+            true_position=robot_true_hist[i].tolist(),
+            est_position=robot_est_hist[i, :2].tolist(),
+            pos_error=float(pos_err_hist[i]),
+            n_landmarks_seen=int(n_seen_hist[i]),
+        )
+    logger.log_summary("mean_pos_error_m", float(pos_err_hist.mean()))
+    logger.log_summary("max_pos_error_m", float(pos_err_hist.max()))
+    logger.log_summary("final_landmarks_seen", int(n_seen_hist[-1]))
+    logger.save()
 
     # ── 3-Panel viz + insets ──────────────────────────────────────────
     viz = ThreePanelViz(

@@ -22,6 +22,7 @@ import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.perception.bbox_tracker import SimulatedDetector
 from uav_sim.sensors.gimbal import Gimbal
 from uav_sim.sensors.gimbal_controller import BBoxTracker, BBoxTrackerConfig
@@ -96,6 +97,30 @@ def main() -> None:
 
         pan_hist[i] = gimbal.pan
         tilt_hist[i] = gimbal.tilt
+
+    filt_err = np.sqrt(err_x_hist**2 + err_y_hist**2)
+    vis_mask = visible_hist.astype(bool)
+    logger = SimLogger("gimbal_bbox_tracking", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Gimbal BBox Tracking")
+    logger.log_metadata("dt", DT)
+    logger.log_metadata("n_steps", n_steps)
+    for i in range(n_steps):
+        logger.log_step(
+            t=i * DT,
+            target_position=target_hist[i].tolist(),
+            pan_rad=float(pan_hist[i]),
+            tilt_rad=float(tilt_hist[i]),
+            raw_err_x=float(raw_err_x_hist[i]),
+            raw_err_y=float(raw_err_y_hist[i]),
+            filt_err_x=float(err_x_hist[i]),
+            filt_err_y=float(err_y_hist[i]),
+            visible=bool(visible_hist[i]),
+        )
+    logger.log_summary(
+        "mean_filtered_error_ndc", float(filt_err[vis_mask].mean()) if vis_mask.any() else 0.0
+    )
+    logger.log_summary("visibility_pct", float(vis_mask.sum() / n_steps * 100))
+    logger.save()
 
     # ── Build custom figure layout ────────────────────────────────────
     fig = matplotlib.pyplot.figure(figsize=(16, 10))

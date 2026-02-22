@@ -18,6 +18,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.path_tracking.geometric_controller import GeometricController
 from uav_sim.simulations.common import (
@@ -62,6 +63,25 @@ def main() -> None:
 
     pos = states[:, :3]
     err = np.linalg.norm(pos - refs, axis=1)
+    speed = np.linalg.norm(states[:, 6:9], axis=1)
+
+    logger = SimLogger("geometric_control", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Geometric SO(3)")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", dur)
+    for i in range(steps):
+        logger.log_step(
+            t=times[i],
+            position=pos[i],
+            velocity=states[i, 6:9],
+            tracking_error=err[i],
+            reference=refs[i],
+            thrust=thrust_hist[i],
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.log_summary("mean_speed_mps", float(speed.mean()))
+    logger.save()
 
     # ── visualisation ──────────────────────────────────────────────────
     idx = frame_indices(steps)

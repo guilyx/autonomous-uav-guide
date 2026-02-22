@@ -17,6 +17,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import rdp_simplify
@@ -72,6 +73,26 @@ def main() -> None:
         loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
+
+    flight_speed = np.linalg.norm(flight_states[:, 6:9], axis=1)
+    flight_times = np.arange(len(flight_states)) * 0.005
+    logger = SimLogger("polynomial_trajectory", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Polynomial (Quintic)")
+    logger.log_metadata("n_waypoints", len(wps))
+    logger.log_metadata("n_segments", len(seg_times))
+    logger.log_metadata("duration", flight_times[-1] if len(flight_times) > 0 else 0.0)
+    for i in range(len(flight_states)):
+        logger.log_step(
+            t=flight_times[i],
+            position=flight_pos[i],
+            velocity=flight_states[i, 6:9],
+            speed=flight_speed[i],
+        )
+    logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
+    logger.log_summary(
+        "traj_length_m", float(np.sum(np.linalg.norm(np.diff(traj_pts, axis=0), axis=1)))
+    )
+    logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
     n_traj = len(traj_pts)

@@ -16,6 +16,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
+from uav_sim.logging import SimLogger
 from uav_sim.vehicles.fixed_wing import FixedWing
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
@@ -115,6 +116,22 @@ def main() -> None:
     if n_steps < 2:
         print("Fixed-wing simulation too short — skipping")
         return
+
+    times_arr = np.arange(n_steps) * dt
+    logger = SimLogger("fixed_wing_flight", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Fixed Wing Autopilot")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", times_arr[-1])
+    logger.log_metadata("target_alt", TARGET_ALT)
+    logger.log_metadata("target_speed", TARGET_SPEED)
+    for i in range(n_steps):
+        logger.log_step(
+            t=times_arr[i],
+            position=positions[i],
+            euler=eulers[i],
+        )
+    logger.log_summary("final_altitude_m", float(positions[-1, 2]))
+    logger.save()
 
     viz = ThreePanelViz(title="Fixed-Wing Flight — Autopilot", world_size=WORLD_SIZE)
 

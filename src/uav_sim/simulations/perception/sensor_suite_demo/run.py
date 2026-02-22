@@ -17,6 +17,7 @@ import numpy as np
 
 from uav_sim.control import StateManager
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.sensors.base import SensorMount
 from uav_sim.sensors.camera import Camera, CameraIntrinsics
@@ -101,6 +102,17 @@ def main() -> None:
         pc_records.append((s.copy(), pc.copy()))
 
     pos = states_arr[:, :3]
+    speeds = np.linalg.norm(states_arr[:, 6:9], axis=1)
+    logger = SimLogger("sensor_suite_demo", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Sensor Suite Demo")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for i in range(0, n_steps, max(1, n_steps // 500)):
+        logger.log_step(t=i * dt, position=pos[i].tolist(), speed=float(speeds[i]))
+    logger.log_summary("mean_speed_m_s", float(speeds.mean()))
+    logger.log_summary("n_lidar_scans", len(pc_records))
+    logger.save()
+
     n_records = len(pc_records)
     rec_indices = list(range(0, n_steps, scan_every))[:n_records]
 

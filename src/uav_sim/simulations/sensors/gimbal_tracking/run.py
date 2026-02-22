@@ -19,6 +19,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
+from uav_sim.logging import SimLogger
 from uav_sim.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
 from uav_sim.sensors.gimbal import Gimbal
 from uav_sim.sensors.gimbal_controller import PointTracker
@@ -94,6 +95,22 @@ def main() -> None:
         gimbal.step(cmd_pan, cmd_tilt, dt)
         pan_hist[i] = gimbal.pan
         tilt_hist[i] = gimbal.tilt
+
+    logger = SimLogger("gimbal_tracking", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Gimbal Point Tracking")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for i in range(n_steps):
+        tgt = target_positions[i]
+        logger.log_step(
+            t=i * dt,
+            target_position=tgt.tolist(),
+            pan_rad=float(pan_hist[i]),
+            tilt_rad=float(tilt_hist[i]),
+        )
+    logger.log_summary("final_pan_deg", float(np.degrees(pan_hist[-1])))
+    logger.log_summary("final_tilt_deg", float(np.degrees(tilt_hist[-1])))
+    logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
     frame_skip = max(1, n_steps // 200)

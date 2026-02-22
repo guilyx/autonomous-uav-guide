@@ -16,6 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from uav_sim.logging import SimLogger
 from uav_sim.swarm.leader_follower import LeaderFollower
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -69,6 +70,23 @@ def main() -> None:
         mean_dist[step] = np.mean(dists)
 
     times = np.arange(n_steps) * dt
+
+    logger = SimLogger("leader_follower", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Leader-Follower")
+    logger.log_metadata("n_agents", n_ag)
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for step in range(n_steps):
+        logger.log_step(
+            t=times[step],
+            positions=snap[step],
+            mean_follower_error=float(follower_err[step].mean()),
+            mean_neighbor_dist=mean_dist[step],
+        )
+    logger.log_summary("mean_follower_error_m", float(follower_err.mean()))
+    logger.log_summary("final_follower_error_m", float(follower_err[-1].mean()))
+    logger.save()
+
     skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)

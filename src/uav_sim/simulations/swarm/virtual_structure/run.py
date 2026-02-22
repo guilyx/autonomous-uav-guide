@@ -16,6 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from uav_sim.logging import SimLogger
 from uav_sim.swarm.virtual_structure import VirtualStructure
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -67,6 +68,23 @@ def main() -> None:
         mean_dist[step] = np.mean(dists)
 
     times = np.arange(n_steps) * dt
+
+    logger = SimLogger("virtual_structure", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Virtual Structure")
+    logger.log_metadata("n_agents", n_ag)
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for step in range(n_steps):
+        logger.log_step(
+            t=times[step],
+            positions=snap[step],
+            formation_error=form_err[step].tolist(),
+            mean_neighbor_dist=mean_dist[step],
+        )
+    logger.log_summary("mean_formation_error_m", float(form_err.mean()))
+    logger.log_summary("final_formation_error_m", float(form_err[-1].mean()))
+    logger.save()
+
     skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
