@@ -19,6 +19,7 @@ import matplotlib
 import matplotlib.patches as mpatches
 import numpy as np
 
+from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
 from uav_sim.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
@@ -35,7 +36,10 @@ SWATH = 5.0
 
 
 def main() -> None:
-    default_world()
+    _world, buildings = default_world()
+    costmap = LayeredCostmap.from_obstacles(
+        buildings, world_size=WORLD_SIZE, resolution=0.5, inflation_radius=1.5
+    )
 
     region = CoverageRegion(
         origin=np.array([3.0, 3.0]),
@@ -76,6 +80,7 @@ def main() -> None:
     total = n_pf + n_ff
 
     viz = ThreePanelViz(title="Coverage Path Planning — Boustrophedon", world_size=WORLD_SIZE)
+    costmap.grid.visualize_2d(viz.ax_top, alpha=0.3)
 
     # Draw survey region outline
     rx, ry = region.origin

@@ -22,6 +22,7 @@ from matplotlib.patches import Ellipse, Wedge
 from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
+from uav_sim.simulations.common import figure_8_path
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 from uav_sim.visualization.vehicle_artists import clear_vehicle_artists
@@ -77,19 +78,14 @@ def main() -> None:
     )[:_N_LM]
     lm_z = np.full(_N_LM, 5.0)
 
-    radius = 10.0
-    n_wp = 80
-    angles = np.linspace(0, 4.5 * np.pi, n_wp)
-    path_3d = np.column_stack(
-        [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
-    )
+    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
-    quad.reset(position=np.array([cx + radius, cy, CRUISE_ALT]))
+    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], CRUISE_ALT]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=100.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=180.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
 
     # ── EKF-SLAM at reduced rate for efficiency ────────────────────────

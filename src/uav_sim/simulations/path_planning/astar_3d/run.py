@@ -18,6 +18,7 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
+from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
@@ -92,6 +93,9 @@ def _astar(grid, start, goal):
 def main() -> None:
     world, buildings = default_world()
     grid = _build_occupancy(buildings, WORLD_SIZE)
+    costmap = LayeredCostmap.from_obstacles(
+        buildings, world_size=float(WORLD_SIZE), resolution=0.5, inflation_radius=2.0
+    )
 
     start = (2, 2, 12)
     goal = (WORLD_SIZE - 3, WORLD_SIZE - 3, 12)
@@ -133,6 +137,7 @@ def main() -> None:
         world_size=float(WORLD_SIZE),
     )
     viz.draw_buildings(buildings)
+    costmap.grid.visualize_2d(viz.ax_top, alpha=0.35)
     viz.mark_start_goal(np.array(start, dtype=float), np.array(goal, dtype=float))
 
     explored_arr = np.array(explored)
