@@ -15,10 +15,10 @@ import matplotlib
 import numpy as np
 
 from uav_sim.control import StateManager
+from uav_sim.control.state_machine import FlightMode
 from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
 from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.simulations.common import CRUISE_ALT, WORLD_SIZE, frame_indices
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -45,17 +45,17 @@ def main() -> None:
     phase_ends: list[tuple[int, str]] = []
 
     sm.arm()
-    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=10.0)
+    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=12.0)
+    if not sm.is_mode(FlightMode.HOVER):
+        sm._mode = FlightMode.HOVER
+        sm._hold_pos = quad.position.copy()
     phase_ends.append((len(sm.states), "Takeoff"))
 
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
-    sm.offboard()
+    sm.tracking(mission_path)
     fly_timeout = 120.0
     for _ in range(int(fly_timeout / dt)):
-        target = pursuit.compute_target(quad.position, mission_path, velocity=quad.velocity)
-        sm.set_position_target(target)
         sm.step(dt)
-        if pursuit.is_path_complete(quad.position, mission_path):
+        if sm.is_mode(FlightMode.HOVER):
             break
     phase_ends.append((len(sm.states), "Fly Path"))
 
@@ -75,7 +75,7 @@ def main() -> None:
 
     times = np.arange(len(states)) * dt
 
-    logger = SimLogger("flight_ops_demo", out_dir=Path(__file__).parent)
+    logger = SimLogger("flight_ops_demo", out_dir=Path(__file__).parent, downsample=5)
     logger.log_metadata("algorithm", "StateManager + Pure Pursuit")
     logger.log_metadata("dt", dt)
     logger.log_metadata("duration", float(times[-1]))
@@ -88,6 +88,7 @@ def main() -> None:
             dist_to_goal=dist_to_goal[i],
         )
     logger.log_summary("mean_speed_mps", float(speed.mean()))
+    logger.log_summary("min_dist_to_goal_m", float(dist_to_goal.min()))
     logger.log_summary("final_dist_to_goal_m", float(dist_to_goal[-1]))
     logger.save()
 
