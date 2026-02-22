@@ -49,7 +49,7 @@ V_FOV = 0.6
 
 def _moving_target(t: float) -> np.ndarray:
     """Figure-8 ground-level path for the target."""
-    pos, _ = figure_8_ref(t, altitude=0.5, speed=0.3)
+    pos, _ = figure_8_ref(t, alt=0.5, omega=0.3)
     return pos
 
 

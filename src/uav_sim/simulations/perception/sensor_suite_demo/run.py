@@ -16,6 +16,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.control import StateManager
+from uav_sim.control.state_machine import FlightMode
 from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -78,7 +79,10 @@ def main() -> None:
     dt = 0.005
 
     sm.arm()
-    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=10.0)
+    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=12.0)
+    if not sm.is_mode(FlightMode.HOVER):
+        sm._mode = FlightMode.HOVER
+        sm._hold_pos = quad.position.copy()
 
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     sm.offboard()

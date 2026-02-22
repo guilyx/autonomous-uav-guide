@@ -76,7 +76,7 @@ def main() -> None:
 
     roll_err = np.abs(true_rp[:, 0] - est_rp[:, 0])
     pitch_err = np.abs(true_rp[:, 1] - est_rp[:, 1])
-    logger = SimLogger("complementary_filter", out_dir=Path(__file__).parent)
+    logger = SimLogger("complementary_filter", out_dir=Path(__file__).parent, downsample=10)
     logger.log_metadata("algorithm", "Complementary Filter")
     logger.log_metadata("dt", DT)
     logger.log_metadata("alpha", 0.98)
