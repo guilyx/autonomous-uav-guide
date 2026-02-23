@@ -34,16 +34,25 @@ class Detection:
 class SimulatedDetector:
     """Projects a known 3D target into the camera image as a bounding box.
 
-    The "detection" is perfect (no noise, no ML). The target is modelled
-    as a sphere of given radius; its projected size determines bbox_size.
+    Adds optional Gaussian noise to NDC output to simulate real-world
+    detector jitter.
 
     Parameters
     ----------
     target_radius : effective radius of the target [m].
+    ndc_noise_std : standard deviation of Gaussian noise on NDC (0 = perfect).
+    seed : RNG seed for reproducibility.
     """
 
-    def __init__(self, target_radius: float = 0.5) -> None:
+    def __init__(
+        self,
+        target_radius: float = 0.5,
+        ndc_noise_std: float = 0.02,
+        seed: int = 42,
+    ) -> None:
         self.target_radius = target_radius
+        self.ndc_noise_std = ndc_noise_std
+        self._rng = np.random.default_rng(seed)
 
     def detect(
         self,
@@ -61,6 +70,8 @@ class SimulatedDetector:
             return Detection(ndc, 1.0, False)
         angular_size = 2 * np.arctan(self.target_radius / dist)
         size_ratio = float(angular_size / max(h_fov, v_fov))
+        if visible and self.ndc_noise_std > 0:
+            ndc = ndc + self._rng.normal(0, self.ndc_noise_std, size=2)
         return Detection(ndc, size_ratio, visible)
 
 

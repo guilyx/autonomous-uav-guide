@@ -39,8 +39,9 @@ def main() -> None:
 
     flock = ReynoldsFlocking(r_percept=20.0, r_sep=8.0, w_sep=2.0, w_ali=1.0, w_coh=1.2)
     dt = 0.1
-    n_steps = 400
+    n_steps = 300
     max_speed = 5.0
+    damping = 0.85
 
     positions_hist = [pos.copy()]
     velocities_hist = [vel.copy()]
@@ -49,7 +50,7 @@ def main() -> None:
 
     for step in range(n_steps):
         forces = flock.compute_forces(pos, vel)
-        vel = vel + forces * dt
+        vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > max_speed, vel / speed * max_speed, vel)
         pos = pos + vel * dt
@@ -61,7 +62,7 @@ def main() -> None:
         cohesion_hist[step] = np.mean(np.linalg.norm(pos - centroid, axis=1))
 
     times = np.arange(n_steps) * dt
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)
     colors = plt.cm.tab10(np.linspace(0, 1, n_agents))

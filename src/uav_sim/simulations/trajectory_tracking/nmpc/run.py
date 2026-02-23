@@ -1,10 +1,9 @@
 # Erwin Lejeune - 2026-02-19
-"""NMPC online trajectory tracking through an urban environment.
+"""NMPC online trajectory tracking — figure-8.
 
-The drone takes off, then a nonlinear MPC (single-shooting, RK2
-integration) runs as a receding-horizon controller at 50 Hz. A
-pure-pursuit carrot on a pre-planned global path provides the
-reference position and velocity for NMPC at each step.
+A nonlinear MPC (single-shooting, RK2 integration) runs as a
+receding-horizon controller at 50 Hz, tracking a figure-8 reference
+trajectory.
 
 Reference: M. Diehl et al., "Real-Time Optimization and Nonlinear Model
 Predictive Control of Processes Governed by Differential-Algebraic
@@ -19,9 +18,12 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
-from uav_sim.path_tracking.flight_ops import init_hover, takeoff
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
+from uav_sim.path_tracking.flight_ops import init_hover
+from uav_sim.simulations.common import (
+    WORLD_SIZE,
+    figure_8_ref,
+    frame_indices,
+)
 from uav_sim.trajectory_tracking.nmpc import NMPCTracker
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -29,106 +31,95 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 
 matplotlib.use("Agg")
 
-WORLD_SIZE = 30.0
-CRUISE_ALT = 15.0
-DT_SIM = 0.005
-DT_CTRL = 0.02  # 50 Hz
+DT_SIM = 0.01
+DT_CTRL = 0.02
 
 
 def main() -> None:
     world, buildings = default_world()
 
-    global_path = np.array(
-        [
-            [3.0, 3.0, CRUISE_ALT],
-            [8.0, 6.0, CRUISE_ALT],
-            [15.0, 10.0, CRUISE_ALT],
-            [20.0, 18.0, CRUISE_ALT],
-            [24.0, 24.0, CRUISE_ALT],
-            [27.0, 27.0, CRUISE_ALT],
-        ]
-    )
-
     quad = Quadrotor()
-    quad.reset(position=np.array([global_path[0, 0], global_path[0, 1], 0.0]))
-    ctrl = CascadedPIDController()
-
-    states_list: list[np.ndarray] = []
-    local_goals: list[np.ndarray] = []
-
-    # Takeoff
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT_SIM, duration=3.0, states=states_list)
+    rp0, _ = figure_8_ref(0.0)
+    quad.reset(position=rp0.copy())
     init_hover(quad)
 
     nmpc = NMPCTracker(
-        horizon=8,
+        horizon=6,
         dt=DT_CTRL,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
-    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
 
+    dur = 15.0
     sim_steps_per_ctrl = max(1, int(DT_CTRL / DT_SIM))
-    max_ctrl_steps = 2000
+    max_ctrl_steps = int(dur / DT_CTRL)
+
+    states_list: list[np.ndarray] = []
+    refs_list: list[np.ndarray] = []
     wrench = quad.hover_wrench()
 
-    for _ in range(max_ctrl_steps):
+    for ci in range(max_ctrl_steps):
         s = quad.state
         if not (np.all(np.isfinite(s[:3])) and np.all(np.abs(s[:3]) < 500)):
             break
 
-        vel = s[6:9] if len(s) >= 9 else None
-        target = pursuit.compute_target(s[:3], global_path, velocity=vel)
-        local_goals.append(target.copy())
-
-        direction = target - s[:3]
-        dist = float(np.linalg.norm(direction))
-        ref_vel = direction / max(dist, 0.01) * 2.0 if dist > 0.3 else np.zeros(3)
-
-        wrench = nmpc.compute(s, target, ref_vel=ref_vel)
+        t = ci * DT_CTRL
+        rp, rv = figure_8_ref(t)
+        wrench = nmpc.compute(s, rp, ref_vel=rv)
 
         for _ in range(sim_steps_per_ctrl):
             states_list.append(quad.state.copy())
+            refs_list.append(rp.copy())
             quad.step(wrench, DT_SIM)
 
-        if pursuit.is_path_complete(s[:3], global_path):
-            break
-
-    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
-    flight_pos = flight_states[:, :3]
-    n_total = len(flight_pos)
+    states = np.array(states_list) if states_list else np.zeros((1, 12))
+    refs = np.array(refs_list) if refs_list else np.zeros((1, 3))
+    pos = states[:, :3]
+    n_total = len(pos)
+    times = np.arange(n_total) * DT_SIM
+    err = np.linalg.norm(pos - refs, axis=1)
+    speed = np.linalg.norm(states[:, 6:9], axis=1)
 
     # ── Animation ─────────────────────────────────────────────────────
-    skip = max(1, n_total // 200)
-    frames = list(range(0, n_total, skip))
-    n_frames = len(frames)
+    idx = frame_indices(n_total, max_frames=60)
+    n_frames = len(idx)
 
-    viz = ThreePanelViz(title="NMPC — Online Trajectory Tracking", world_size=WORLD_SIZE)
+    viz = ThreePanelViz(title="NMPC — Figure-8 Tracking", world_size=WORLD_SIZE)
     viz.draw_buildings(buildings)
-    viz.draw_path(global_path, color="cyan", lw=1.5, alpha=0.4, label="Global Path")
-    viz.mark_start_goal(global_path[0], global_path[-1])
+    viz.draw_path(refs, color="red", lw=1.0, alpha=0.3, label="Reference")
 
     trail = viz.create_trail_artists(color="orange")
-    (lg_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10, label="Local Goal")
-    (lg_top,) = viz.ax_top.plot([], [], "r*", ms=8, zorder=10)
+    (ref_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10)
+    (ref_top,) = viz.ax_top.plot([], [], "r*", ms=8, zorder=10)
     viz.ax3d.legend(fontsize=7, loc="upper left")
+
+    ax_d = viz.setup_data_axes(title="Tracking Error [m]", ylabel="Error")
+    ax_d.set_xlim(0, dur)
+    ax_d.set_ylim(0, max(0.5, err.max() * 1.1))
+    (l_err,) = ax_d.plot([], [], "r-", lw=0.8, label="||e||")
+    ax_v = ax_d.twinx()
+    ax_v.set_ylabel("Speed [m/s]", fontsize=7)
+    ax_v.tick_params(labelsize=6)
+    ax_v.set_ylim(0, max(1.0, speed.max() * 1.2))
+    (l_spd,) = ax_v.plot([], [], "b-", lw=0.5, alpha=0.6, label="speed")
+    ax_d.legend(fontsize=5, loc="upper right")
+    ax_v.legend(fontsize=5, loc="lower right")
 
     anim = SimAnimator("nmpc", out_dir=Path(__file__).parent, dpi=72)
     anim._fig = viz.fig
-
-    local_goal_arr = np.array(local_goals) if local_goals else np.zeros((1, 3))
+    title = viz.ax3d.set_title("NMPC")
 
     def update(f: int) -> None:
-        k = frames[f]
-        viz.update_trail(trail, flight_pos, k)
-        viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
-
-        lg_idx = min(k // sim_steps_per_ctrl, len(local_goal_arr) - 1)
-        lg = local_goal_arr[lg_idx]
-        lg_3d.set_data([lg[0]], [lg[1]])
-        lg_3d.set_3d_properties([lg[2]])
-        lg_top.set_data([lg[0]], [lg[1]])
+        k = idx[f]
+        viz.update_trail(trail, pos, k)
+        viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
+        ref_3d.set_data([refs[k, 0]], [refs[k, 1]])
+        ref_3d.set_3d_properties([refs[k, 2]])
+        ref_top.set_data([refs[k, 0]], [refs[k, 1]])
+        l_err.set_data(times[:k], err[:k])
+        l_spd.set_data(times[:k], speed[:k])
+        title.set_text(f"NMPC — t={times[k]:.1f}s  err={err[k]:.2f}m")
 
     anim.animate(update, n_frames)
     anim.save()

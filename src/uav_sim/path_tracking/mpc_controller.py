@@ -1,9 +1,13 @@
-# Erwin Lejeune - 2026-02-15
+# Erwin Lejeune - 2026-02-21
 """Linear Model Predictive Controller for quadrotor path tracking.
 
 Uses the same hover-linearised model as the LQR controller, but solves
 a finite-horizon optimal control problem at every step, applying only
 the first control input (receding horizon).
+
+Includes a ``compute_path_follow`` mode that finds a local nearest-point
+on the path and distributes reference points along the prediction horizon,
+avoiding the simple "track a single global target" pitfall.
 
 Reference: J. B. Rawlings, D. Q. Mayne, M. M. Diehl, "Model Predictive
 Control: Theory, Computation, and Design," 2nd ed., Nob Hill, 2017.
@@ -15,6 +19,8 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import solve_continuous_are
 from scipy.optimize import minimize
+
+from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 
 
 class MPCController:
@@ -117,6 +123,54 @@ class MPCController:
         self._warm_start[: (H - 1) * u_dim] = result.x[u_dim:]
 
         return self.hover_wrench + u_opt[0]
+
+    # ------------------------------------------------------------------
+    # Path-following mode
+    # ------------------------------------------------------------------
+
+    def compute_path_follow(
+        self,
+        state: NDArray[np.floating],
+        path: NDArray[np.floating],
+        path_index: int = 0,
+        lookahead: float = 3.0,
+        speed: float = 1.5,
+    ) -> tuple[NDArray[np.floating], int]:
+        """Track a local segment of *path* rather than a single point.
+
+        Finds the nearest segment via sphere-segment intersection, then
+        delegates to :meth:`compute` with an interpolated target + velocity.
+
+        Returns ``(wrench, updated_index)`` so the caller can persist the
+        segment index across calls.
+        """
+        pos = state[:3]
+        n = len(path)
+        if n == 0:
+            return self.compute(state, pos), path_index
+
+        while path_index < n - 1:
+            if np.linalg.norm(pos - path[path_index]) < lookahead * 0.5:
+                path_index += 1
+            else:
+                break
+
+        target: NDArray[np.floating] | None = None
+        for i in range(path_index, n - 1):
+            pt = PurePursuit3D._intersect_sphere_segment(pos, lookahead, path[i], path[i + 1])
+            if pt is not None:
+                target = pt
+                break
+
+        if target is None:
+            target = path[min(path_index, n - 1)].copy()
+
+        direction = target - pos
+        dist = float(np.linalg.norm(direction))
+        vel = direction / max(dist, 1e-6) * speed if dist > 0.01 else np.zeros(3)
+
+        wrench = self.compute(state, target, target_vel=vel)
+        return wrench, path_index
 
     def _cost(self, u_flat: NDArray[np.floating], x0: NDArray[np.floating]) -> float:
         H = self.horizon

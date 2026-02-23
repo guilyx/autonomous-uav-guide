@@ -1,5 +1,8 @@
-# Erwin Lejeune - 2026-02-17
-"""2-D / 3-D occupancy grid with binary or probabilistic cells.
+# Erwin Lejeune - 2026-02-15
+"""2-D / 3-D occupancy grid with frame-aware queries and visualisation.
+
+Supports both global and ego-centred costmap representations, following the
+same pattern as ``simple_autonomous_car.costmap.GridCostmap``.
 
 Reference: S. Thrun, "Learning Occupancy Grid Maps with Forward Sensor
 Models," Autonomous Robots, 2003. DOI: 10.1023/A:1024972020450
@@ -7,10 +10,20 @@ Models," Autonomous Robots, 2003. DOI: 10.1023/A:1024972020450
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from numpy.typing import NDArray
 
-from uav_sim.environment.world import World
+from uav_sim.frames import FrameID, body_to_world, world_to_body
+
+if TYPE_CHECKING:
+    from uav_sim.environment.obstacles import BoxObstacle
+    from uav_sim.environment.world import World
+
+COSTMAP_CMAP = "RdYlGn_r"
+COST_FREE = 0.0
+COST_OCCUPIED = 1.0
 
 
 class OccupancyGrid:
@@ -24,6 +37,9 @@ class OccupancyGrid:
         Workspace extents.
     dimensions:
         2 for a height-collapsed 2-D grid, 3 for a full 3-D voxel grid.
+    frame:
+        ``FrameID.WORLD`` for a fixed global grid,
+        ``FrameID.BODY`` for an ego-centred grid that moves with the vehicle.
     """
 
     def __init__(
@@ -32,11 +48,13 @@ class OccupancyGrid:
         bounds_min: NDArray[np.floating] | None = None,
         bounds_max: NDArray[np.floating] | None = None,
         dimensions: int = 2,
+        frame: FrameID = FrameID.WORLD,
     ) -> None:
         self.resolution = resolution
         self.bounds_min = np.asarray(bounds_min if bounds_min is not None else np.zeros(3))
         self.bounds_max = np.asarray(bounds_max if bounds_max is not None else np.full(3, 50.0))
         self.dimensions = dimensions
+        self.frame = frame
 
         sizes = ((self.bounds_max - self.bounds_min) / resolution).astype(int) + 1
         if dimensions == 2:
@@ -69,6 +87,31 @@ class OccupancyGrid:
     def is_occupied(self, point: NDArray[np.floating], threshold: float = 0.5) -> bool:
         return bool(self._grid[self.world_to_cell(point)] >= threshold)
 
+    def get_cost(
+        self,
+        point: NDArray[np.floating],
+        *,
+        query_frame: FrameID = FrameID.WORLD,
+        vehicle_position: NDArray[np.floating] | None = None,
+        vehicle_euler: NDArray[np.floating] | None = None,
+    ) -> float:
+        """Return the continuous cost [0, 1] at *point*.
+
+        If the grid is in world frame and the query is in body frame (or vice
+        versa), the caller must supply vehicle pose for the conversion.
+        """
+        pt = self._resolve_frame(point, query_frame, vehicle_position, vehicle_euler)
+        cell = self.world_to_cell(pt)
+        return float(self._grid[cell])
+
+    def clear(self) -> None:
+        """Reset all cells to free space."""
+        self._grid.fill(COST_FREE)
+
+    # ------------------------------------------------------------------
+    # Rasterisation
+    # ------------------------------------------------------------------
+
     def from_world(self, world: World) -> None:
         """Rasterise all obstacles in *world* into this grid."""
         it = np.nditer(self._grid, flags=["multi_index"])
@@ -80,8 +123,80 @@ class OccupancyGrid:
             else:
                 pt3 = self.cell_to_world(idx)
             if not world.is_free(pt3):
-                self._grid[idx] = 1.0
+                self._grid[idx] = COST_OCCUPIED
             it.iternext()
+
+    def from_obstacles(self, obstacles: list[BoxObstacle]) -> None:
+        """Rasterise *obstacles* (box list) into this grid — faster than from_world."""
+        for b in obstacles:
+            lo = np.clip(
+                (
+                    (b.min_corner[: self.dimensions] - self.bounds_min[: self.dimensions])
+                    / self.resolution
+                ).astype(int),
+                0,
+                np.array(self._grid.shape) - 1,
+            )
+            hi = np.clip(
+                (
+                    (b.max_corner[: self.dimensions] - self.bounds_min[: self.dimensions])
+                    / self.resolution
+                ).astype(int)
+                + 1,
+                0,
+                np.array(self._grid.shape),
+            )
+            if self.dimensions == 2:
+                self._grid[lo[0] : hi[0], lo[1] : hi[1]] = COST_OCCUPIED
+            else:
+                self._grid[lo[0] : hi[0], lo[1] : hi[1], lo[2] : hi[2]] = COST_OCCUPIED
+
+    def from_points(
+        self,
+        points: NDArray[np.floating],
+        *,
+        query_frame: FrameID = FrameID.WORLD,
+        vehicle_position: NDArray[np.floating] | None = None,
+        vehicle_euler: NDArray[np.floating] | None = None,
+    ) -> None:
+        """Mark cells hit by an (N, 2) or (N, 3) point cloud as occupied.
+
+        Useful for building a local costmap from lidar returns.
+        """
+        for pt in points:
+            resolved = self._resolve_frame(pt, query_frame, vehicle_position, vehicle_euler)
+            cell = self.world_to_cell(resolved)
+            valid = all(0 <= cell[d] < self._grid.shape[d] for d in range(len(cell)))
+            if valid:
+                self._grid[cell] = COST_OCCUPIED
+
+    # ------------------------------------------------------------------
+    # Frame helpers
+    # ------------------------------------------------------------------
+
+    def _resolve_frame(
+        self,
+        point: NDArray[np.floating],
+        query_frame: FrameID,
+        vehicle_position: NDArray[np.floating] | None,
+        vehicle_euler: NDArray[np.floating] | None,
+    ) -> NDArray[np.floating]:
+        """Convert *point* from *query_frame* into the grid's native frame."""
+        if query_frame == self.frame:
+            return np.asarray(point)
+
+        if vehicle_position is None or vehicle_euler is None:
+            raise ValueError("vehicle_position and vehicle_euler required for cross-frame queries")
+
+        point3 = np.zeros(3)
+        point3[: len(point)] = point
+
+        if query_frame == FrameID.BODY and self.frame == FrameID.WORLD:
+            return body_to_world(point3, vehicle_position, vehicle_euler)
+        if query_frame == FrameID.WORLD and self.frame == FrameID.BODY:
+            return world_to_body(point3, vehicle_position, vehicle_euler)
+
+        return np.asarray(point)
 
     # ------------------------------------------------------------------
     # Visualisation helpers
@@ -91,27 +206,13 @@ class OccupancyGrid:
         self,
         ax: object,
         *,
-        cmap: str = "hot_r",
+        cmap: str = COSTMAP_CMAP,
         alpha: float = 0.35,
         z_height: float = 0.0,
         stride: int = 2,
     ) -> None:
-        """Render the 2-D occupancy grid as a coloured floor surface on an Axes3D.
-
-        Parameters
-        ----------
-        ax:
-            A ``mpl_toolkits.mplot3d.Axes3D`` instance.
-        cmap:
-            Matplotlib colourmap name applied to cell values.
-        alpha:
-            Surface transparency.
-        z_height:
-            Z-level to place the surface.
-        stride:
-            Row/column stride for ``plot_surface`` (lower = more detail).
-        """
-        import matplotlib.pyplot as plt  # deferred to keep module lightweight
+        """Render the 2-D occupancy grid as a coloured floor surface on an Axes3D."""
+        import matplotlib.pyplot as plt
 
         g = self._grid
         if g.ndim != 2:
@@ -125,7 +226,7 @@ class OccupancyGrid:
         zz = np.full_like(xm, z_height)
 
         face_colors = cm(g[..., np.newaxis].repeat(1, axis=2))[:, :, 0]
-        ax.plot_surface(
+        ax.plot_surface(  # type: ignore[union-attr]
             xm,
             ym,
             zz,
@@ -141,12 +242,18 @@ class OccupancyGrid:
         self,
         ax: object,
         *,
-        cmap: str = "Greys",
+        cmap: str = COSTMAP_CMAP,
         vmin: float = 0.0,
         vmax: float = 1.0,
-        alpha: float = 1.0,
+        alpha: float = 0.45,
+        mask_free: bool = True,
     ) -> object:
-        """Render the 2-D occupancy grid as an image on a 2D axes.
+        """Render the 2-D grid as a translucent costmap overlay.
+
+        Green = free, yellow = inflated, red = occupied.
+
+        When *mask_free* is True, zero-cost cells are made transparent
+        (matching ``simple_autonomous_car``'s visualisation style).
 
         Returns the ``AxesImage`` so callers can call ``set_data`` for animation.
         """
@@ -154,18 +261,23 @@ class OccupancyGrid:
         if g.ndim != 2:
             g = g.max(axis=2) if g.ndim == 3 else g
 
+        display = (
+            np.ma.masked_where(g <= COST_FREE, g) if (mask_free and np.any(g > COST_FREE)) else g
+        )
+
         extent = [
             float(self.bounds_min[0]),
             float(self.bounds_max[0]),
             float(self.bounds_min[1]),
             float(self.bounds_max[1]),
         ]
-        return ax.imshow(
-            g.T,
+        return ax.imshow(  # type: ignore[union-attr]
+            display.T,
             origin="lower",
             extent=extent,
             cmap=cmap,
             vmin=vmin,
             vmax=vmax,
             alpha=alpha,
+            zorder=0,
         )

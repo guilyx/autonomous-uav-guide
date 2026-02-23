@@ -21,6 +21,7 @@ from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.sensors.base import SensorMount
 from uav_sim.sensors.camera import Camera, CameraIntrinsics
 from uav_sim.sensors.lidar import Lidar2D, Lidar3D
+from uav_sim.simulations.common import figure_8_path
 from uav_sim.vehicles.multirotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 from uav_sim.visualization.sensor_viz import (
@@ -68,20 +69,10 @@ def main() -> None:
         ),
     )
 
-    path_3d = np.array(
-        [
-            [3.0, 3.0, CRUISE_ALT],
-            [15.0, 5.0, CRUISE_ALT],
-            [27.0, 10.0, CRUISE_ALT],
-            [27.0, 20.0, CRUISE_ALT],
-            [15.0, 27.0, CRUISE_ALT],
-            [5.0, 20.0, CRUISE_ALT],
-            [5.0, 10.0, CRUISE_ALT],
-        ]
-    )
+    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
-    quad.reset(position=path_3d[0].copy())
+    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
     sm = StateManager(quad)
     dt = 0.005
 
@@ -90,7 +81,7 @@ def main() -> None:
 
     pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
     sm.offboard()
-    for _ in range(int(80.0 / dt)):
+    for _ in range(int(180.0 / dt)):
         target = pursuit.compute_target(quad.position, path_3d, velocity=quad.velocity)
         sm.set_position_target(target)
         sm.step(dt)

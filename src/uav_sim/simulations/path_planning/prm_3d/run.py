@@ -2,9 +2,9 @@
 """PRM 3D: 3-panel, two-phase visualisation.
 
 Phase 1 — Algorithm: roadmap construction with progressive edge reveal,
-           then Dijkstra query with path highlight.
-           Path smoothing is shown as a distinct step.
-Phase 2 — Platform: quadrotor takeoff -> pure-pursuit along smoothed path -> land.
+           then Dijkstra query with path highlight.  Search frames are
+           tripled to slow down the algorithm phase.
+Phase 2 — Platform: quadrotor takeoff -> pure-pursuit along smoothed path.
 
 Reference: L. E. Kavraki et al., "Probabilistic Roadmaps for Path Planning
 in High-Dimensional Configuration Spaces," IEEE T-RA, 1996.
@@ -17,7 +17,10 @@ from pathlib import Path
 
 import matplotlib
 import numpy as np
+from matplotlib.collections import LineCollection
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
+from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
 from uav_sim.path_planning.prm_3d import PRM3D
 from uav_sim.path_tracking.flight_ops import fly_mission
@@ -31,10 +34,15 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
+SEARCH_REPEAT = 3
+N_SAMPLE = 20
+N_EDGE = 15
+N_SEARCH = 10
+N_SMOOTH = 10
+N_FLY_FRAMES = 60
 
 
 def _box_to_sphere(b):
-    """Use XY-only bounding radius so planner can fly above buildings."""
     centre = (b.min_corner + b.max_corner) / 2
     half_xy = (b.max_corner[:2] - b.min_corner[:2]) / 2
     radius = float(np.linalg.norm(half_xy)) * 1.1
@@ -44,6 +52,9 @@ def _box_to_sphere(b):
 def main() -> None:
     world, buildings = default_world()
     sphere_obs = [_box_to_sphere(b) for b in buildings]
+    costmap = LayeredCostmap.from_obstacles(
+        buildings, world_size=WORLD_SIZE, resolution=0.5, inflation_radius=2.0
+    )
 
     start = np.array([2.0, 2.0, 15.0])
     goal = np.array([28.0, 28.0, 15.0])
@@ -64,7 +75,6 @@ def main() -> None:
     raw_path = np.array(path)
     smooth = smooth_path_3d(raw_path, epsilon=2.0, min_spacing=1.5)
 
-    # Phase 2: fly
     quad = Quadrotor()
     quad.reset(position=np.array([start[0], start[1], 0.0]))
     ctrl = CascadedPIDController()
@@ -82,36 +92,36 @@ def main() -> None:
     )
     flight_pos = flight_states[:, :3]
 
-    # ── Animation ─────────────────────────────────────────────────────
-    n_sample_frames = 20
-    n_edge_frames = 15
-    n_search_frames = 10
-    n_smooth_frames = 10
-    roadmap_pause = n_sample_frames + n_edge_frames + n_search_frames
-    smooth_pause = n_smooth_frames
-    fly_step = max(1, len(flight_pos) // 60)
-    fly_frames = list(range(0, len(flight_pos), fly_step))
-    n_ff = len(fly_frames)
-    total = roadmap_pause + smooth_pause + n_ff
-
-    viz = ThreePanelViz(title="PRM 3D — Roadmap → Smooth → Flight", world_size=WORLD_SIZE)
-    viz.draw_buildings(buildings)
-    viz.mark_start_goal(start, goal)
-
-    from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
-    edge_segs = []
+    # ── Edge collections ──────────────────────────────────────────────
+    edge_segs_3d, edge_segs_2d = [], []
     for i, adj in enumerate(planner.edges):
         for j, _ in adj:
             if j > i:
-                edge_segs.append([planner.nodes[i], planner.nodes[j]])
+                edge_segs_3d.append([planner.nodes[i], planner.nodes[j]])
+                edge_segs_2d.append([planner.nodes[i, :2], planner.nodes[j, :2]])
 
-    edge_col = None
-    if edge_segs:
-        edge_col = Line3DCollection(edge_segs, colors="cyan", linewidths=0.3, alpha=0.0)
-        viz.ax3d.add_collection3d(edge_col)
+    # ── Frame schedule ────────────────────────────────────────────────
+    algo_frames = (N_SAMPLE + N_EDGE + N_SEARCH) * SEARCH_REPEAT
+    fly_step = max(1, len(flight_pos) // N_FLY_FRAMES)
+    fly_frames = list(range(0, len(flight_pos), fly_step))
+    total = algo_frames + N_SMOOTH * SEARCH_REPEAT + len(fly_frames)
 
-    viz.ax3d.scatter(
+    viz = ThreePanelViz(title="PRM 3D — Roadmap → Smooth → Flight", world_size=WORLD_SIZE)
+    viz.draw_buildings(buildings)
+    costmap.grid.visualize_2d(viz.ax_top, alpha=0.35)
+    viz.mark_start_goal(start, goal)
+
+    edge_col_3d = None
+    if edge_segs_3d:
+        edge_col_3d = Line3DCollection(edge_segs_3d, colors="cyan", linewidths=0.3, alpha=0.0)
+        viz.ax3d.add_collection3d(edge_col_3d)
+
+    edge_col_top = None
+    if edge_segs_2d:
+        edge_col_top = LineCollection(edge_segs_2d, colors="cyan", linewidths=0.3, alpha=0.0)
+        viz.ax_top.add_collection(edge_col_top)
+
+    node_scat_3d = viz.ax3d.scatter(
         planner.nodes[:, 0],
         planner.nodes[:, 1],
         planner.nodes[:, 2],
@@ -120,76 +130,99 @@ def main() -> None:
         alpha=0.0,
         zorder=3,
     )
-    node_scat = viz.ax3d.collections[-1]
+    node_scat_top = viz.ax_top.scatter(
+        planner.nodes[:, 0],
+        planner.nodes[:, 1],
+        c="cyan",
+        s=1,
+        alpha=0.0,
+        zorder=3,
+    )
 
-    (raw_line_3d,) = viz.ax3d.plot([], [], [], "b-", lw=1.5, alpha=0.0)
-    (smooth_line_3d,) = viz.ax3d.plot([], [], [], "lime", lw=2.5, alpha=0.0, label="Smoothed")
-    (raw_line_top,) = viz.ax_top.plot([], [], "b-", lw=1.0, alpha=0.0)
-    (smooth_line_top,) = viz.ax_top.plot([], [], "lime", lw=2.0, alpha=0.0)
-    (raw_line_side,) = viz.ax_side.plot([], [], "b-", lw=1.0, alpha=0.0)
-    (smooth_line_side,) = viz.ax_side.plot([], [], "lime", lw=2.0, alpha=0.0)
+    (raw_3d,) = viz.ax3d.plot([], [], [], "b-", lw=1.5, alpha=0.0)
+    (smooth_3d,) = viz.ax3d.plot([], [], [], "lime", lw=2.5, alpha=0.0, label="Smoothed")
+    (raw_top,) = viz.ax_top.plot([], [], "b-", lw=1.0, alpha=0.0)
+    (smooth_top,) = viz.ax_top.plot([], [], "lime", lw=2.0, alpha=0.0)
 
     fly_trail = viz.create_trail_artists()
-    title = viz.ax3d.set_title("Phase 1: PRM Roadmap")
+    viz.ax3d.legend(fontsize=7, loc="upper left")
 
+    ax_d = viz.setup_data_axes(title="PRM Stats", ylabel="Count")
+    ax_d.set_xlim(0, 3)
+    n_nodes = len(planner.nodes)
+    n_edges_total = len(edge_segs_3d)
+    ax_d.set_ylim(0, max(n_nodes, n_edges_total) * 1.2)
+    ax_d.bar(
+        [0, 1, 2],
+        [n_nodes, n_edges_total, len(raw_path)],
+        color=["cyan", "teal", "blue"],
+        alpha=0.6,
+    )
+    ax_d.set_xticks([0, 1, 2])
+    ax_d.set_xticklabels(["Nodes", "Edges", "Path"], fontsize=6)
+
+    title = viz.ax3d.set_title("PRM Roadmap")
     anim = SimAnimator("prm_3d", out_dir=Path(__file__).parent, dpi=72)
     anim._fig = viz.fig
 
-    n_nodes = len(planner.nodes)
-    n_edges_total = len(edge_segs)
-
     def update(f: int) -> None:
-        p1_sample_end = n_sample_frames
-        p1_edge_end = p1_sample_end + n_edge_frames
-        p1_search_end = p1_edge_end + n_search_frames
-        p2_end = p1_search_end + smooth_pause
+        p1_sample_end = N_SAMPLE
+        p1_edge_end = p1_sample_end + N_EDGE
+        p1_search_end = p1_edge_end + N_SEARCH
+        p2_end = p1_search_end + N_SMOOTH
 
-        if f < p1_sample_end:
-            frac = min(1.0, (f + 1) / n_sample_frames)
-            node_scat.set_alpha(frac * 0.6)
+        if f < algo_frames + N_SMOOTH * SEARCH_REPEAT:
+            phase_f = f // SEARCH_REPEAT
+        else:
+            phase_f = p2_end
+
+        if phase_f < p1_sample_end:
+            frac = min(1.0, (phase_f + 1) / N_SAMPLE)
+            node_scat_3d.set_alpha(frac * 0.6)
+            node_scat_top.set_alpha(frac * 0.4)
             n_show = max(1, int(frac * n_nodes))
             title.set_text(f"Sampling — {n_show}/{n_nodes} nodes")
-        elif f < p1_edge_end:
-            node_scat.set_alpha(0.5)
-            ef = f - p1_sample_end
-            frac = min(1.0, (ef + 1) / n_edge_frames)
-            if edge_col:
-                edge_col.set_alpha(frac * 0.25)
+        elif phase_f < p1_edge_end:
+            node_scat_3d.set_alpha(0.5)
+            node_scat_top.set_alpha(0.3)
+            ef = phase_f - p1_sample_end
+            frac = min(1.0, (ef + 1) / N_EDGE)
+            if edge_col_3d:
+                edge_col_3d.set_alpha(frac * 0.25)
+            if edge_col_top:
+                edge_col_top.set_alpha(frac * 0.2)
             n_show = max(1, int(frac * n_edges_total))
             title.set_text(f"Building Edges — {n_show}/{n_edges_total}")
-        elif f < p1_search_end:
-            sf = f - p1_edge_end
-            if edge_col:
-                edge_col.set_alpha(0.1)
-            if sf >= n_search_frames // 2:
-                raw_line_3d.set_alpha(1.0)
-                raw_line_3d.set_data(raw_path[:, 0], raw_path[:, 1])
-                raw_line_3d.set_3d_properties(raw_path[:, 2])
-                raw_line_top.set_alpha(1.0)
-                raw_line_top.set_data(raw_path[:, 0], raw_path[:, 1])
-                raw_line_side.set_alpha(1.0)
-                raw_line_side.set_data(raw_path[:, 0], raw_path[:, 2])
-                title.set_text(f"Dijkstra Search — Path found ({len(raw_path)} nodes)")
+        elif phase_f < p1_search_end:
+            sf = phase_f - p1_edge_end
+            if edge_col_3d:
+                edge_col_3d.set_alpha(0.1)
+            if edge_col_top:
+                edge_col_top.set_alpha(0.08)
+            if sf >= N_SEARCH // 2:
+                raw_3d.set_alpha(1.0)
+                raw_3d.set_data(raw_path[:, 0], raw_path[:, 1])
+                raw_3d.set_3d_properties(raw_path[:, 2])
+                raw_top.set_alpha(1.0)
+                raw_top.set_data(raw_path[:, 0], raw_path[:, 1])
+                title.set_text(f"Dijkstra — Path found ({len(raw_path)} nodes)")
             else:
                 title.set_text("Dijkstra Search...")
-        elif f < p2_end:
-            sf = f - p1_search_end
-            if sf >= smooth_pause // 2:
-                smooth_line_3d.set_alpha(1.0)
-                smooth_line_3d.set_data(smooth[:, 0], smooth[:, 1])
-                smooth_line_3d.set_3d_properties(smooth[:, 2])
-                smooth_line_top.set_alpha(1.0)
-                smooth_line_top.set_data(smooth[:, 0], smooth[:, 1])
-                smooth_line_side.set_alpha(1.0)
-                smooth_line_side.set_data(smooth[:, 0], smooth[:, 2])
-                raw_line_3d.set_alpha(0.2)
-                raw_line_top.set_alpha(0.2)
-                raw_line_side.set_alpha(0.2)
+        elif phase_f < p2_end:
+            sf = phase_f - p1_search_end
+            if sf >= N_SMOOTH // 2:
+                smooth_3d.set_alpha(1.0)
+                smooth_3d.set_data(smooth[:, 0], smooth[:, 1])
+                smooth_3d.set_3d_properties(smooth[:, 2])
+                smooth_top.set_alpha(1.0)
+                smooth_top.set_data(smooth[:, 0], smooth[:, 1])
+                raw_3d.set_alpha(0.2)
+                raw_top.set_alpha(0.2)
                 title.set_text("Smoothed Path (RDP + Resample)")
             else:
-                title.set_text("Raw PRM Path (Dijkstra)")
+                title.set_text("Raw PRM Path")
         else:
-            fi = f - p2_end
+            fi = f - (algo_frames + N_SMOOTH * SEARCH_REPEAT)
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
