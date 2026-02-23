@@ -25,6 +25,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection, Poly3DCollection
 from numpy.typing import NDArray
 
+from uav_sim.visualization.theme import C_CAMERA, C_LIDAR, C_LIDAR3D, C_LIDAR_HIT
+
 # ── 2-D lidar FOV ────────────────────────────────────────────────────────────
 
 
@@ -35,7 +37,7 @@ def draw_lidar2d_fov_top(
     fov: float = 2 * np.pi,
     max_range: float = 12.0,
     *,
-    color: str = "lime",
+    color: str = C_LIDAR,
     alpha: float = 0.08,
     edge_alpha: float = 0.3,
 ) -> list[Artist]:
@@ -89,8 +91,8 @@ def draw_lidar2d_rays_top(
     angles: NDArray[np.floating],
     max_range: float = 12.0,
     *,
-    ray_color: str = "lime",
-    hit_color: str = "red",
+    ray_color: str = C_LIDAR,
+    hit_color: str = C_LIDAR_HIT,
     ray_alpha: float = 0.25,
     ray_lw: float = 0.4,
     hit_size: float = 8.0,
@@ -127,7 +129,7 @@ def draw_lidar2d_fov_3d(
     fov: float = 2 * np.pi,
     max_range: float = 12.0,
     *,
-    color: str = "lime",
+    color: str = C_LIDAR,
     alpha: float = 0.06,
     n_segments: int = 36,
 ) -> list[Artist]:
@@ -159,8 +161,8 @@ def draw_lidar2d_rays_3d(
     angles: NDArray[np.floating],
     max_range: float = 12.0,
     *,
-    ray_color: str = "lime",
-    hit_color: str = "red",
+    ray_color: str = C_LIDAR,
+    hit_color: str = C_LIDAR_HIT,
     ray_alpha: float = 0.3,
     ray_lw: float = 0.5,
     hit_size: float = 6.0,
@@ -204,7 +206,7 @@ def draw_lidar3d_fov_3d(
     v_fov: float = np.radians(30.0),
     max_range: float = 12.0,
     *,
-    color: str = "cyan",
+    color: str = C_LIDAR3D,
     alpha: float = 0.04,
     n_segments: int = 24,
 ) -> list[Artist]:
@@ -291,7 +293,7 @@ def draw_camera_frustum_3d(
     v_fov: float,
     max_depth: float = 15.0,
     *,
-    color: str = "gold",
+    color: str = C_CAMERA,
     alpha: float = 0.08,
     edge_alpha: float = 0.4,
     mount_R: NDArray[np.floating] | None = None,
@@ -354,7 +356,7 @@ def draw_camera_fov_top(
     h_fov: float,
     max_depth: float = 15.0,
     *,
-    color: str = "gold",
+    color: str = C_CAMERA,
     alpha: float = 0.10,
     mount_yaw: float = 0.0,
 ) -> list[Artist]:
@@ -395,7 +397,7 @@ def draw_camera_fov_side(
     v_fov: float,
     max_depth: float = 15.0,
     *,
-    color: str = "gold",
+    color: str = C_CAMERA,
     alpha: float = 0.10,
     mount_pitch: float = 0.0,
 ) -> list[Artist]:

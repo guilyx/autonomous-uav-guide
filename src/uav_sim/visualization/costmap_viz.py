@@ -17,13 +17,16 @@ from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.typing import NDArray
 
+from uav_sim.visualization.theme import COSTMAP_CMAP as _DEFAULT_CMAP
+from uav_sim.visualization.theme import apply_theme
+
 
 def draw_costmap_heatmap(
     ax: Any,
     grid: NDArray[np.floating],
     extent: tuple[float, float, float, float],
     *,
-    cmap: str = "hot_r",
+    cmap: str = _DEFAULT_CMAP,
     alpha: float = 0.65,
     mask_free: bool = True,
     vmin: float = 0.0,
@@ -71,7 +74,7 @@ def draw_costmap_surface(
     extent: tuple[float, float, float, float],
     z_offset: float = 0.0,
     *,
-    cmap: str = "hot_r",
+    cmap: str = _DEFAULT_CMAP,
     alpha: float = 0.5,
     z_scale: float = 1.0,
 ) -> list[Artist]:
@@ -135,6 +138,7 @@ def create_four_panel_figure(
     Returns ``(fig, ax3d, ax_top, ax_data, ax_sensor)``.
     The third return was previously a side view; it is now a data panel.
     """
+    apply_theme()
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(2, 3, width_ratios=[1.3, 1, 1], hspace=0.30, wspace=0.28)
 

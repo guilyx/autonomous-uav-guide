@@ -24,6 +24,15 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy.typing import NDArray
 
 from uav_sim.environment.obstacles import BoxObstacle, CylinderObstacle, Obstacle
+from uav_sim.visualization.theme import (
+    C_BUILDING_EDGE,
+    C_BUILDING_FACE,
+    C_GOAL,
+    C_PATH,
+    C_START,
+    C_TRAIL,
+    apply_theme,
+)
 from uav_sim.visualization.vehicle_artists import (
     clear_vehicle_artists,
     draw_quadrotor_2d,
@@ -57,6 +66,7 @@ class ThreePanelViz:
     _vehicle_arts_side: list[Artist] = field(init=False, default_factory=list)
 
     def __post_init__(self) -> None:
+        apply_theme()
         zm = self.z_max if self.z_max is not None else self.world_size
         self.fig = plt.figure(figsize=self.figsize)
         gs = self.fig.add_gridspec(
@@ -116,16 +126,16 @@ class ThreePanelViz:
         goal: NDArray[np.floating],
     ) -> None:
         """Plot start/goal markers on 3D and top-down views."""
-        self.ax3d.scatter(*start, c="lime", s=120, marker="^", label="Start", zorder=5)
-        self.ax3d.scatter(*goal, c="red", s=120, marker="v", label="Goal", zorder=5)
+        self.ax3d.scatter(*start, c=C_START, s=120, marker="^", label="Start", zorder=5)
+        self.ax3d.scatter(*goal, c=C_GOAL, s=120, marker="v", label="Goal", zorder=5)
         self.ax3d.legend(fontsize=7, loc="upper left")
-        self.ax_top.plot(start[0], start[1], "g^", ms=10, zorder=5)
-        self.ax_top.plot(goal[0], goal[1], "rv", ms=10, zorder=5)
+        self.ax_top.plot(start[0], start[1], "^", color=C_START, ms=10, zorder=5)
+        self.ax_top.plot(goal[0], goal[1], "v", color=C_GOAL, ms=10, zorder=5)
 
     def draw_path(
         self,
         path: NDArray[np.floating],
-        color: str = "blue",
+        color: str = C_PATH,
         lw: float = 1.5,
         alpha: float = 0.6,
         label: str = "",
@@ -141,7 +151,7 @@ class ThreePanelViz:
 
     def create_trail_artists(
         self,
-        color: str = "orange",
+        color: str = C_TRAIL,
         lw: float = 1.5,
     ) -> dict[str, Any]:
         """Create empty line artists for the live drone trail."""
@@ -221,8 +231,8 @@ def _draw_box_3d(ax: Axes3D, lo: NDArray, hi: NDArray) -> None:
     poly = Poly3DCollection(
         verts,
         alpha=0.18,
-        facecolor="slategray",
-        edgecolor="gray",
+        facecolor=C_BUILDING_FACE,
+        edgecolor=C_BUILDING_EDGE,
         linewidth=0.3,
     )
     ax.add_collection3d(poly)
@@ -238,8 +248,8 @@ def _draw_box_top(ax: Any, lo: NDArray, hi: NDArray) -> None:
         w,
         h,
         linewidth=0.5,
-        edgecolor="gray",
-        facecolor="slategray",
+        edgecolor=C_BUILDING_EDGE,
+        facecolor=C_BUILDING_FACE,
         alpha=0.35,
     )
     ax.add_patch(rect)
@@ -249,7 +259,7 @@ def _draw_cyl_top(ax: Any, obs: CylinderObstacle) -> None:
     circle = plt.Circle(
         (obs.centre[0], obs.centre[1]),
         obs.radius,
-        color="slategray",
+        color=C_BUILDING_FACE,
         alpha=0.35,
     )
     ax.add_patch(circle)

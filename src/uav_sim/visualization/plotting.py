@@ -8,6 +8,17 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.typing import NDArray
 
+from uav_sim.visualization.theme import (
+    C_ARM1,
+    C_ARM2,
+    C_GOAL,
+    C_HUB,
+    C_REFERENCE,
+    C_START,
+    C_TRAIL,
+    apply_theme,
+)
+
 
 def plot_quadrotor_3d(
     ax: Axes3D,
@@ -40,8 +51,7 @@ def plot_quadrotor_3d(
 
     motors_world = R @ motors_body + position.reshape(3, 1)
 
-    # Draw arms.
-    colors = ["r", "b", "r", "b"]
+    colors = [C_ARM1, C_ARM2, C_ARM1, C_ARM2]
     for i in range(4):
         ax.plot(
             [position[0], motors_world[0, i]],
@@ -51,12 +61,10 @@ def plot_quadrotor_3d(
             linewidth=2,
         )
 
-    # Draw motor circles.
     for i in range(4):
         ax.scatter(*motors_world[:, i], color=colors[i], s=20)
 
-    # Draw centre of mass.
-    ax.scatter(*position, color="k", s=30, marker="o")
+    ax.scatter(*position, color=C_HUB, s=30, marker="o")
 
 
 def plot_trajectory_3d(
@@ -76,6 +84,7 @@ def plot_trajectory_3d(
     Returns:
         (fig, ax) tuple.
     """
+    apply_theme()
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection="3d")
 
@@ -83,7 +92,8 @@ def plot_trajectory_3d(
         positions[:, 0],
         positions[:, 1],
         positions[:, 2],
-        "b-",
+        color=C_TRAIL,
+        linestyle="-",
         label="Actual",
         linewidth=1.5,
     )
@@ -93,13 +103,14 @@ def plot_trajectory_3d(
             reference[:, 0],
             reference[:, 1],
             reference[:, 2],
-            "r--",
+            color=C_REFERENCE,
+            linestyle="--",
             label="Reference",
             linewidth=1.5,
         )
 
-    ax.scatter(*positions[0, :3], color="g", s=80, marker="^", label="Start")
-    ax.scatter(*positions[-1, :3], color="r", s=80, marker="v", label="End")
+    ax.scatter(*positions[0, :3], color=C_START, s=80, marker="^", label="Start")
+    ax.scatter(*positions[-1, :3], color=C_GOAL, s=80, marker="v", label="End")
 
     ax.set_xlabel("X [m]")
     ax.set_ylabel("Y [m]")
@@ -130,6 +141,7 @@ def plot_state_history(
     Returns:
         Figure object.
     """
+    apply_theme()
     fig, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
     fig.suptitle(title)
 

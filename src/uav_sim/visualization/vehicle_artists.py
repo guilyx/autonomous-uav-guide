@@ -30,6 +30,8 @@ from matplotlib.artist import Artist
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.typing import NDArray
 
+from uav_sim.visualization.theme import C_ARM1, C_ARM2, C_HUB, C_MOTOR
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -75,8 +77,8 @@ def draw_quadrotor_3d(
     position: NDArray[np.floating],
     R: NDArray[np.floating],
     size: float = 0.25,
-    arm_colors: tuple[str, str] = ("red", "blue"),
-    center_color: str = "k",
+    arm_colors: tuple[str, str] = (C_ARM1, C_ARM2),
+    center_color: str = C_HUB,
     motor_size: float = 25.0,
     arm_lw: float = 2.5,
     **_kw: Any,
@@ -84,8 +86,8 @@ def draw_quadrotor_3d(
     """Draw a quadrotor cross-frame and return the created artists.
 
     The quadrotor is rendered as two perpendicular arms (a ``+`` shape):
-    * Arm 1: ``p1`` <-> ``p2`` along the body-x axis (``red`` by default).
-    * Arm 2: ``p3`` <-> ``p4`` along the body-y axis (``blue`` by default).
+    * Arm 1: ``p1`` <-> ``p2`` along the body-x axis.
+    * Arm 2: ``p3`` <-> ``p4`` along the body-y axis.
     Motor positions are shown as dots at each tip.
 
     Parameters
@@ -139,14 +141,13 @@ def draw_quadrotor_3d(
         tips[0],
         tips[1],
         tips[2],
-        color="k",
+        color=C_MOTOR,
         s=motor_size,
         zorder=5,
         depthshade=False,
     )
     arts.append(pt)
 
-    # Centre hub
     hub = ax.scatter(
         *position,
         color=center_color,
@@ -170,8 +171,8 @@ def draw_hexarotor_3d(
     position: NDArray[np.floating],
     R: NDArray[np.floating],
     size: float = 0.3,
-    arm_colors: tuple[str, str] = ("red", "blue"),
-    center_color: str = "k",
+    arm_colors: tuple[str, str] = (C_ARM1, C_ARM2),
+    center_color: str = C_HUB,
     motor_size: float = 20.0,
     arm_lw: float = 2.0,
     **_kw: Any,
@@ -203,7 +204,7 @@ def draw_hexarotor_3d(
             [pw_pos[0], pw_neg[0]],
             [pw_pos[1], pw_neg[1]],
             [pw_pos[2], pw_neg[2]],
-            color="k",
+            color=C_MOTOR,
             s=motor_size,
             zorder=5,
             depthshade=False,
@@ -234,9 +235,9 @@ def draw_fixed_wing_3d(
     fuselage_length: float = 1.0,
     wingspan: float = 1.4,
     scale: float = 1.0,
-    body_color: str = "steelblue",
-    wing_color: str = "royalblue",
-    tail_color: str = "slategray",
+    body_color: str = C_ARM1,
+    wing_color: str = C_ARM2,
+    tail_color: str = C_MOTOR,
     lw: float = 2.5,
     **_kw: Any,
 ) -> list[Artist]:
@@ -277,7 +278,7 @@ def draw_fixed_wing_3d(
     arts.append(_line(tail, tail_r, tail_color))
 
     nose_w = T @ nose
-    pt = ax.scatter(*nose_w, color="red", s=25, zorder=6, depthshade=False)
+    pt = ax.scatter(*nose_w, color=C_ARM1, s=25, zorder=6, depthshade=False)
     arts.append(pt)
     return arts
 
@@ -292,7 +293,7 @@ def draw_quadrotor_2d(
     position_xy: NDArray[np.floating],
     yaw: float,
     size: float = 0.25,
-    arm_colors: tuple[str, str] = ("red", "blue"),
+    arm_colors: tuple[str, str] = (C_ARM1, C_ARM2),
     arm_lw: float = 1.5,
     motor_size: float = 15.0,
 ) -> list[Artist]:
@@ -312,9 +313,9 @@ def draw_quadrotor_2d(
     arts.append(arm2)
 
     for p in [p1, p2, p3, p4]:
-        (pt,) = ax.plot(p[0], p[1], "ko", ms=motor_size / 4)
+        (pt,) = ax.plot(p[0], p[1], "o", color=C_MOTOR, ms=motor_size / 4)
         arts.append(pt)
 
-    (hub,) = ax.plot(*position_xy, "ko", ms=motor_size / 3)
+    (hub,) = ax.plot(*position_xy, "o", color=C_HUB, ms=motor_size / 3)
     arts.append(hub)
     return arts
