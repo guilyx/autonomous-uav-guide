@@ -39,16 +39,16 @@ def main() -> None:
     rng = np.random.default_rng(42)
     world, buildings = default_world()
 
-    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
+    path_3d = figure_8_path(duration=60.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
     quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=1.0, adaptive=True)
 
     states_list: list[np.ndarray] = []
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT, duration=3.0, states=states_list)
     init_hover(quad)
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT, duration=5.0, states=states_list)
     fly_path(quad, ctrl, path_3d, dt=DT, pursuit=pursuit, timeout=180.0, states=states_list)
 
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
