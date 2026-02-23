@@ -1,0 +1,15 @@
+{
+  "simulation": "astar_3d",
+  "timestamp": "2026-02-22T09:46:23.431373+00:00",
+  "metadata": {
+    "algorithm": "A*",
+    "nodes_explored": 695,
+    "raw_path_length": 30,
+    "smooth_path_length": 23
+  },
+  "summary": {
+    "raw_path_m": 37.69848480983499,
+    "smooth_path_m": 35.82614237372844
+  },
+  "timeseries": {}
+}
