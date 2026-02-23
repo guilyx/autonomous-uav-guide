@@ -17,6 +17,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.complementary_filter import ComplementaryFilter
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -72,6 +73,24 @@ def main() -> None:
 
     times = np.arange(n_steps) * DT
     pos = flight_states[:, :3]
+
+    roll_err = np.abs(true_rp[:, 0] - est_rp[:, 0])
+    pitch_err = np.abs(true_rp[:, 1] - est_rp[:, 1])
+    logger = SimLogger("complementary_filter", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Complementary Filter")
+    logger.log_metadata("dt", DT)
+    logger.log_metadata("alpha", 0.98)
+    for i in range(n_steps):
+        logger.log_step(
+            t=times[i],
+            true_roll=true_rp[i, 0],
+            true_pitch=true_rp[i, 1],
+            est_roll=est_rp[i, 0],
+            est_pitch=est_rp[i, 1],
+        )
+    logger.log_summary("mean_roll_error_rad", float(roll_err.mean()))
+    logger.log_summary("mean_pitch_error_rad", float(pitch_err.mean()))
+    logger.save()
 
     # ── Visualisation ────────────────────────────────────────────────
     viz = ThreePanelViz(

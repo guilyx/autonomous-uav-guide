@@ -18,6 +18,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -68,6 +69,25 @@ def main() -> None:
         loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
+
+    flight_speed = np.linalg.norm(flight_states[:, 6:9], axis=1)
+    flight_times = np.arange(len(flight_states)) * 0.005
+    logger = SimLogger("quintic_polynomial_demo", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Quintic Polynomial")
+    logger.log_metadata("T", T)
+    logger.log_metadata("duration", flight_times[-1] if len(flight_times) > 0 else 0.0)
+    for i in range(len(flight_states)):
+        logger.log_step(
+            t=flight_times[i],
+            position=flight_pos[i],
+            velocity=flight_states[i, 6:9],
+            speed=flight_speed[i],
+        )
+    logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
+    logger.log_summary(
+        "traj_length_m", float(np.sum(np.linalg.norm(np.diff(traj_pts, axis=0), axis=1)))
+    )
+    logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
     n_traj = len(traj_pts)

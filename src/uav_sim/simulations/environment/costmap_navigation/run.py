@@ -30,6 +30,7 @@ from uav_sim.control import StateManager
 from uav_sim.costmap import OccupancyGrid
 from uav_sim.environment import default_world
 from uav_sim.environment.buildings import add_city_grid
+from uav_sim.logging import SimLogger
 from uav_sim.vehicles.multirotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.three_panel import _draw_box_3d
@@ -210,6 +211,23 @@ def main() -> None:
     sm.run_land(dt=dt, timeout=6.0)
     states_arr = np.array(sm.states)
     pos = states_arr[:, :3]
+
+    flight_times = np.arange(len(pos)) * dt
+    flight_speed = np.linalg.norm(states_arr[:, 6:9], axis=1)
+    logger = SimLogger("costmap_navigation", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Dynamic Costmap + A*")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", flight_times[-1] if len(flight_times) > 0 else 0.0)
+    for i in range(len(pos)):
+        logger.log_step(
+            t=flight_times[i],
+            position=pos[i],
+            velocity=states_arr[i, 6:9],
+            speed=flight_speed[i],
+        )
+    logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
+    logger.log_summary("final_dist_to_goal_m", float(np.linalg.norm(pos[-1, :2] - goal_xy)))
+    logger.save()
 
     # ── Visualization ──────────────────────────────────────────────────
     n_records = len(costmap_history)

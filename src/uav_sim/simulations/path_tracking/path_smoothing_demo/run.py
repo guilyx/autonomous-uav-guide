@@ -20,6 +20,7 @@ import numpy as np
 from uav_sim.control import StateManager
 from uav_sim.environment import default_world
 from uav_sim.environment.obstacles import BoxObstacle
+from uav_sim.logging import SimLogger
 from uav_sim.path_planning.astar_3d import AStar3D
 from uav_sim.path_tracking.path_smoothing import rdp_simplify, smooth_path_3d
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -85,6 +86,24 @@ def main() -> None:
 
     flight_states = np.array(sm.states)
     flight_pos = flight_states[:, :3]
+    flight_times = np.arange(len(flight_states)) * dt
+    flight_speed = np.linalg.norm(flight_states[:, 6:9], axis=1)
+
+    logger = SimLogger("path_smoothing_demo", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "A* + RDP + Spline + Pure Pursuit")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("raw_path_points", len(raw_path))
+    logger.log_metadata("rdp_path_points", len(rdp_path))
+    logger.log_metadata("smooth_path_points", len(smooth))
+    for i in range(len(flight_states)):
+        logger.log_step(
+            t=flight_times[i],
+            position=flight_pos[i],
+            velocity=flight_states[i, 6:9],
+            speed=flight_speed[i],
+        )
+    logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
+    logger.save()
 
     n_raw_show = 20
     n_rdp_show = 20

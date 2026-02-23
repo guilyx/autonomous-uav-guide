@@ -18,6 +18,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.particle_filter import ParticleFilter
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -101,6 +102,18 @@ def main() -> None:
     err = np.sqrt(np.sum((true_xy - est_xy) ** 2, axis=1))
     pos_3d_true = np.column_stack([true_xy, np.full(n_steps, CRUISE_ALT)])
     pos_3d_est = np.column_stack([est_xy, np.full(n_steps, CRUISE_ALT)])
+
+    logger = SimLogger("particle_filter", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Particle Filter")
+    logger.log_metadata("dt", pf_dt)
+    logger.log_metadata("n_particles", N_PARTICLES)
+    for i in range(n_steps):
+        logger.log_step(
+            t=times[i], position=true_xy[i], estimate=est_xy[i], error=err[i], n_eff=n_eff_hist[i]
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.save()
 
     # ── Visualisation ────────────────────────────────────────────────
     viz = ThreePanelViz(
