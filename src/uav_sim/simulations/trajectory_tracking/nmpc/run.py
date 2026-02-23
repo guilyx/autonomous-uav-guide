@@ -32,7 +32,7 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 
 matplotlib.use("Agg")
 
-DT_SIM = 0.01
+DT_SIM = 0.005
 DT_CTRL = 0.02
 
 
@@ -45,14 +45,14 @@ def main() -> None:
     init_hover(quad)
 
     nmpc = NMPCTracker(
-        horizon=6,
+        horizon=15,
         dt=DT_CTRL,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dur = 15.0
+    dur = 30.0
     sim_steps_per_ctrl = max(1, int(DT_CTRL / DT_SIM))
     max_ctrl_steps = int(dur / DT_CTRL)
 

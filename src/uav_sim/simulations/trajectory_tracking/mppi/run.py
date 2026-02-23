@@ -19,7 +19,6 @@ import numpy as np
 from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.simulations.common import (
     WORLD_SIZE,
     figure_8_ref,
@@ -33,15 +32,20 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 matplotlib.use("Agg")
 
 DT_SIM = 0.005
-DT_MPPI = 0.05
-SPEED_SCALE = 12.0
+DT_MPPI = 0.02
 
-_OBS_SPHERES: list[tuple[np.ndarray, float]] = []
+MASS = 1.5
+GRAVITY = 9.81
+HOVER_T = MASS * GRAVITY
 
 
 def _dyn(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
-    pos, vel = x[:3], x[3:6]
-    nv = vel + u * dt
+    """Simplified 6-state (pos, vel) dynamics driven by wrench u=[T, tx, ty, tz]."""
+    pos, vel = x[:3].copy(), x[3:6].copy()
+    acc = np.array([0.0, 0.0, u[0] / MASS - GRAVITY])
+    acc[0] += u[2] * 2.0 / MASS
+    acc[1] += -u[1] * 2.0 / MASS
+    nv = vel + acc * dt
     np_ = pos + nv * dt
     return np.concatenate([np_, nv])
 
@@ -49,9 +53,10 @@ def _dyn(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
 def _cost(x: np.ndarray, u: np.ndarray, ref: np.ndarray | None) -> float:
     if ref is None:
         return 0.0
-    goal_cost = float(np.sum((x[:3] - ref[:3]) ** 2))
-    vel_cost = 0.05 * float(np.sum(u**2))
-    return goal_cost + vel_cost
+    pos_cost = float(np.sum((x[:3] - ref[:3]) ** 2)) * 10.0
+    vel_cost = float(np.sum((x[3:6] - ref[3:6]) ** 2))
+    ctrl_cost = 0.001 * float(np.sum((u - np.array([HOVER_T, 0, 0, 0])) ** 2))
+    return pos_cost + vel_cost + ctrl_cost
 
 
 def main() -> None:
@@ -59,22 +64,21 @@ def main() -> None:
 
     tracker = MPPITracker(
         state_dim=6,
-        control_dim=3,
-        horizon=20,
-        num_samples=200,
-        lambda_=0.3,
-        control_std=np.array([3.0, 3.0, 1.5]),
+        control_dim=4,
+        horizon=25,
+        num_samples=256,
+        lambda_=0.5,
+        control_std=np.array([2.0, 0.3, 0.3, 0.3]),
         dynamics=_dyn,
         cost_fn=_cost,
         dt=DT_MPPI,
     )
+    tracker.U[:, 0] = HOVER_T
 
     quad = Quadrotor()
     rp0, _ = figure_8_ref(0.0)
     quad.reset(position=rp0.copy())
     init_hover(quad)
-
-    ctrl = CascadedPIDController()
 
     dur = 30.0
     sim_steps_per_mppi = max(1, int(DT_MPPI / DT_SIM))
@@ -98,18 +102,14 @@ def main() -> None:
         result = tracker.compute(
             mppi_state, reference=mppi_ref, seed=seed_counter, return_rollouts=True
         )
-        u_mppi, rollouts = result
+        wrench_mppi, rollouts = result
         seed_counter += 1
         rollout_snapshots.append(rollouts.copy())
-
-        desired_pos = s[:3] + u_mppi * DT_MPPI * SPEED_SCALE
-        desired_pos = np.clip(desired_pos, 0.0, WORLD_SIZE)
 
         for _ in range(sim_steps_per_mppi):
             states_list.append(quad.state.copy())
             refs_list.append(rp.copy())
-            wrench = ctrl.compute(quad.state, desired_pos, dt=DT_SIM)
-            quad.step(wrench, DT_SIM)
+            quad.step(wrench_mppi, DT_SIM)
 
     states = np.array(states_list) if states_list else np.zeros((1, 12))
     refs = np.array(refs_list) if refs_list else np.zeros((1, 3))

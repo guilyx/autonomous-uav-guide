@@ -72,10 +72,10 @@ def main() -> None:
     quad = Quadrotor()
     quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=1.0, adaptive=True)
     init_hover(quad)
     states: list[np.ndarray] = []
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=5.0, states=states)
     fly_path(quad, ctrl, traj_pts, dt=0.005, pursuit=pursuit, timeout=90.0, states=states)
     loiter(quad, ctrl, traj_pts[-1], dt=0.005, duration=0.5, states=states)
     landing(quad, ctrl, dt=0.005, duration=2.5, states=states)
