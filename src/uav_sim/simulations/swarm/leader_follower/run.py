@@ -35,10 +35,13 @@ def main() -> None:
     offsets = np.array([[8, 0, 0], [-8, 0, 0], [0, 8, 0.0]])
     ctrl = LeaderFollower(offsets=offsets, kp=3.0, kd=2.0)
     n_ag = 1 + ctrl.num_followers
+    rng = np.random.default_rng(7)
     pos = np.zeros((n_ag, 3))
     pos[0] = [50, 50, CRUISE_ALT]
+    follower_corners = np.array([[10, 10], [90, 10], [10, 90]])
     for i in range(ctrl.num_followers):
-        pos[1 + i] = pos[0] + offsets[i] + np.random.randn(3) * 15
+        pos[1 + i, :2] = follower_corners[i] + rng.uniform(-3, 3, 2)
+        pos[1 + i, 2] = CRUISE_ALT + rng.uniform(-5, 5)
     vel = np.zeros((n_ag, 3))
     dt, n_steps = 0.1, 300
     damping = 0.85

@@ -42,7 +42,8 @@ def main() -> None:
     n_ag = 6
     rng = np.random.default_rng(4)
     bounds = np.array([[0.0, WORLD_SIZE], [0.0, WORLD_SIZE]])
-    pos_2d = rng.uniform(2, WORLD_SIZE - 2, (n_ag, 2))
+    corners = np.array([[10, 10], [90, 10], [10, 90], [90, 90], [10, 50], [90, 50]])
+    pos_2d = corners[:n_ag].astype(float) + rng.uniform(-3, 3, (n_ag, 2))
     vel_2d = np.zeros((n_ag, 2))
     ctrl = CoverageController(bounds=bounds, resolution=2.0, gain=0.5)
 

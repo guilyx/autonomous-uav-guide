@@ -35,7 +35,10 @@ def main() -> None:
     offsets = np.array([[10, 0, 0], [-10, 0, 0], [0, 10, 0], [0, -10, 0.0]])
     ctrl = VirtualStructure(body_offsets=offsets, kp=2.0, kd=1.5)
     rng = np.random.default_rng(2)
-    pos = np.array([[50, 50, 50.0]] * n_ag) + rng.uniform(-5, 5, (n_ag, 3))
+    corners_2d = np.array([[10, 10], [90, 10], [10, 90], [90, 90]])
+    pos = np.zeros((n_ag, 3))
+    pos[:, :2] = corners_2d[:n_ag] + rng.uniform(-3, 3, (n_ag, 2))
+    pos[:, 2] = 50.0 + rng.uniform(-5, 5, n_ag)
     vel = np.zeros((n_ag, 3))
     dt, n_steps = 0.1, 300
     damping = 0.85
