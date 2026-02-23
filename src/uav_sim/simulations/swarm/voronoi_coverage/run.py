@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial import Voronoi
 
+from uav_sim.logging import SimLogger
 from uav_sim.swarm.coverage import CoverageController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -69,6 +70,23 @@ def main() -> None:
         mean_dist[step] = np.mean(dists) if dists else 0.0
 
     times = np.arange(n_steps) * dt
+
+    logger = SimLogger("voronoi_coverage", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Voronoi Coverage (Lloyd)")
+    logger.log_metadata("n_agents", n_ag)
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for step in range(n_steps):
+        logger.log_step(
+            t=times[step],
+            positions=snap[step],
+            coverage_cost=coverage_cost[step],
+            mean_neighbor_dist=mean_dist[step],
+        )
+    logger.log_summary("final_coverage_cost", float(coverage_cost[-1]))
+    logger.log_summary("final_mean_neighbor_dist_m", float(mean_dist[-1]))
+    logger.save()
+
     skip = max(1, n_steps // 100)
     idx = list(range(0, n_steps, skip))
     n_frames = len(idx)

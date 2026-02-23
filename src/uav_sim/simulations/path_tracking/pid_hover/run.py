@@ -16,6 +16,7 @@ import numpy as np
 
 from uav_sim.control import StateManager
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.simulations.common import WORLD_SIZE, frame_indices
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -45,6 +46,22 @@ def main() -> None:
     dt = 0.005
     times = np.arange(len(states)) * dt
     err = np.linalg.norm(pos - TARGET, axis=1)
+
+    logger = SimLogger("pid_hover", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "PID")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", times[-1])
+    for i in range(len(states)):
+        logger.log_step(
+            t=times[i],
+            position=pos[i],
+            velocity=states[i, 6:9],
+            tracking_error=err[i],
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.log_summary("final_error_m", float(err[-1]))
+    logger.save()
 
     idx = frame_indices(len(states))
     n_frames = len(idx)

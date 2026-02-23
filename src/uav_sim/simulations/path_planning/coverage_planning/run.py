@@ -21,6 +21,7 @@ import numpy as np
 
 from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -67,6 +68,15 @@ def main() -> None:
     landing(quad, ctrl, dt=0.005, duration=3.0, states=states)
     flight_states = np.array(states) if states else np.zeros((1, 12))
     flight_pos = flight_states[:, :3]
+
+    logger = SimLogger("coverage_planning", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "Boustrophedon Coverage")
+    logger.log_metadata("coverage_pct", coverage_pct)
+    logger.log_metadata("path_points", len(coverage_path))
+    path_len = float(np.sum(np.linalg.norm(np.diff(coverage_path, axis=0), axis=1)))
+    logger.log_summary("path_length_m", path_len)
+    logger.log_summary("estimated_coverage_pct", float(coverage_pct))
+    logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
     n_path_pts = len(coverage_path)

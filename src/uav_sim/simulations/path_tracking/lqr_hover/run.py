@@ -17,6 +17,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.path_tracking.lqr_controller import LQRController
 from uav_sim.simulations.common import STANDARD_DURATION, WORLD_SIZE, frame_indices
@@ -60,6 +61,23 @@ def main() -> None:
 
     pos = states[:, :3]
     err = np.linalg.norm(pos - target_pos, axis=1)
+
+    logger = SimLogger("lqr_hover", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "LQR")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", duration)
+    for i in range(steps):
+        logger.log_step(
+            t=times[i],
+            position=pos[i],
+            velocity=states[i, 6:9],
+            tracking_error=err[i],
+            wrench=controls[i],
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.log_summary("final_error_m", float(err[-1]))
+    logger.save()
 
     # ── visualisation ──────────────────────────────────────────────────
     idx = frame_indices(steps)

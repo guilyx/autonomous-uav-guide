@@ -17,6 +17,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.ekf import ExtendedKalmanFilter
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -129,6 +130,23 @@ def main() -> None:
     times = np.arange(n_steps) * DT
     err_ekf = np.sqrt(np.sum((true_xyz - ekf_xyz) ** 2, axis=1))
     err_imu = np.sqrt(np.sum((true_xyz - imu_xyz) ** 2, axis=1))
+
+    logger = SimLogger("gps_imu_fusion", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "GPS+IMU EKF Fusion")
+    logger.log_metadata("dt", DT)
+    logger.log_metadata("gps_rate_hz", GPS_RATE_HZ)
+    for i in range(n_steps):
+        logger.log_step(
+            t=times[i],
+            position=true_xyz[i],
+            ekf_estimate=ekf_xyz[i],
+            imu_estimate=imu_xyz[i],
+            ekf_error=err_ekf[i],
+            imu_error=err_imu[i],
+        )
+    logger.log_summary("mean_ekf_error_m", float(err_ekf.mean()))
+    logger.log_summary("mean_imu_error_m", float(err_imu.mean()))
+    logger.save()
 
     # ── Visualisation: 3D + top-down + data panel ─────────────────────
     viz = ThreePanelViz(title="GPS + IMU Fusion (EKF)", world_size=WORLD_SIZE, figsize=(18, 9))

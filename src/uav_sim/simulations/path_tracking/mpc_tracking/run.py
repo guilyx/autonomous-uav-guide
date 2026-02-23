@@ -16,6 +16,7 @@ import matplotlib
 import numpy as np
 
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.path_tracking.mpc_controller import MPCController
 from uav_sim.simulations.common import WORLD_SIZE, figure_8_ref, frame_indices
@@ -66,6 +67,25 @@ def main() -> None:
 
     pos = states[:, :3]
     err = np.linalg.norm(pos - refs, axis=1)
+    speed = np.linalg.norm(states[:, 6:9], axis=1)
+
+    logger = SimLogger("mpc_tracking", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "MPC")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("duration", dur)
+    logger.log_metadata("horizon", 8)
+    for i in range(steps):
+        logger.log_step(
+            t=times[i],
+            position=pos[i],
+            velocity=states[i, 6:9],
+            tracking_error=err[i],
+            reference=refs[i],
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.log_summary("mean_speed_mps", float(speed.mean()))
+    logger.save()
 
     # ── Visualisation ─────────────────────────────────────────────────
     idx = frame_indices(steps, max_frames=120)
@@ -87,7 +107,6 @@ def main() -> None:
     ax_v = ax_d.twinx()
     ax_v.set_ylabel("Speed [m/s]", fontsize=7)
     ax_v.tick_params(labelsize=6)
-    speed = np.linalg.norm(states[:, 6:9], axis=1)
     ax_v.set_ylim(0, max(1.0, speed.max() * 1.2))
     (l_spd,) = ax_v.plot([], [], "b-", lw=0.5, alpha=0.6, label="speed")
     ax_d.legend(fontsize=5, loc="upper right")

@@ -20,6 +20,7 @@ import numpy as np
 
 from uav_sim.costmap import LayeredCostmap
 from uav_sim.environment import default_world
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_mission
 from uav_sim.path_tracking.path_smoothing import smooth_path_3d
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
@@ -123,6 +124,17 @@ def main() -> None:
         loiter_duration=0.5,
     )
     flight_pos = flight_states[:, :3]
+
+    logger = SimLogger("astar_3d", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "A*")
+    logger.log_metadata("nodes_explored", len(explored))
+    logger.log_metadata("raw_path_length", len(raw_path))
+    logger.log_metadata("smooth_path_length", len(smooth_path))
+    raw_len = float(np.sum(np.linalg.norm(np.diff(raw_path, axis=0), axis=1)))
+    smooth_len = float(np.sum(np.linalg.norm(np.diff(smooth_path, axis=0), axis=1)))
+    logger.log_summary("raw_path_m", raw_len)
+    logger.log_summary("smooth_path_m", smooth_len)
+    logger.save()
 
     # ── Frame schedule ────────────────────────────────────────────────
     explore_step = max(1, len(explored) // N_EXPLORE_FRAMES)

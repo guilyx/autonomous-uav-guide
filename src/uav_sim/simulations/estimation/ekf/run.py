@@ -17,6 +17,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.ekf import ExtendedKalmanFilter
+from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -97,6 +98,22 @@ def main() -> None:
     times = np.arange(n_steps) * dt
     err = np.sqrt(np.sum((true_xyz - est_xyz) ** 2, axis=1))
     cov_trace = np.array([np.trace(cov_history[i]) for i in range(n_steps)])
+
+    logger = SimLogger("ekf", out_dir=Path(__file__).parent)
+    logger.log_metadata("algorithm", "EKF")
+    logger.log_metadata("dt", dt)
+    logger.log_metadata("n_steps", n_steps)
+    for i in range(n_steps):
+        logger.log_step(
+            t=times[i],
+            position=true_xyz[i],
+            estimate=est_xyz[i],
+            error=err[i],
+            cov_trace=cov_trace[i],
+        )
+    logger.log_summary("mean_error_m", float(err.mean()))
+    logger.log_summary("max_error_m", float(err.max()))
+    logger.save()
 
     # ── 3-Panel viz ────────────────────────────────────────────────────
     viz = ThreePanelViz(
