@@ -181,20 +181,18 @@ def main() -> None:
 
     ax_top.plot(path_3d[:, 0], path_3d[:, 1], "c-", lw=0.4, alpha=0.3)
 
+    ax_grid.remove()
+    ax_grid = fig.add_subplot(gs[1, 0], projection="3d")
     ax_grid.set_xlim(0, WORLD_SIZE)
     ax_grid.set_ylim(0, WORLD_SIZE)
-    ax_grid.set_aspect("equal")
-    ax_grid.set_title("Occupancy Grid", fontsize=9)
-    ax_grid.tick_params(labelsize=6)
-    im_grid = ax_grid.imshow(
-        grid_snapshots[0].T,
-        origin="lower",
-        extent=[0, WORLD_SIZE, 0, WORLD_SIZE],
-        cmap="gray_r",
-        vmin=0,
-        vmax=1,
-    )
-    plt.colorbar(im_grid, ax=ax_grid, fraction=0.046, pad=0.04)
+    ax_grid.set_zlim(0, WORLD_SIZE)
+    ax_grid.set_xlabel("X", fontsize=7)
+    ax_grid.set_ylabel("Y", fontsize=7)
+    ax_grid.set_zlabel("Z", fontsize=7)
+    ax_grid.set_title("3D Occupancy Map", fontsize=9)
+    ax_grid.tick_params(labelsize=5)
+
+    occ_scatter = [None]
 
     ax_data.set_xlim(0, n_frames)
     ax_data.set_ylim(0, 100)
@@ -250,7 +248,17 @@ def main() -> None:
             )
         )
 
-        im_grid.set_data(grid_snapshots[min(f, len(grid_snapshots) - 1)].T)
+        grid_snap = grid_snapshots[min(f, len(grid_snapshots) - 1)]
+        if occ_scatter[0] is not None:
+            occ_scatter[0].remove()
+            occ_scatter[0] = None
+        occ_mask = grid_snap > 0.65
+        occ_i, occ_j = np.where(occ_mask)
+        if len(occ_i) > 0:
+            ox = (occ_i + 0.5) * GRID_RES
+            oy = (occ_j + 0.5) * GRID_RES
+            oz = np.full_like(ox, CRUISE_ALT)
+            occ_scatter[0] = ax_grid.scatter(ox, oy, oz, c="red", s=2, alpha=0.4, marker="s")
         cov_line.set_data(range(f + 1), coverage_pct[: f + 1])
         pct = coverage_pct[min(f, len(coverage_pct) - 1)]
         ax3d.set_title(f"Occupancy Mapping — {pct:.0f}% covered")

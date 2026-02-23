@@ -48,8 +48,8 @@ V_FOV = 0.6
 
 
 def _moving_target(t: float) -> np.ndarray:
-    """Figure-8 ground-level path for the target."""
-    pos, _ = figure_8_ref(t, alt=0.5, omega=0.3)
+    """Slow figure-8 ground-level path for the target."""
+    pos, _ = figure_8_ref(t, alt=0.5, omega=0.15)
     return pos
 
 
@@ -58,7 +58,7 @@ def main() -> None:
 
     gimbal = Gimbal(max_rate=3.0)
     init_tgt = _moving_target(0.0)
-    init_pos = np.array([15.0, 15.0, 10.0])
+    init_pos = np.array([5.0, 5.0, 15.0])
     init_pan, init_tilt = gimbal.look_at(init_pos, init_tgt, 0.0)
     gimbal.reset(pan=init_pan, tilt=init_tilt)
     tracker = PointTracker(gimbal)
@@ -66,10 +66,10 @@ def main() -> None:
     detector = SimulatedDetector(target_radius=0.5)
     servo = VisualServoController(
         VisualServoConfig(
-            kp_lateral=3.0,
-            kp_forward=2.0,
-            desired_size_ratio=0.08,
-            max_velocity=2.5,
+            kp_lateral=2.5,
+            kp_forward=1.5,
+            desired_size_ratio=0.12,
+            max_velocity=2.0,
         )
     )
 
@@ -179,16 +179,23 @@ def main() -> None:
     ax_data.set_ylim(0, max(20, dist_hist.max() * 1.2))
     ax_data.set_xlabel("Time [s]", fontsize=8)
     ax_data.set_ylabel("Distance [m]", fontsize=8)
-    ax_data.set_title("Drone-Target Distance", fontsize=9)
+    ax_data.set_title("Distance & BBox Size", fontsize=9)
     ax_data.grid(True, alpha=0.3)
     (dist_line,) = ax_data.plot([], [], "b-", lw=0.8, label="Distance")
-    ax_data.legend(fontsize=7)
+    ax_sz = ax_data.twinx()
+    ax_sz.set_ylabel("BBox Size Ratio", fontsize=7)
+    ax_sz.tick_params(labelsize=6)
+    ax_sz.set_ylim(0, max(0.2, bbox_size.max() * 1.5))
+    (sz_line,) = ax_sz.plot([], [], "g-", lw=0.6, alpha=0.7, label="BBox size")
+    ax_data.legend(fontsize=6, loc="upper right")
+    ax_sz.legend(fontsize=6, loc="lower right")
 
     skip = max(1, n_steps // 200)
     frames = list(range(0, n_steps, skip))
     n_frames = len(frames)
 
     veh_arts: list = []
+    fov_arts: list = []
 
     anim = SimAnimator("visual_servoing", out_dir=Path(__file__).parent, dpi=72)
     anim._fig = fig
@@ -201,10 +208,22 @@ def main() -> None:
         drone_trail_top.set_data(drone_pos[:k, 0], drone_pos[:k, 1])
 
         clear_vehicle_artists(veh_arts)
+        clear_vehicle_artists(fov_arts)
         R = Quadrotor.rotation_matrix(0, 0, 0)
         veh_arts.extend(draw_quadrotor_3d(ax3d, dp, R, size=1.5))
         (dt_t,) = ax_top.plot(dp[0], dp[1], "ko", ms=4, zorder=10)
         veh_arts.append(dt_t)
+
+        corners = gimbal.frustum_corners_world(dp, H_FOV, V_FOV, 18.0, yaw=0.0)
+        for i_c in range(4):
+            (ln,) = ax_top.plot(
+                [dp[0], corners[i_c, 0]],
+                [dp[1], corners[i_c, 1]],
+                "gold",
+                lw=0.5,
+                alpha=0.4,
+            )
+            fov_arts.append(ln)
 
         tgt_3d.set_data([tp[0]], [tp[1]])
         tgt_3d.set_3d_properties([tp[2]])
@@ -236,6 +255,7 @@ def main() -> None:
             target_dot.set_data([], [])
 
         dist_line.set_data(times[:k], dist_hist[:k])
+        sz_line.set_data(times[:k], bbox_size[:k])
 
     anim.animate(update, n_frames)
     anim.save()

@@ -71,7 +71,7 @@ def main() -> None:
         ),
     )
 
-    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
+    path_3d = figure_8_path(duration=60.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
     quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
@@ -84,7 +84,7 @@ def main() -> None:
         sm._mode = FlightMode.HOVER
         sm._hold_pos = quad.position.copy()
 
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.0, adaptive=True)
     sm.offboard()
     for _ in range(int(180.0 / dt)):
         target = pursuit.compute_target(quad.position, path_3d, velocity=quad.velocity)
