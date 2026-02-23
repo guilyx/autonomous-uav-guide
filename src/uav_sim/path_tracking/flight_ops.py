@@ -69,21 +69,27 @@ def takeoff(
     ctrl: CascadedPIDController,
     target_alt: float,
     dt: float = 0.005,
-    duration: float = 3.0,
+    duration: float = 5.0,
     states: list[NDArray] | None = None,
+    climb_rate: float = 2.0,
 ) -> list[NDArray]:
-    """Vertical climb to *target_alt* from current position."""
+    """Vertical climb to *target_alt* with a smooth altitude ramp."""
     if states is None:
         states = []
+    start_z = float(quad.state[2])
     target = quad.state[:3].copy()
-    target[2] = target_alt
     steps = int(duration / dt)
-    for _ in range(steps):
+    for i in range(steps):
         if not _is_sane(quad.state):
             break
         states.append(quad.state.copy())
+        elapsed = i * dt
+        ramp_z = min(target_alt, start_z + climb_rate * elapsed)
+        target[2] = ramp_z
         cmd = _limit_target(quad.state[:3], target)
         quad.step(ctrl.compute(quad.state, cmd, dt=dt), dt)
+        if abs(quad.state[2] - target_alt) < 0.3 and abs(quad.state[8]) < 0.3:
+            break
     return states
 
 
@@ -91,22 +97,34 @@ def landing(
     quad: Quadrotor,
     ctrl: CascadedPIDController,
     dt: float = 0.005,
-    duration: float = 4.0,
+    duration: float = 6.0,
     ground_z: float = 0.0,
     states: list[NDArray] | None = None,
+    descent_rate: float | None = None,
 ) -> list[NDArray]:
-    """Descend vertically to *ground_z* from current position."""
+    """Descend vertically to *ground_z* with a smooth altitude ramp.
+
+    If *descent_rate* is ``None`` it is computed so that the ramp
+    reaches ``ground_z`` in roughly 80 % of *duration*, clamped to
+    [0.5, 3.0] m/s for realism.
+    """
     if states is None:
         states = []
+    start_z = float(quad.state[2])
+    if descent_rate is None:
+        dz = max(start_z - ground_z, 0.1)
+        descent_rate = float(np.clip(dz / (duration * 0.8), 0.5, 3.0))
     target = quad.state[:3].copy()
-    target[2] = ground_z
     steps = int(duration / dt)
-    for _ in range(steps):
+    for i in range(steps):
         if not _is_sane(quad.state):
             break
         states.append(quad.state.copy())
         if quad.state[2] < ground_z + 0.05:
             break
+        elapsed = i * dt
+        ramp_z = max(ground_z, start_z - descent_rate * elapsed)
+        target[2] = ramp_z
         cmd = _limit_target(quad.state[:3], target)
         quad.step(ctrl.compute(quad.state, cmd, dt=dt), dt)
     return states
@@ -181,8 +199,8 @@ def fly_mission(
     cruise_alt: float | None = None,
     dt: float = 0.005,
     pursuit: PurePursuit3D | None = None,
-    takeoff_duration: float = 3.0,
-    landing_duration: float = 4.0,
+    takeoff_duration: float = 5.0,
+    landing_duration: float = 6.0,
     loiter_duration: float = 1.0,
     fly_timeout: float = 120.0,
 ) -> NDArray[np.floating]:
