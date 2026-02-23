@@ -60,7 +60,7 @@ def main() -> None:
     phase_ends.append((len(sm.states), "Fly Path"))
 
     sm.loiter()
-    for _ in range(int(3.0 / dt)):
+    for _ in range(int(5.0 / dt)):
         sm.step(dt)
     phase_ends.append((len(sm.states), "Loiter"))
 
