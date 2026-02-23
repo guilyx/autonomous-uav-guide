@@ -251,11 +251,13 @@ def main() -> None:
         ax.set_title(lbl, fontsize=9)
         ax.tick_params(labelsize=6)
 
+    from uav_sim.simulations.common import COSTMAP_CMAP
+
     im_cost = ax_cost.imshow(
         static_occ.T,
         origin="lower",
         extent=extent,
-        cmap="hot_r",
+        cmap=COSTMAP_CMAP,
         vmin=0,
         vmax=1,
     )
@@ -263,7 +265,7 @@ def main() -> None:
         static_occ.T,
         origin="lower",
         extent=extent,
-        cmap="YlOrRd",
+        cmap=COSTMAP_CMAP,
         vmin=0,
         vmax=1,
     )

@@ -1,5 +1,5 @@
-# Erwin Lejeune - 2026-02-18
-"""EKF localisation: quadrotor flying a circle with GPS fusion.
+# Erwin Lejeune - 2026-02-21
+"""EKF localisation: quadrotor flying a figure-8 with GPS fusion.
 
 Three panels (3D, top-down, side) showing the quadrotor, with inset plots
 for position error and covariance trace.  GPS measurements shown as scattered
@@ -21,6 +21,7 @@ from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.sensors.gps import GPS
+from uav_sim.simulations.common import figure_8_path
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 
@@ -33,15 +34,10 @@ CRUISE_ALT = 12.0
 def main() -> None:
     world, buildings = default_world()
 
-    cx, cy, radius = 15.0, 15.0, 8.0
-    n_wp = 100
-    angles = np.linspace(0, 3.5 * np.pi, n_wp)
-    path_3d = np.column_stack(
-        [cx + radius * np.cos(angles), cy + radius * np.sin(angles), np.full(n_wp, CRUISE_ALT)]
-    )
+    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
-    quad.reset(position=np.array([cx + radius, cy, 0.0]))
+    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
     states_list: list[np.ndarray] = []
@@ -49,7 +45,7 @@ def main() -> None:
 
     takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states_list)
     init_hover(quad)
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=120.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=180.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     n_steps = len(flight_states)
     dt = 0.005

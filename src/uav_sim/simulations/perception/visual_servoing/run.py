@@ -29,6 +29,7 @@ from uav_sim.perception.bbox_tracker import (
 )
 from uav_sim.sensors.gimbal import Gimbal
 from uav_sim.sensors.gimbal_controller import PointTracker
+from uav_sim.simulations.common import figure_8_ref
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.vehicle_artists import (
@@ -46,11 +47,9 @@ V_FOV = 0.6
 
 
 def _moving_target(t: float) -> np.ndarray:
-    """Slow elliptical ground-level path for the target."""
-    cx, cy = 15.0, 15.0
-    rx, ry = 7.0, 5.0
-    omega = 0.06
-    return np.array([cx + rx * np.cos(omega * t), cy + ry * np.sin(omega * t), 0.5])
+    """Figure-8 ground-level path for the target."""
+    pos, _ = figure_8_ref(t, altitude=0.5, speed=0.3)
+    return pos
 
 
 def main() -> None:

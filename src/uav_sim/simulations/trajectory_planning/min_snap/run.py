@@ -57,10 +57,9 @@ def main() -> None:
     coeffs = ms.generate(wps, seg_times)
     _, traj_pts_dense = ms.evaluate(coeffs, seg_times, dt=0.05)
 
-    # Resample to ~1 m spacing for path tracking
     traj_pts = [traj_pts_dense[0]]
     for p in traj_pts_dense[1:]:
-        if np.linalg.norm(p - traj_pts[-1]) >= 0.8:
+        if np.linalg.norm(p - traj_pts[-1]) >= 1.0:
             traj_pts.append(p)
     if np.linalg.norm(traj_pts[-1] - traj_pts_dense[-1]) > 0.1:
         traj_pts.append(traj_pts_dense[-1])
@@ -72,7 +71,7 @@ def main() -> None:
     quad = Quadrotor()
     quad.reset(position=np.array([START[0], START[1], 0.0]))
     ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
+    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
     init_hover(quad)
     states: list[np.ndarray] = []
     takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)

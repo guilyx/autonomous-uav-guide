@@ -20,6 +20,7 @@ from uav_sim.estimation.complementary_filter import ComplementaryFilter
 from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
+from uav_sim.simulations.common import figure_8_path
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 
@@ -34,25 +35,16 @@ def main() -> None:
     rng = np.random.default_rng(42)
     world, buildings = default_world()
 
-    cx, cy, radius = 15.0, 15.0, 10.0
-    n_wp = 100
-    angles = np.linspace(0, 2.5 * np.pi, n_wp)
-    path_3d = np.column_stack(
-        [
-            cx + radius * np.cos(angles),
-            cy + radius * np.sin(angles),
-            np.full(n_wp, CRUISE_ALT),
-        ]
-    )
+    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
-    quad.reset(position=np.array([cx + radius, cy, 0.0]))
+    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
     ctrl = CascadedPIDController()
     pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
     states_list: list[np.ndarray] = []
     takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT, duration=3.0, states=states_list)
     init_hover(quad)
-    fly_path(quad, ctrl, path_3d, dt=DT, pursuit=pursuit, timeout=60.0, states=states_list)
+    fly_path(quad, ctrl, path_3d, dt=DT, pursuit=pursuit, timeout=180.0, states=states_list)
     flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
     n_steps = len(flight_states)
 
