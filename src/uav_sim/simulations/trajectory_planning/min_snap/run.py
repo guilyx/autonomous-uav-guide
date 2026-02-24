@@ -83,7 +83,7 @@ def main() -> None:
     flight_pos = flight_states[:, :3]
 
     flight_speed = np.linalg.norm(flight_states[:, 6:9], axis=1)
-    logger = SimLogger("min_snap", out_dir=Path(__file__).parent)
+    logger = SimLogger("min_snap", out_dir=Path(__file__).parent, downsample=5)
     logger.log_metadata("algorithm", "Min-Snap")
     logger.log_metadata("n_waypoints", len(wps))
     logger.log_metadata("n_segments", len(seg_times))

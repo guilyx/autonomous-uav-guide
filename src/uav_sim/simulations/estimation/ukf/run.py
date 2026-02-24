@@ -96,7 +96,7 @@ def main() -> None:
     times = np.arange(n_steps) * DT
     err = np.sqrt(np.sum((true_xyz - est_xyz) ** 2, axis=1))
 
-    logger = SimLogger("ukf", out_dir=Path(__file__).parent)
+    logger = SimLogger("ukf", out_dir=Path(__file__).parent, downsample=10)
     logger.log_metadata("algorithm", "UKF")
     logger.log_metadata("dt", DT)
     logger.log_metadata("n_steps", n_steps)

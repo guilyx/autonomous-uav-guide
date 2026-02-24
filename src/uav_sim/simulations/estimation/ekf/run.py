@@ -99,7 +99,7 @@ def main() -> None:
     err = np.sqrt(np.sum((true_xyz - est_xyz) ** 2, axis=1))
     cov_trace = np.array([np.trace(cov_history[i]) for i in range(n_steps)])
 
-    logger = SimLogger("ekf", out_dir=Path(__file__).parent)
+    logger = SimLogger("ekf", out_dir=Path(__file__).parent, downsample=10)
     logger.log_metadata("algorithm", "EKF")
     logger.log_metadata("dt", dt)
     logger.log_metadata("n_steps", n_steps)

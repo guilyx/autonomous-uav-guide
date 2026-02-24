@@ -38,11 +38,11 @@ def main() -> None:
     pos[:, 2] = rng.uniform(30, 70, n_agents)
     vel = rng.uniform(-1.0, 1.0, (n_agents, 3))
 
-    flock = ReynoldsFlocking(r_percept=20.0, r_sep=8.0, w_sep=2.0, w_ali=1.0, w_coh=1.2)
+    flock = ReynoldsFlocking(r_percept=40.0, r_sep=8.0, w_sep=1.5, w_ali=1.0, w_coh=2.5)
     dt = 0.1
-    n_steps = 300
-    max_speed = 5.0
-    damping = 0.85
+    n_steps = 600
+    max_speed = 6.0
+    damping = 0.92
 
     positions_hist = [pos.copy()]
     velocities_hist = [vel.copy()]

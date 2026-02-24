@@ -33,8 +33,8 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 matplotlib.use("Agg")
 
 DT_SIM = 0.005
-DT_MPPI = 0.02
-SPEED_SCALE = 4.0
+DT_MPPI = 0.05
+SPEED_SCALE = 12.0
 
 _OBS_SPHERES: list[tuple[np.ndarray, float]] = []
 
@@ -60,10 +60,10 @@ def main() -> None:
     tracker = MPPITracker(
         state_dim=6,
         control_dim=3,
-        horizon=10,
-        num_samples=100,
-        lambda_=0.5,
-        control_std=np.array([2.0, 2.0, 1.0]),
+        horizon=20,
+        num_samples=200,
+        lambda_=0.3,
+        control_std=np.array([3.0, 3.0, 1.5]),
         dynamics=_dyn,
         cost_fn=_cost,
         dt=DT_MPPI,
@@ -76,7 +76,7 @@ def main() -> None:
 
     ctrl = CascadedPIDController()
 
-    dur = 20.0
+    dur = 30.0
     sim_steps_per_mppi = max(1, int(DT_MPPI / DT_SIM))
     max_mppi_steps = int(dur / DT_MPPI)
 
