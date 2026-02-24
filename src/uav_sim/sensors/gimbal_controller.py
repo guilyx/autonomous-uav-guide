@@ -65,11 +65,11 @@ class PointTracker:
 class BBoxTrackerConfig:
     """Gains for keeping a bounding box centred in the image."""
 
-    kp_pan: float = 1.5
-    kp_tilt: float = 1.5
-    kd_pan: float = 0.3
-    kd_tilt: float = 0.3
-    ema_alpha: float = 0.3
+    kp_pan: float = 1.2
+    kp_tilt: float = 1.2
+    kd_pan: float = 0.5
+    kd_tilt: float = 0.5
+    ema_alpha: float = 0.15
     desired_size_ratio: float = 0.3
 
 

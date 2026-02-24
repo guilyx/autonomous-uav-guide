@@ -58,10 +58,10 @@ def main() -> None:
     init_pan, init_tilt = gimbal.look_at(DRONE_POS, init_target, 0.0)
     gimbal.reset(pan=init_pan + 0.3, tilt=init_tilt + 0.2)
 
-    detector = SimulatedDetector(target_radius=0.8, ndc_noise_std=0.03, seed=42)
+    detector = SimulatedDetector(target_radius=0.8, ndc_noise_std=0.015, seed=42)
     bbox_ctrl = BBoxTracker(
         gimbal,
-        BBoxTrackerConfig(kp_pan=2.0, kp_tilt=2.0, kd_pan=0.3, kd_tilt=0.3, ema_alpha=0.3),
+        BBoxTrackerConfig(kp_pan=1.2, kp_tilt=1.2, kd_pan=0.5, kd_tilt=0.5, ema_alpha=0.15),
     )
 
     n_steps = int(SIM_TIME / DT)
