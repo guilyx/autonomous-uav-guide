@@ -1,22 +1,50 @@
-<!-- Erwin Lejeune — 2026-02-23 -->
+<!-- Erwin Lejeune — 2026-02-24 -->
 # Costmap Navigation
 
-## Algorithm
+## Problem Statement
 
-Dynamic costmap with footprint inflation and speed-based dynamic inflation. A* plans on the local costmap at 10 Hz, with moving obstacle avoidance. Dual-view shows global (world frame) and FCU (sensor range) costmaps.
+Costmap navigation fuses occupancy information into a traversability surface used for local replanning and obstacle avoidance.
+It bridges mapping uncertainty with actionable path costs.
 
-**Reference:** D. Fox, W. Burgard, S. Thrun, "The Dynamic Window Approach to Collision Avoidance," IEEE RA Magazine, 1997.
+## Model and Formulation
 
-## Parameters
+A costmap cell combines occupancy, inflation, and dynamic penalties:
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Grid resolution | 0.5 m | Costmap cell size |
-| Sensor range | 10 m | FCU costmap radius |
-| Replan rate | 10 Hz | Path replanning frequency |
+$$
+C(x,y)=w_o C_{occ}(x,y)+w_i C_{infl}(x,y)+w_d C_{dyn}(x,y)
+$$
 
-## Run
+Local planning repeatedly solves shortest-path queries on the evolving cost field.
+
+## Algorithm Procedure
+
+1. Update occupancy with sensor observations.
+2. Apply footprint inflation and dynamic obstacle penalties.
+3. Replan local route at fixed frequency.
+4. Feed feasible path segments to tracking controller.
+
+## Tuning and Failure Modes
+
+- Over-inflation can block narrow but valid corridors.
+- Under-inflation reduces safety margins near moving obstacles.
+- Replan frequencies that are too low produce stale avoidance behavior.
+
+## Implementation and Execution
 
 ```bash
 python -m uav_sim.simulations.environment.costmap_navigation
 ```
+
+## Evidence
+
+![Costmap Navigation](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif)
+
+## References
+
+- [Fox, Burgard, Thrun, Dynamic Window Approach (1997)](https://doi.org/10.1109/100.580977)
+- [Lu et al., Layered Costmaps for Context-Sensitive Navigation (IROS 2014)](https://doi.org/10.1109/IROS.2014.6942367)
+
+## Related Algorithms
+
+- [Occupancy Mapping](/simulations/perception/occupancy-mapping)
+- [A* 3D](/simulations/path-planning/astar-3d)
