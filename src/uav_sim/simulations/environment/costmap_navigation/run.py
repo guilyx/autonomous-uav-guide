@@ -234,6 +234,7 @@ def main() -> None:
     logger.save()
 
     # ── Visualization ──────────────────────────────────────────────────
+    sensor_range = 10.0
     n_records = len(costmap_history)
     rec_step = max(1, len(pos) // n_records)
     rec_indices = [min(i * rec_step, len(pos) - 1) for i in range(n_records)]
@@ -243,9 +244,9 @@ def main() -> None:
     anim._fig = fig
     gs = fig.add_gridspec(1, 3, width_ratios=[1.2, 1, 1], wspace=0.25)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
-    ax_cost = fig.add_subplot(gs[0, 1])
-    ax_infl = fig.add_subplot(gs[0, 2])
-    fig.suptitle("Dynamic Costmap Navigation — Footprint + Speed Inflation", fontsize=13)
+    ax_global = fig.add_subplot(gs[0, 1])
+    ax_fcu = fig.add_subplot(gs[0, 2])
+    fig.suptitle("Costmap Navigation — Global vs FCU Frame", fontsize=13)
 
     ax3d.set_xlim(0, WORLD_SIZE)
     ax3d.set_ylim(0, WORLD_SIZE)
@@ -263,8 +264,10 @@ def main() -> None:
     ax3d.legend(fontsize=7, loc="upper left")
 
     extent = [0, WORLD_SIZE, 0, WORLD_SIZE]
-    labels = [("Local Costmap (footprint)", ax_cost), ("Speed-Inflated Costmap", ax_infl)]
-    for lbl, ax in labels:
+    for lbl, ax in [
+        ("Global Costmap (World Frame)", ax_global),
+        ("FCU Costmap (Sensor Range)", ax_fcu),
+    ]:
         ax.set_aspect("equal")
         ax.set_xlim(0, WORLD_SIZE)
         ax.set_ylim(0, WORLD_SIZE)
@@ -275,7 +278,7 @@ def main() -> None:
 
     from uav_sim.simulations.common import COSTMAP_CMAP
 
-    im_cost = ax_cost.imshow(
+    im_global = ax_global.imshow(
         static_occ.T,
         origin="lower",
         extent=extent,
@@ -283,24 +286,31 @@ def main() -> None:
         vmin=0,
         vmax=1,
     )
-    im_infl = ax_infl.imshow(
-        static_occ.T,
+    im_fcu = ax_fcu.imshow(
+        np.full_like(static_occ, 0.5).T,
         origin="lower",
         extent=extent,
         cmap=COSTMAP_CMAP,
         vmin=0,
         vmax=1,
     )
-    (drone_dot_c,) = ax_cost.plot([], [], "go", ms=6, zorder=10)
-    (drone_dot_i,) = ax_infl.plot([], [], "go", ms=6, zorder=10)
-    (goal_dot_c,) = ax_cost.plot(goal_xy[0], goal_xy[1], "r*", ms=10, zorder=10)
-    (goal_dot_i,) = ax_infl.plot(goal_xy[0], goal_xy[1], "r*", ms=10, zorder=10)
-    obs_dots_c = [ax_cost.plot([], [], "mo", ms=8, zorder=10)[0] for _ in range(n_obs)]
-    obs_dots_i = [ax_infl.plot([], [], "mo", ms=8, zorder=10)[0] for _ in range(n_obs)]
+    (drone_dot_g,) = ax_global.plot([], [], "go", ms=6, zorder=10)
+    (drone_dot_f,) = ax_fcu.plot([], [], "go", ms=6, zorder=10)
+    ax_global.plot(goal_xy[0], goal_xy[1], "r*", ms=10, zorder=10)
+    ax_fcu.plot(goal_xy[0], goal_xy[1], "r*", ms=10, zorder=10)
+    obs_dots_g = [ax_global.plot([], [], "mo", ms=8, zorder=10)[0] for _ in range(n_obs)]
+    obs_dots_f = [ax_fcu.plot([], [], "mo", ms=8, zorder=10)[0] for _ in range(n_obs)]
+    fcu_circle = [None]
     obs_3d_arts: list = []
 
     title = ax3d.set_title("Navigating...")
     veh_arts: list = []
+
+    grid_cells_x = int(WORLD_SIZE / GRID_RES)
+    grid_cells_y = int(WORLD_SIZE / GRID_RES)
+    gx = np.arange(grid_cells_x) * GRID_RES + GRID_RES / 2
+    gy = np.arange(grid_cells_y) * GRID_RES + GRID_RES / 2
+    gxx, gyy = np.meshgrid(gx, gy, indexing="ij")
 
     def update(f: int) -> None:
         ri = min(f, n_records - 1)
@@ -327,21 +337,37 @@ def main() -> None:
                 zorder=5,
             )
             obs_3d_arts.append(ax3d_s)
-            obs_dots_c[oi].set_data([op[0]], [op[1]])
-            obs_dots_i[oi].set_data([op[0]], [op[1]])
+            obs_dots_g[oi].set_data([op[0]], [op[1]])
+            obs_dots_f[oi].set_data([op[0]], [op[1]])
 
-        drone_dot_c.set_data([pos[k, 0]], [pos[k, 1]])
-        drone_dot_i.set_data([pos[k, 0]], [pos[k, 1]])
+        drone_dot_g.set_data([pos[k, 0]], [pos[k, 1]])
+        drone_dot_f.set_data([pos[k, 0]], [pos[k, 1]])
 
         costmap = costmap_history[ri]
-        static_inflated = _build_local_costmap(static_occ, obs_pos, obs_radius, 0.0, GRID_RES)
-        im_cost.set_data(static_inflated.T)
-        im_infl.set_data(costmap.T)
+        im_global.set_data(costmap.T)
+
+        dist_to_drone = np.sqrt((gxx - pos[k, 0]) ** 2 + (gyy - pos[k, 1]) ** 2)
+        fcu_mask = dist_to_drone <= sensor_range
+        fcu_view = np.full_like(costmap, 0.5)
+        fcu_view[fcu_mask] = costmap[fcu_mask]
+        im_fcu.set_data(fcu_view.T)
+
+        if fcu_circle[0] is not None:
+            fcu_circle[0].remove()
+        fcu_circle[0] = plt.Circle(
+            (pos[k, 0], pos[k, 1]),
+            sensor_range,
+            fill=False,
+            ec="lime",
+            lw=1.0,
+            ls="--",
+            alpha=0.6,
+        )
+        ax_fcu.add_patch(fcu_circle[0])
 
         spd = float(np.linalg.norm(states_arr[k, 6:8]))
-        infl_r = BASE_INFLATION + SPEED_INFLATION_SCALE * spd
         dist = float(np.linalg.norm(pos[k, :2] - goal_xy))
-        title.set_text(f"Speed: {spd:.1f} m/s | Inflation: {infl_r:.2f} m | To goal: {dist:.1f} m")
+        title.set_text(f"Speed: {spd:.1f} m/s | To goal: {dist:.1f} m")
 
     anim.animate(update, n_records)
     anim.save()
