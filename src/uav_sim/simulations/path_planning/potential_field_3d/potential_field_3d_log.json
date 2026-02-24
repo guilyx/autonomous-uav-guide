@@ -1,0 +1,14 @@
+{
+  "simulation": "potential_field_3d",
+  "timestamp": "2026-02-22T09:54:19.146083+00:00",
+  "metadata": {
+    "algorithm": "Potential Field",
+    "n_steps": 501,
+    "smooth_path_length": 54
+  },
+  "summary": {
+    "raw_path_m": 249.9999999998851,
+    "smooth_path_m": 53.802567593032904
+  },
+  "timeseries": {}
+}
