@@ -52,11 +52,22 @@ def main() -> None:
     controls = np.zeros((steps, 4))
     times = np.zeros(steps)
 
+    rng = np.random.default_rng(42)
+    act_noise_std = np.array([0.3, 0.01, 0.01, 0.005])
+    wind_base = rng.uniform(-0.3, 0.3, size=3)
+    wind_base[2] = 0.0
+
     for i in range(steps):
         states[i] = quad.state
         times[i] = i * dt
         u = ctrl.compute(quad.state, target_state)
+        u += rng.normal(0, act_noise_std)
         controls[i] = u
+        wind_gust = wind_base + rng.normal(0, 0.15, size=3)
+        wind_gust[2] = 0.0
+        wind_wrench = np.zeros(4)
+        wind_wrench[0] = np.dot(wind_gust, np.array([0, 0, 1])) * quad.params.mass
+        quad.state[6:9] += wind_gust * dt
         quad.step(u, dt)
 
     pos = states[:, :3]
