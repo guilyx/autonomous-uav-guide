@@ -3,22 +3,28 @@
 layout: home
 
 hero:
-  name: Autonomous UAV Guide
-  text: From-scratch Python UAV algorithms
-  tagline: Multirotor dynamics, estimation, planning, tracking, perception, and swarm control — all with runnable simulations.
+  name: Autonomous UAV Technical Documentation
+  text: Algorithms, architecture, and simulation references
+  tagline: Production-style docs for quadrotor control, planning, perception, estimation, sensors, and swarm behaviors.
   actions:
     - theme: brand
-      text: Get Started
-      link: /guide/getting-started
+      text: Open Simulation Catalog
+      link: /simulations/
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/guilyx/autonomous-quadrotor-guide
+      text: Read Architecture Guide
+      link: /guide/architecture
 
 features:
-  - title: 6DOF Quadrotor Dynamics
-    details: Newton-Euler rigid-body model with RK4 integration and motor dynamics.
-  - title: 40+ Simulations
-    details: Every algorithm ships with a runnable sim, GIF preview, and academic reference.
-  - title: Full Stack
-    details: From sensors and estimation through planning, tracking, control, and swarm coordination.
+  - title: System-Level Coverage
+    details: Vehicles, controllers, estimators, planners, trackers, perception, and swarm algorithms in one codebase.
+  - title: Simulation-First Documentation
+    details: Every simulation page includes algorithm context, runnable command, and GIF behavior preview.
+  - title: Engineering-Oriented Structure
+    details: Versioned docs layout with category indexes, cross-links, and technical references.
 ---
+
+## Documentation Scope
+
+- Use the sidebar to navigate by subsystem.
+- Use the simulation catalog to compare behaviors quickly.
+- Every GIF is linked to a GitHub-hosted source path for reproducibility.
