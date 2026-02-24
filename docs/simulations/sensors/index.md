@@ -1,9 +1,21 @@
-<!-- Erwin Lejeune — 2026-02-23 -->
+<!-- Erwin Lejeune — 2026-02-24 -->
 # Sensors
 
-Camera and gimbal control simulations focused on target locking quality and stability.
+Sensor subsystem algorithms describe how camera geometry, gimbal control, and target extraction are integrated for robust tracking.
 
-## Included Simulations
+## Core Questions
+
+- How should gimbal kinematics be controlled under platform motion?
+- Which observation models best reduce target drift?
+- How does measurement noise map into line-of-sight error?
+
+## Algorithms
 
 - [Gimbal Tracking](/simulations/sensors/gimbal-tracking)
 - [Gimbal BBox Tracking](/simulations/sensors/gimbal-bbox-tracking)
+
+## Prerequisites
+
+- Camera intrinsics/extrinsics
+- Servo dynamics and control loops
+- Coordinate transforms between body and camera frames

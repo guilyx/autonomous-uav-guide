@@ -1,0 +1,68 @@
+/* Sidebar-first docs layout (no top navbar). */
+.VPNav,
+.VPLocalNav {
+  display: none !important;
+}
+
+.VPDoc {
+  --vp-font-family-base: "Iowan Old Style", "Palatino Linotype", Palatino, "URW Palladio L", P052, serif;
+  --vp-font-family-mono: "Iosevka", "JetBrains Mono", "Fira Code", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+.VPDoc .container {
+  max-width: 1280px;
+}
+
+.VPDoc p,
+.VPDoc li {
+  font-size: 1.02rem;
+  line-height: 1.8;
+}
+
+.VPDoc h1,
+.VPDoc h2,
+.VPDoc h3,
+.VPDoc h4 {
+  letter-spacing: 0.01em;
+  font-weight: 600;
+}
+
+.VPDoc h1 {
+  font-size: 2.1rem;
+}
+
+.VPDoc h2 {
+  margin-top: 2rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding-bottom: 0.35rem;
+}
+
+.VPDoc code,
+.VPDoc kbd,
+.VPDoc pre {
+  font-family: var(--vp-font-family-mono);
+}
+
+.VPDoc .vp-doc [class*='language-'] {
+  border: 1px solid var(--vp-c-divider);
+}
+
+.VPDoc .custom-block {
+  border-left: 3px solid var(--vp-c-brand-1);
+}
+
+.VPDoc .custom-block p.custom-block-title {
+  font-family: var(--vp-font-family-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.VPContent.has-sidebar,
+.VPDoc.has-aside .content-container {
+  padding-top: 0 !important;
+}
+
+.VPSidebar {
+  top: 0 !important;
+  padding-top: 24px !important;
+}

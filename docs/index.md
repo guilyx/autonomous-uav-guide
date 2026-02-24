@@ -1,30 +1,28 @@
 ---
-# Erwin Lejeune — 2026-02-23
-layout: home
-
-hero:
-  name: Autonomous UAV Technical Documentation
-  text: Algorithms, architecture, and simulation references
-  tagline: Production-style docs for quadrotor control, planning, perception, estimation, sensors, and swarm behaviors.
-  actions:
-    - theme: brand
-      text: Open Simulation Catalog
-      link: /simulations/
-    - theme: alt
-      text: Read Architecture Guide
-      link: /guide/architecture
-
-features:
-  - title: System-Level Coverage
-    details: Vehicles, controllers, estimators, planners, trackers, perception, and swarm algorithms in one codebase.
-  - title: Simulation-First Documentation
-    details: Every simulation page includes algorithm context, runnable command, and GIF behavior preview.
-  - title: Engineering-Oriented Structure
-    details: Versioned docs layout with category indexes, cross-links, and technical references.
+layout: doc
 ---
 
-## Documentation Scope
+# Autonomous UAV Algorithm Handbook
 
-- Use the sidebar to navigate by subsystem.
-- Use the simulation catalog to compare behaviors quickly.
-- Every GIF is linked to a GitHub-hosted source path for reproducibility.
+This handbook presents the autonomous UAV stack as a technical reference: algorithm design, mathematical formulations, implementation notes, tuning strategy, and empirical behavior.
+Use the sidebar as the primary table of contents.
+
+## Reading Guide
+
+- [Getting Started](/guide/getting-started): repository setup, execution flow, and notation baseline.
+- [Architecture](/guide/architecture): subsystem boundaries and data flow.
+- [Algorithm Atlas](/simulations/): domain index with article links and media evidence.
+
+## Chapter Structure
+
+- Each chapter starts with problem framing, assumptions, and model definitions.
+- Each algorithm page includes derivations, practical tuning, and failure analysis.
+- Every article links to reproducible media hosted via `media.githubusercontent.com`.
+
+## Suggested Learning Path
+
+1. Foundations (`Getting Started`, `Architecture`)
+2. Estimation and state representation
+3. Control, path tracking, and trajectory layers
+4. Planning and environment interaction
+5. Perception, sensing, and swarm coordination

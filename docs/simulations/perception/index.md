@@ -1,11 +1,24 @@
-<!-- Erwin Lejeune — 2026-02-23 -->
+<!-- Erwin Lejeune — 2026-02-24 -->
 # Perception
 
-Mapping, SLAM, and vision-driven control demos in dynamic environments.
+Perception transforms raw sensing into map, localization, and task-relevant scene understanding.
+The chapter emphasizes probabilistic mapping and vision-in-the-loop feedback.
 
-## Included Simulations
+## Core Questions
+
+- Which state representations remain observable with sparse landmarks?
+- How should map confidence be accumulated and decayed?
+- How do perception delays impact closed-loop control?
+
+## Algorithms
 
 - [EKF-SLAM](/simulations/perception/ekf-slam)
 - [Occupancy Mapping](/simulations/perception/occupancy-mapping)
-- [Sensor Suite Demo](/simulations/perception/sensor-suite)
+- [Sensor Suite Fusion](/simulations/perception/sensor-suite)
 - [Visual Servoing](/simulations/perception/visual-servoing)
+
+## Prerequisites
+
+- Probabilistic robotics fundamentals
+- Camera projection and feature tracking
+- Grid-map and landmark-map representations
