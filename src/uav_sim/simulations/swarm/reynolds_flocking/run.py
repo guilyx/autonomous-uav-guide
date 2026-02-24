@@ -31,27 +31,54 @@ WORLD_SIZE = 100.0
 CRUISE_ALT = 50.0
 
 
-def main() -> None:
-    n_agents = 12
-    rng = np.random.default_rng(42)
-    pos = rng.uniform(10, 90, (n_agents, 3))
-    pos[:, 2] = rng.uniform(30, 70, n_agents)
-    vel = rng.uniform(-1.0, 1.0, (n_agents, 3))
+def _corner_positions(n: int, ws: float, alt: float, rng: np.random.Generator) -> np.ndarray:
+    """Scatter *n* agents near the four corners of the world at *alt*."""
+    corners = np.array([[10, 10], [ws - 10, 10], [10, ws - 10], [ws - 10, ws - 10]])
+    pos = np.zeros((n, 3))
+    for i in range(n):
+        c = corners[i % 4]
+        pos[i, :2] = c + rng.uniform(-5, 5, 2)
+        pos[i, 2] = alt + rng.uniform(-3, 3)
+    return pos
 
-    flock = ReynoldsFlocking(r_percept=40.0, r_sep=8.0, w_sep=1.5, w_ali=1.0, w_coh=2.5)
+
+def main() -> None:
+    n_agents = 8
+    rng = np.random.default_rng(42)
+    pos = _corner_positions(n_agents, WORLD_SIZE, CRUISE_ALT, rng)
+    centroid = pos.mean(axis=0)
+    vel = (centroid - pos) * 0.05 + rng.uniform(-0.5, 0.5, (n_agents, 3))
+
+    waypoint = np.array([WORLD_SIZE / 2, WORLD_SIZE / 2, CRUISE_ALT])
+
+    flock = ReynoldsFlocking(r_percept=40.0, r_sep=8.0, w_sep=1.5, w_ali=1.0, w_coh=3.0)
     dt = 0.1
-    n_steps = 600
+    takeoff_steps = 50
+    n_steps = 600 + takeoff_steps
     max_speed = 6.0
-    damping = 0.92
+    damping = 0.88
 
     positions_hist = [pos.copy()]
     velocities_hist = [vel.copy()]
     mean_speed_hist = np.zeros(n_steps)
     cohesion_hist = np.zeros(n_steps)
+    phase_labels = np.empty(n_steps, dtype="U10")
 
     for step in range(n_steps):
-        forces = flock.compute_forces(pos, vel)
-        vel = vel * damping + forces * dt
+        if step < takeoff_steps:
+            target_z = CRUISE_ALT
+            force_z = np.zeros((n_agents, 3))
+            force_z[:, 2] = 0.3 * (target_z - pos[:, 2])
+            vel = vel * damping + force_z * dt
+            phase_labels[step] = "TAKEOFF"
+        else:
+            forces = flock.compute_forces(pos, vel)
+            wp_dir = waypoint - pos
+            wp_dist = np.linalg.norm(wp_dir, axis=1, keepdims=True)
+            wp_dir = np.where(wp_dist > 1.0, wp_dir / wp_dist * 0.8, wp_dir * 0.8)
+            forces += wp_dir
+            vel = vel * damping + forces * dt
+            phase_labels[step] = "FLOCK"
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > max_speed, vel / speed * max_speed, vel)
         pos = pos + vel * dt
@@ -59,8 +86,8 @@ def main() -> None:
         positions_hist.append(pos.copy())
         velocities_hist.append(vel.copy())
         mean_speed_hist[step] = np.mean(np.linalg.norm(vel, axis=1))
-        centroid = pos.mean(axis=0)
-        cohesion_hist[step] = np.mean(np.linalg.norm(pos - centroid, axis=1))
+        centroid_cur = pos.mean(axis=0)
+        cohesion_hist[step] = np.mean(np.linalg.norm(pos - centroid_cur, axis=1))
 
     times = np.arange(n_steps) * dt
 
@@ -173,7 +200,8 @@ def main() -> None:
 
         lspd.set_data(times[:step], mean_speed_hist[:step])
         lcoh.set_data(times[:step], cohesion_hist[:step])
-        title.set_text(f"Reynolds Flocking — t = {step * dt:.1f} s")
+        phase = phase_labels[step] if step < n_steps else "FLOCK"
+        title.set_text(f"Reynolds Flocking [{phase}] — t = {step * dt:.1f} s")
 
     anim.animate(update, n_frames)
     anim.save()
