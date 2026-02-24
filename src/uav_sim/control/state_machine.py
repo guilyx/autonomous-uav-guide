@@ -82,6 +82,9 @@ class StateManager:
     fc : optional pre-configured FlightController (created if None).
     """
 
+    _TAKEOFF_CLIMB_RATE: float = 2.0
+    _LAND_DESCENT_RATE: float = 1.5
+
     def __init__(
         self,
         quad: Quadrotor,
@@ -91,6 +94,9 @@ class StateManager:
         self.fc = fc or FlightController(mass=quad.params.mass, gravity=quad.params.gravity)
         self._mode = FlightMode.DISARMED
         self._takeoff_alt = 0.0
+        self._takeoff_start_z = 0.0
+        self._land_start_z = 0.0
+        self._phase_time = 0.0
         self._home: NDArray[np.floating] = np.zeros(3)
         self._hold_pos: NDArray[np.floating] = np.zeros(3)
         self._track_wps: NDArray[np.floating] | None = None
@@ -139,6 +145,8 @@ class StateManager:
         if not self._transition(FlightMode.TAKEOFF):
             return False
         self._takeoff_alt = altitude
+        self._takeoff_start_z = float(self.quad.position[2])
+        self._phase_time = 0.0
         return True
 
     def hover(self) -> bool:
@@ -168,7 +176,11 @@ class StateManager:
         return self._transition(FlightMode.RETURN_TO_HOME)
 
     def land(self) -> bool:
-        return self._transition(FlightMode.LAND)
+        if not self._transition(FlightMode.LAND):
+            return False
+        self._land_start_z = float(self.quad.position[2])
+        self._phase_time = 0.0
+        return True
 
     def emergency(self) -> bool:
         return self._transition(FlightMode.EMERGENCY)
@@ -208,13 +220,18 @@ class StateManager:
             return self.quad.hover_wrench()
 
         if mode == FlightMode.TAKEOFF:
+            self._phase_time += dt
+            ramp_z = min(
+                self._takeoff_alt,
+                self._takeoff_start_z + self._TAKEOFF_CLIMB_RATE * self._phase_time,
+            )
             target = self.quad.position.copy()
-            target[2] = self._takeoff_alt
+            target[2] = ramp_z
             self.fc.set_position_target(target)
             w = self.fc.compute(self.quad.state, dt)
             if (
-                abs(self.quad.position[2] - self._takeoff_alt) < 0.3
-                and abs(self.quad.velocity[2]) < 0.3
+                abs(self.quad.position[2] - self._takeoff_alt) < 0.5
+                and abs(self.quad.velocity[2]) < 0.5
             ):
                 self._hold_pos = self.quad.position.copy()
                 self._mode = FlightMode.HOVER
@@ -234,12 +251,16 @@ class StateManager:
             self.fc.set_position_target(self._home)
             w = self.fc.compute(self.quad.state, dt)
             if float(np.linalg.norm(self.quad.position - self._home)) < 1.0:
+                self._land_start_z = float(self.quad.position[2])
+                self._phase_time = 0.0
                 self._mode = FlightMode.LAND
             return w
 
         if mode == FlightMode.LAND:
+            self._phase_time += dt
+            ramp_z = max(0.0, self._land_start_z - self._LAND_DESCENT_RATE * self._phase_time)
             target = self.quad.position.copy()
-            target[2] = 0.0
+            target[2] = ramp_z
             self.fc.set_position_target(target)
             w = self.fc.compute(self.quad.state, dt)
             if self.quad.position[2] < _LANDED_Z:

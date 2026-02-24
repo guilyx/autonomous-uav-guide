@@ -38,7 +38,7 @@ def main() -> None:
     sm.run_takeoff(altitude=TARGET[2], dt=0.005, timeout=10.0)
     sm.fly_to(TARGET, dt=0.005, threshold=0.5, timeout=15.0)
 
-    for _ in range(int(5.0 / 0.005)):
+    for _ in range(int(15.0 / 0.005)):
         sm.step(0.005)
 
     states = np.array(sm.states)

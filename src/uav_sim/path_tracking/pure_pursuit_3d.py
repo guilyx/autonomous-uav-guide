@@ -82,12 +82,11 @@ class PurePursuit3D:
         if n == 0:
             return position.copy()
 
-        # Advance segment index when close to current waypoint
-        while self._idx < n - 1:
+        # Advance one waypoint per call to avoid skipping across
+        # self-crossing regions (e.g. figure-8 paths).
+        if self._idx < n - 1:
             if float(np.linalg.norm(position - path[self._idx])) < self.waypoint_threshold:
                 self._idx += 1
-            else:
-                break
 
         # Adaptive look-ahead: scale with speed for conservative tracking
         la = self.lookahead
