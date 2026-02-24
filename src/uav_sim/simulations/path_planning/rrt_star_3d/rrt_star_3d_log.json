@@ -1,0 +1,15 @@
+{
+  "simulation": "rrt_star_3d",
+  "timestamp": "2026-02-22T09:47:48.232595+00:00",
+  "metadata": {
+    "algorithm": "RRT*",
+    "tree_nodes": 3927,
+    "raw_path_length": 8,
+    "smooth_path_length": 23
+  },
+  "summary": {
+    "raw_path_m": 34.95593474302921,
+    "smooth_path_m": 34.76016401108906
+  },
+  "timeseries": {}
+}

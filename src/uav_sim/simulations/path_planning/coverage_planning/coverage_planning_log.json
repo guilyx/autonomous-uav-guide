@@ -1,0 +1,14 @@
+{
+  "simulation": "coverage_planning",
+  "timestamp": "2026-02-22T09:55:22.083818+00:00",
+  "metadata": {
+    "algorithm": "Boustrophedon Coverage",
+    "coverage_pct": 0.9114583333333334,
+    "path_points": 155
+  },
+  "summary": {
+    "path_length_m": 147.25,
+    "estimated_coverage_pct": 0.9114583333333334
+  },
+  "timeseries": {}
+}
