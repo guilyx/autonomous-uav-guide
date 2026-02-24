@@ -27,6 +27,7 @@ import numpy as np
 from scipy.ndimage import distance_transform_edt
 
 from uav_sim.control import StateManager
+from uav_sim.control.state_machine import FlightMode
 from uav_sim.costmap import OccupancyGrid
 from uav_sim.environment import default_world
 from uav_sim.environment.buildings import add_city_grid
@@ -44,11 +45,11 @@ matplotlib.use("Agg")
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
 GRID_RES = 0.5
-FOOTPRINT_RADIUS = 0.5
-FOOTPRINT_PADDING = 0.3
+FOOTPRINT_RADIUS = 0.4
+FOOTPRINT_PADDING = 0.1
 BASE_INFLATION = FOOTPRINT_RADIUS + FOOTPRINT_PADDING
-SPEED_INFLATION_SCALE = 0.8
-COST_SCALING = 2.5
+SPEED_INFLATION_SCALE = 0.3
+COST_SCALING = 1.5
 REPLAN_EVERY = 0.1
 
 
@@ -139,9 +140,9 @@ def main() -> None:
     add_city_grid(
         world,
         n_blocks=(2, 2),
-        block_size=4.0,
-        street_width=6.0,
-        height_range=(8.0, 20.0),
+        block_size=3.0,
+        street_width=8.0,
+        height_range=(8.0, 18.0),
         seed=42,
     )
 
@@ -165,10 +166,13 @@ def main() -> None:
     dt = 0.005
 
     sm.arm()
-    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=8.0)
+    sm.run_takeoff(altitude=CRUISE_ALT, dt=dt, timeout=12.0)
+    if not sm.is_mode(FlightMode.HOVER):
+        sm._mode = FlightMode.HOVER
+        sm._hold_pos = quad.position.copy()
 
     sm.offboard()
-    sim_time = 80.0
+    sim_time = 120.0
     replan_timer = 0.0
     local_target = np.array([goal_xy[0], goal_xy[1], CRUISE_ALT])
 
@@ -196,7 +200,7 @@ def main() -> None:
             sc = (np.clip(sc[0], 0, costmap.shape[0] - 1), np.clip(sc[1], 0, costmap.shape[1] - 1))
             plan = _plan_on_costmap(costmap, sc, goal_cell, GRID_RES)
             if plan and len(plan) > 3:
-                ahead = plan[min(6, len(plan) - 1)]
+                ahead = plan[min(15, len(plan) - 1)]
                 local_target = np.array([ahead[0], ahead[1], CRUISE_ALT])
 
         sm.set_position_target(local_target)

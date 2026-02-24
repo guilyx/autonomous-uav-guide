@@ -131,7 +131,7 @@ def main() -> None:
     err_ekf = np.sqrt(np.sum((true_xyz - ekf_xyz) ** 2, axis=1))
     err_imu = np.sqrt(np.sum((true_xyz - imu_xyz) ** 2, axis=1))
 
-    logger = SimLogger("gps_imu_fusion", out_dir=Path(__file__).parent)
+    logger = SimLogger("gps_imu_fusion", out_dir=Path(__file__).parent, downsample=20)
     logger.log_metadata("algorithm", "GPS+IMU EKF Fusion")
     logger.log_metadata("dt", DT)
     logger.log_metadata("gps_rate_hz", GPS_RATE_HZ)

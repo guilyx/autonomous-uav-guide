@@ -44,9 +44,9 @@ V_FOV = 0.45
 def _moving_target(t: float) -> np.ndarray:
     """Figure-8 ground target with initial stationary acquisition phase."""
     if t < ACQUIRE_TIME:
-        pos, _ = figure_8_ref(0.0, altitude=1.0, speed=0.25)
+        pos, _ = figure_8_ref(0.0, alt=1.0, omega=0.25)
         return pos
-    pos, _ = figure_8_ref(t - ACQUIRE_TIME, altitude=1.0, speed=0.25)
+    pos, _ = figure_8_ref(t - ACQUIRE_TIME, alt=1.0, omega=0.25)
     return pos
 
 

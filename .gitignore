@@ -29,3 +29,15 @@ htmlcov/
 
 # Ruff
 .ruff_cache/
+
+*.json
+*.log
+*.log.gz
+*.log.gz.part
+*.log.gz.part.1
+*.log.gz.part.2
+*.log.gz.part.3
+*.log.gz.part.4
+*.log.gz.part.5
+*.log.gz.part.6
+*.log.gz.part.7
