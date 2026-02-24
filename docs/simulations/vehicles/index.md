@@ -1,10 +1,23 @@
-<!-- Erwin Lejeune — 2026-02-23 -->
+<!-- Erwin Lejeune — 2026-02-24 -->
 # Vehicles
 
-Vehicle-dynamics focused simulations for different flight platforms.
+Vehicle modeling defines the dynamics and actuator mappings that bound every algorithm in this handbook.
+This chapter includes multirotor, fixed-wing, and hybrid VTOL operating regimes.
 
-## Included Simulations
+## Core Questions
 
-- Quadrotor (hover/control demos)
-- Fixed-Wing Flight
-- VTOL Transition
+- Which assumptions are valid for each airframe class?
+- How do actuator constraints reshape feasible trajectories?
+- What model simplifications preserve control fidelity?
+
+## Algorithms
+
+- [Quadrotor Dynamics](/simulations/vehicles/quadrotor-dynamics)
+- [Fixed-Wing Flight](/simulations/vehicles/fixed-wing-flight)
+- [VTOL Transition](/simulations/vehicles/vtol-transition)
+
+## Prerequisites
+
+- Newton-Euler rigid body dynamics
+- Aerodynamic force and moment modeling
+- Control allocation and actuator limits

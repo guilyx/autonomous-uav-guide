@@ -2,17 +2,21 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Autonomous UAV Technical Docs',
-  description: 'Technical documentation for autonomous UAV simulation algorithms and architecture',
+  title: 'Autonomous UAV Algorithm Handbook',
+  description: 'Technical handbook for autonomous UAV algorithms, modeling, and implementation references',
   themeConfig: {
-    nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'Simulations', link: '/simulations/' },
-    ],
+    nav: [],
+    outline: false,
     sidebar: [
       {
-        text: 'Guide',
+        text: 'Overview',
+        items: [
+          { text: 'Handbook Home', link: '/' },
+          { text: 'Algorithm Atlas', link: '/simulations/' },
+        ],
+      },
+      {
+        text: 'Foundations',
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Architecture', link: '/guide/architecture' },
@@ -31,7 +35,7 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Control & Path Tracking',
+        text: 'Control and Path Tracking',
         collapsed: true,
         items: [
           { text: 'Overview', link: '/simulations/path-tracking/' },
@@ -45,6 +49,11 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Overview', link: '/simulations/path-planning/' },
+          { text: 'A* 3D', link: '/simulations/path-planning/astar-3d' },
+          { text: 'RRT* 3D', link: '/simulations/path-planning/rrt-star-3d' },
+          { text: 'PRM 3D', link: '/simulations/path-planning/prm-3d' },
+          { text: 'Potential Field 3D', link: '/simulations/path-planning/potential-field-3d' },
+          { text: 'Coverage Planning', link: '/simulations/path-planning/coverage-planning' },
         ],
       },
       {
@@ -106,6 +115,9 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Overview', link: '/simulations/vehicles/' },
+          { text: 'Quadrotor Dynamics', link: '/simulations/vehicles/quadrotor-dynamics' },
+          { text: 'Fixed-Wing Flight', link: '/simulations/vehicles/fixed-wing-flight' },
+          { text: 'VTOL Transition', link: '/simulations/vehicles/vtol-transition' },
         ],
       },
       {
@@ -117,8 +129,6 @@ export default defineConfig({
         ],
       },
     ],
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/guilyx/autonomous-quadrotor-guide' },
-    ],
+    socialLinks: [],
   },
 })
