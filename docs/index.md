@@ -1,24 +1,28 @@
 ---
-# Erwin Lejeune — 2026-02-23
-layout: home
-
-hero:
-  name: Autonomous UAV Guide
-  text: From-scratch Python UAV algorithms
-  tagline: Multirotor dynamics, estimation, planning, tracking, perception, and swarm control — all with runnable simulations.
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/getting-started
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/guilyx/autonomous-quadrotor-guide
-
-features:
-  - title: 6DOF Quadrotor Dynamics
-    details: Newton-Euler rigid-body model with RK4 integration and motor dynamics.
-  - title: 40+ Simulations
-    details: Every algorithm ships with a runnable sim, GIF preview, and academic reference.
-  - title: Full Stack
-    details: From sensors and estimation through planning, tracking, control, and swarm coordination.
+layout: doc
 ---
+
+# Autonomous UAV Algorithm Handbook
+
+This handbook presents the autonomous UAV stack as a technical reference: algorithm design, mathematical formulations, implementation notes, tuning strategy, and empirical behavior.
+Use the sidebar as the primary table of contents.
+
+## Reading Guide
+
+- [Getting Started](/guide/getting-started): repository setup, execution flow, and notation baseline.
+- [Architecture](/guide/architecture): subsystem boundaries and data flow.
+- [Algorithm Atlas](/simulations/): domain index with article links and media evidence.
+
+## Chapter Structure
+
+- Each chapter starts with problem framing, assumptions, and model definitions.
+- Each algorithm page includes derivations, practical tuning, and failure analysis.
+- Every article links to reproducible media hosted via `media.githubusercontent.com`.
+
+## Suggested Learning Path
+
+1. Foundations (`Getting Started`, `Architecture`)
+2. Estimation and state representation
+3. Control, path tracking, and trajectory layers
+4. Planning and environment interaction
+5. Perception, sensing, and swarm coordination
