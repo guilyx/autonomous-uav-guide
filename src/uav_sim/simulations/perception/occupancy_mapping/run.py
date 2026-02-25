@@ -21,10 +21,10 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.sensors.lidar import Lidar2D
+from uav_sim.simulations.mission_runner import run_standard_mission
+from uav_sim.simulations.standards import SimulationStandard
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.sensor_viz import (
@@ -62,6 +62,7 @@ def _lawnmower_path(size: float, alt: float, n_rows: int = 6) -> np.ndarray:
 
 def main() -> None:
     world, buildings = default_world()
+    standard = SimulationStandard.flight_coupled()
 
     lidar = Lidar2D(num_beams=120, max_range=12.0, noise_std=0.08, seed=42)
 
@@ -69,15 +70,14 @@ def main() -> None:
 
     quad = Quadrotor()
     quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
-    ctrl = CascadedPIDController()
-
-    states_list: list[np.ndarray] = []
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states_list)
-    init_hover(quad)
-
-    pursuit = PurePursuit3D(lookahead=2.5, waypoint_threshold=2.0, adaptive=True)
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=200.0, states=states_list)
-    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
+    mission = run_standard_mission(
+        quad,
+        CascadedPIDController(),
+        path_3d,
+        standard=standard,
+        obstacles=world.obstacles,
+    )
+    flight_states = mission.states
     n_steps = len(flight_states)
 
     n_cells = int(WORLD_SIZE / GRID_RES)
@@ -127,8 +127,13 @@ def main() -> None:
 
     logger = SimLogger("occupancy_mapping", out_dir=Path(__file__).parent)
     logger.log_metadata("algorithm", "Occupancy Grid Mapping")
+    logger.log_metadata("flight_coupled", True)
+    logger.log_metadata("dt", standard.dt)
     logger.log_metadata("grid_res", GRID_RES)
     logger.log_metadata("n_scans", n_frames)
+    logger.log_metadata("tracking_fallback", mission.tracking_fallback)
+    logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
+    logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
     logger.log_metadata("final_coverage_pct", coverage_pct[-1] if coverage_pct else 0.0)
     for i, si in enumerate(scan_indices):
         logger.log_step(
@@ -136,6 +141,7 @@ def main() -> None:
             position=pos[si].tolist(),
             coverage_pct=coverage_pct[i] if i < len(coverage_pct) else 0.0,
         )
+    logger.log_completion(**mission.completion.as_dict())
     logger.log_summary("final_coverage_pct", coverage_pct[-1] if coverage_pct else 0.0)
     logger.save()
 
@@ -179,7 +185,7 @@ def main() -> None:
         zs = [b.max_corner[2]] * 5
         ax3d.plot(xs, ys, zs, "gray", lw=0.5, alpha=0.3)
 
-    ax_top.plot(path_3d[:, 0], path_3d[:, 1], "c-", lw=0.4, alpha=0.3)
+    ax_top.plot(mission.tracking_path[:, 0], mission.tracking_path[:, 1], "c-", lw=0.4, alpha=0.3)
 
     ax_grid.set_xlim(0, WORLD_SIZE)
     ax_grid.set_ylim(0, WORLD_SIZE)
