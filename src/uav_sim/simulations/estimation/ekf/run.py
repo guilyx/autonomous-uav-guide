@@ -18,38 +18,74 @@ import numpy as np
 from uav_sim.environment import default_world
 from uav_sim.estimation.ekf import ExtendedKalmanFilter
 from uav_sim.logging import SimLogger
-from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.sensors.gps import GPS
-from uav_sim.simulations.common import figure_8_path
+from uav_sim.simulations.common import CRUISE_ALT, figure_8_path
+from uav_sim.simulations.mission_runner import MissionResult, run_standard_mission
+from uav_sim.simulations.standards import (
+    SimulationStandard,
+    deterministic_truth_trajectory,
+    evaluate_completion,
+)
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-CRUISE_ALT = 12.0
+BENCHMARK_MODE = True
+
+
+def _truth_states(
+    benchmark_mode: bool,
+    world_obstacles: list,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, MissionResult | None]:
+    standard = (
+        SimulationStandard.estimation_benchmark()
+        if benchmark_mode
+        else SimulationStandard.flight_coupled()
+    )
+    if benchmark_mode:
+        states, times = deterministic_truth_trajectory(standard, alt=CRUISE_ALT, rx=8.0, ry=6.0)
+        path = figure_8_path(
+            duration=standard.duration,
+            dt=0.1,
+            alt=CRUISE_ALT,
+            alt_amp=0.0,
+            rx=8.0,
+            ry=6.0,
+        )
+        return states, times, path, None
+    path_3d = figure_8_path(
+        duration=standard.duration,
+        dt=0.1,
+        alt=CRUISE_ALT,
+        alt_amp=0.0,
+        rx=8.0,
+        ry=6.0,
+    )
+    quad = Quadrotor()
+    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
+    mission = run_standard_mission(
+        quad,
+        CascadedPIDController(),
+        path_3d,
+        standard=standard,
+        obstacles=world_obstacles,
+    )
+    times = np.arange(len(mission.states)) * standard.dt
+    return mission.states, times, mission.tracking_path, mission
 
 
 def main() -> None:
-    world, buildings = default_world()
-
-    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
-
-    quad = Quadrotor()
-    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
-    ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
-    states_list: list[np.ndarray] = []
-    from uav_sim.path_tracking.flight_ops import init_hover, takeoff
-
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states_list)
-    init_hover(quad)
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=180.0, states=states_list)
-    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
+    world, _ = default_world()
+    flight_states, times, path_3d, mission = _truth_states(BENCHMARK_MODE, world.obstacles)
     n_steps = len(flight_states)
-    dt = 0.005
+    dt = (
+        float(times[1] - times[0])
+        if len(times) > 1
+        else SimulationStandard.estimation_benchmark().dt
+    )
 
     gps = GPS(noise_std=0.4, seed=42)
 
@@ -95,14 +131,30 @@ def main() -> None:
         est_xyz[i] = ekf.x[:3]
         cov_history[i] = ekf.P[:3, :3]
 
-    times = np.arange(n_steps) * dt
     err = np.sqrt(np.sum((true_xyz - est_xyz) ** 2, axis=1))
     cov_trace = np.array([np.trace(cov_history[i]) for i in range(n_steps)])
+    completion = (
+        mission.completion
+        if mission is not None
+        else evaluate_completion(
+            true_xyz,
+            path_3d[-1],
+            dt=dt,
+            standard=SimulationStandard.estimation_benchmark(),
+            completed_tracking=True,
+        )
+    )
 
     logger = SimLogger("ekf", out_dir=Path(__file__).parent, downsample=10)
     logger.log_metadata("algorithm", "EKF")
+    logger.log_metadata("benchmark_mode", BENCHMARK_MODE)
+    logger.log_metadata("flight_coupled", not BENCHMARK_MODE)
     logger.log_metadata("dt", dt)
     logger.log_metadata("n_steps", n_steps)
+    if mission is not None:
+        logger.log_metadata("tracking_fallback", mission.tracking_fallback)
+        logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
+        logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
     for i in range(n_steps):
         logger.log_step(
             t=times[i],
@@ -111,6 +163,7 @@ def main() -> None:
             error=err[i],
             cov_trace=cov_trace[i],
         )
+    logger.log_completion(**completion.as_dict())
     logger.log_summary("mean_error_m", float(err.mean()))
     logger.log_summary("max_error_m", float(err.max()))
     logger.save()
