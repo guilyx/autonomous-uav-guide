@@ -246,7 +246,7 @@ def main() -> None:
         k = idx[f]
         viz.update_trail(trail_true, true_xyz, k)
         viz.update_trail(trail_ekf, ekf_xyz, k)
-        viz.update_vehicle(true_xyz[k], flight_states[k, 3:6], size=1.5)
+        viz.update_vehicle(ekf_xyz[k], flight_states[k, 3:6], size=1.5)
 
         err_ekf_line.set_data(times[:k], err_ekf[:k])
         err_imu_line.set_data(times[:k], err_imu[:k])

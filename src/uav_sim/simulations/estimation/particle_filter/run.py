@@ -227,7 +227,7 @@ def main() -> None:
         viz.update_trail(trail_est, pos_3d_est, k)
         fi = pf_to_flight[k]
         viz.update_vehicle(
-            np.array([true_xy[k, 0], true_xy[k, 1], CRUISE_ALT]),
+            np.array([est_xy[k, 0], est_xy[k, 1], CRUISE_ALT]),
             flight_states[fi, 3:6],
             size=1.5,
         )

@@ -137,10 +137,13 @@ def main() -> None:
     for i in range(n_steps):
         logger.log_step(
             t=times[i],
+            position=pos[i],
             true_roll=true_rp[i, 0],
             true_pitch=true_rp[i, 1],
             est_roll=est_rp[i, 0],
             est_pitch=est_rp[i, 1],
+            roll_error=roll_err[i],
+            pitch_error=pitch_err[i],
         )
     logger.log_completion(**completion.as_dict())
     logger.log_summary("mean_roll_error_rad", float(roll_err.mean()))
