@@ -41,3 +41,7 @@ htmlcov/
 *.log.gz.part.5
 *.log.gz.part.6
 *.log.gz.part.7
+.env
+
+# Generated simulation artifacts
+src/uav_sim/simulations/**/*_log.json
