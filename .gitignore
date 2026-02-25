@@ -30,7 +30,6 @@ htmlcov/
 # Ruff
 .ruff_cache/
 
-*.json
 *.log
 *.log.gz
 *.log.gz.part
