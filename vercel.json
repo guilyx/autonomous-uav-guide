@@ -1,5 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix docs install && npm --prefix docs run build",
-  "outputDirectory": "docs/.vitepress/dist"
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": ".vitepress/dist"
 }
