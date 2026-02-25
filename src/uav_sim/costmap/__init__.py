@@ -6,6 +6,7 @@ from uav_sim.costmap.footprint_layer import FootprintInflationLayer
 from uav_sim.costmap.inflation_layer import InflationLayer
 from uav_sim.costmap.occupancy_grid import OccupancyGrid
 from uav_sim.costmap.social_layer import SocialLayer
+from uav_sim.costmap.velocity_layer import VelocityCostLayer
 
 __all__ = [
     "FootprintInflationLayer",
@@ -13,4 +14,5 @@ __all__ = [
     "LayeredCostmap",
     "OccupancyGrid",
     "SocialLayer",
+    "VelocityCostLayer",
 ]
