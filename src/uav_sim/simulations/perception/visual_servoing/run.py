@@ -1,15 +1,8 @@
-# Erwin Lejeune - 2026-02-19
-"""Visual Servoing: drone autonomously follows a moving ground target.
+"""Visual servoing with arch target and BB objectives.
 
-A ``SimulatedDetector`` projects a known 3D target into the camera as a
-bounding box, and a ``VisualServoController`` converts the image-space
-error into world-frame velocity commands that keep the target centred
-and at a desired distance.
-
-Four-panel view: 3D scene, top-down, camera-image panel, and error data.
-
-Reference: F. Chaumette & S. Hutchinson, "Visual Servo Control — Part I:
-Basic Approaches," IEEE Robotics & Automation Magazine, 2006.
+Objective:
+  - keep bounding box center near image center,
+  - keep bounding box size near a target ratio (distance proxy).
 """
 
 from __future__ import annotations
@@ -23,6 +16,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
+from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.perception.bbox_tracker import (
     SimulatedDetector,
     VisualServoConfig,
@@ -30,111 +24,125 @@ from uav_sim.perception.bbox_tracker import (
 )
 from uav_sim.sensors.gimbal import Gimbal
 from uav_sim.sensors.gimbal_controller import PointTracker
-from uav_sim.simulations.common import figure_8_ref
+from uav_sim.simulations.standards import SimulationStandard
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
-from uav_sim.visualization.vehicle_artists import (
-    clear_vehicle_artists,
-    draw_quadrotor_3d,
-)
+from uav_sim.visualization.vehicle_artists import clear_vehicle_artists, draw_quadrotor_3d
 
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-DT = 0.02
-SIM_TIME = 60.0
 H_FOV = 0.8
 V_FOV = 0.6
 
 
-def _moving_target(t: float) -> np.ndarray:
-    """Figure-8 ground-level path for the target."""
-    pos, _ = figure_8_ref(t, alt=0.5, omega=0.3)
-    return pos
+def _arch_target(t: float, duration: float) -> np.ndarray:
+    progress = np.clip(t / max(duration, 1e-6), 0.0, 1.0)
+    x = 4.0 + 22.0 * progress
+    y = 15.0 + 7.5 * np.sin(np.pi * progress)
+    z = 0.6 + 0.4 * np.sin(2.0 * np.pi * progress)
+    return np.array([x, y, z])
 
 
 def main() -> None:
-    world, buildings = default_world()
+    _, buildings = default_world()
+    standard = SimulationStandard(dt=0.02, duration=60.0)
+    n_steps = int(standard.duration / standard.dt)
 
-    gimbal = Gimbal(max_rate=3.0)
-    init_tgt = _moving_target(0.0)
-    init_pos = np.array([15.0, 15.0, 10.0])
-    init_pan, init_tilt = gimbal.look_at(init_pos, init_tgt, 0.0)
+    gimbal = Gimbal(max_rate=2.5)
+    init_target = _arch_target(0.0, standard.duration)
+    init_pos = np.array([6.0, 11.0, 8.0])
+    init_pan, init_tilt = gimbal.look_at(init_pos, init_target, 0.0)
     gimbal.reset(pan=init_pan, tilt=init_tilt)
     tracker = PointTracker(gimbal)
 
-    detector = SimulatedDetector(target_radius=0.5)
+    detector = SimulatedDetector(target_radius=0.55, ndc_noise_std=0.01, seed=42)
     servo = VisualServoController(
         VisualServoConfig(
-            kp_lateral=3.0,
-            kp_forward=2.0,
-            desired_size_ratio=0.08,
-            max_velocity=2.5,
+            kp_lateral=2.2,
+            kp_forward=3.2,
+            desired_size_ratio=0.10,
+            max_velocity=3.0,
         )
     )
 
-    n_steps = int(SIM_TIME / DT)
+    quad = Quadrotor()
+    quad.reset(position=init_pos.copy())
+    ctrl = CascadedPIDController()
+    follow_setpoint = init_pos.copy()
+
     drone_pos = np.zeros((n_steps, 3))
+    drone_att = np.zeros((n_steps, 3))
     target_pos = np.zeros((n_steps, 3))
     bbox_cx = np.zeros(n_steps)
     bbox_cy = np.zeros(n_steps)
     bbox_size = np.zeros(n_steps)
     visible_hist = np.zeros(n_steps, dtype=bool)
     dist_hist = np.zeros(n_steps)
-
-    pos = init_pos.copy()
-    vel = np.zeros(3)
+    center_err = np.zeros(n_steps)
+    size_err = np.zeros(n_steps)
 
     for i in range(n_steps):
-        t = i * DT
-        tgt = _moving_target(t)
-        target_pos[i] = tgt
-        yaw = 0.0
+        t = i * standard.dt
+        target = _arch_target(t, standard.duration)
+        target_pos[i] = target
 
-        tracker.step(pos, tgt, yaw, DT)
+        state = quad.state.copy()
+        pos = state[:3]
+        yaw = state[5]
+        tracker.step(pos, target, yaw, standard.dt)
 
-        det = detector.detect(tgt, pos, gimbal, H_FOV, V_FOV, yaw)
+        det = detector.detect(target, pos, gimbal, H_FOV, V_FOV, yaw)
         vel_cmd = servo.compute(det, yaw)
+        follow_setpoint = follow_setpoint + vel_cmd * standard.dt
+        follow_setpoint[0] = np.clip(follow_setpoint[0], 1.0, WORLD_SIZE - 1.0)
+        follow_setpoint[1] = np.clip(follow_setpoint[1], 1.0, WORLD_SIZE - 1.0)
+        follow_setpoint[2] = np.clip(follow_setpoint[2], 3.0, 18.0)
 
+        wrench = ctrl.compute(quad.state, follow_setpoint, target_yaw=0.0, dt=standard.dt)
+        quad.step(wrench, standard.dt)
+
+        new_state = quad.state.copy()
+        drone_pos[i] = new_state[:3]
+        drone_att[i] = new_state[3:6]
+        visible_hist[i] = det.visible
         bbox_cx[i] = det.center_ndc[0] if det.visible else 0.0
         bbox_cy[i] = det.center_ndc[1] if det.visible else 0.0
-        bbox_size[i] = det.size_ratio
-        visible_hist[i] = det.visible
-        dist_hist[i] = np.linalg.norm(pos - tgt)
-
-        alpha = 0.35
-        vel = (1 - alpha) * vel + alpha * vel_cmd
-        pos = pos + vel * DT
-        pos[2] = np.clip(pos[2], 3.0, 20.0)
-        drone_pos[i] = pos
+        bbox_size[i] = det.size_ratio if det.visible else 0.0
+        dist_hist[i] = float(np.linalg.norm(new_state[:3] - target))
+        center_err[i] = float(np.linalg.norm(det.center_ndc)) if det.visible else 1.5
+        size_err[i] = abs(servo.cfg.desired_size_ratio - det.size_ratio) if det.visible else 1.0
 
     logger = SimLogger("visual_servoing", out_dir=Path(__file__).parent)
     logger.log_metadata("algorithm", "Visual Servoing")
-    logger.log_metadata("dt", DT)
+    logger.log_metadata("target_motion", "arch")
+    logger.log_metadata("flight_coupled", False)
+    logger.log_metadata("dt", standard.dt)
     logger.log_metadata("n_steps", n_steps)
     for i in range(n_steps):
         logger.log_step(
-            t=i * DT,
+            t=i * standard.dt,
             drone_position=drone_pos[i].tolist(),
+            drone_attitude=drone_att[i].tolist(),
             target_position=target_pos[i].tolist(),
             distance=float(dist_hist[i]),
+            bbox_center_error=float(center_err[i]),
+            bbox_size_error=float(size_err[i]),
             visible=bool(visible_hist[i]),
         )
-    vis_mask = visible_hist.astype(bool)
+    logger.log_summary("visibility_pct", float(100.0 * visible_hist.mean()))
     logger.log_summary("mean_distance_m", float(dist_hist.mean()))
-    logger.log_summary("visibility_pct", float(vis_mask.sum() / n_steps * 100))
+    logger.log_summary("mean_bbox_center_error", float(center_err.mean()))
+    logger.log_summary("mean_bbox_size_error", float(size_err.mean()))
     logger.save()
 
-    # ── 2x2 gridspec layout ──────────────────────────────────────────
     fig = plt.figure(figsize=(16, 10))
     gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.30, wspace=0.30)
-
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
     ax_cam = fig.add_subplot(gs[1, 0])
     ax_data = fig.add_subplot(gs[1, 1])
-
-    fig.suptitle("Visual Servoing — Bounding Box Follow", fontsize=13)
+    fig.suptitle("Visual Servoing — Arch Follow with BB Center/Size Objective", fontsize=13)
 
     ax3d.set_xlim(0, WORLD_SIZE)
     ax3d.set_ylim(0, WORLD_SIZE)
@@ -149,18 +157,16 @@ def main() -> None:
     ax_top.set_ylabel("Y")
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.set_aspect("equal")
-
     for b in buildings:
         sz = b.max_corner - b.min_corner
         ax_top.add_patch(
             matplotlib.patches.Rectangle(b.min_corner[:2], sz[0], sz[1], fc="gray", alpha=0.3)
         )
 
-    tgt_trail = np.array([_moving_target(i * DT) for i in range(n_steps)])
-    ax_top.plot(tgt_trail[:, 0], tgt_trail[:, 1], "r--", lw=0.5, alpha=0.3)
+    ax_top.plot(target_pos[:, 0], target_pos[:, 1], "r--", lw=0.7, alpha=0.4)
     (tgt_top,) = ax_top.plot([], [], "r*", ms=10, zorder=10)
     (tgt_3d,) = ax3d.plot([], [], [], "r*", ms=10, zorder=10, label="Target")
-    (drone_trail_top,) = ax_top.plot([], [], "dodgerblue", lw=0.8, alpha=0.5)
+    (drone_trail_top,) = ax_top.plot([], [], "dodgerblue", lw=0.9, alpha=0.6)
     ax3d.legend(fontsize=7, loc="upper left")
 
     ax_cam.set_xlim(-1.2, 1.2)
@@ -171,23 +177,23 @@ def main() -> None:
     ax_cam.axhline(0, color="gray", lw=0.3, alpha=0.5)
     ax_cam.axvline(0, color="gray", lw=0.3, alpha=0.5)
     (bbox_rect_art,) = ax_cam.plot([], [], "lime", lw=2)
-    (crosshair,) = ax_cam.plot([0], [0], "w+", ms=12, mew=1)
+    ax_cam.plot([0], [0], "w+", ms=12, mew=1)
     (target_dot,) = ax_cam.plot([], [], "r.", ms=10)
 
-    times = np.arange(n_steps) * DT
-    ax_data.set_xlim(0, SIM_TIME)
-    ax_data.set_ylim(0, max(20, dist_hist.max() * 1.2))
+    times = np.arange(n_steps) * standard.dt
+    ax_data.set_xlim(0, standard.duration)
+    ax_data.set_ylim(0, max(1.0, max(center_err.max(), size_err.max()) * 1.2))
     ax_data.set_xlabel("Time [s]", fontsize=8)
-    ax_data.set_ylabel("Distance [m]", fontsize=8)
-    ax_data.set_title("Drone-Target Distance", fontsize=9)
+    ax_data.set_ylabel("Objective Error", fontsize=8)
+    ax_data.set_title("BB Center/Size Tracking Error", fontsize=9)
     ax_data.grid(True, alpha=0.3)
-    (dist_line,) = ax_data.plot([], [], "b-", lw=0.8, label="Distance")
+    (center_line,) = ax_data.plot([], [], "c-", lw=0.8, label="Center error")
+    (size_line,) = ax_data.plot([], [], "m--", lw=0.8, label="Size error")
     ax_data.legend(fontsize=7)
 
-    skip = max(1, n_steps // 200)
+    skip = max(1, n_steps // 220)
     frames = list(range(0, n_steps, skip))
     n_frames = len(frames)
-
     veh_arts: list = []
 
     anim = SimAnimator("visual_servoing", out_dir=Path(__file__).parent, dpi=72)
@@ -198,44 +204,31 @@ def main() -> None:
         dp = drone_pos[k]
         tp = target_pos[k]
 
-        drone_trail_top.set_data(drone_pos[:k, 0], drone_pos[:k, 1])
-
+        drone_trail_top.set_data(drone_pos[: k + 1, 0], drone_pos[: k + 1, 1])
         clear_vehicle_artists(veh_arts)
-        R = Quadrotor.rotation_matrix(0, 0, 0)
+        R = Quadrotor.rotation_matrix(*drone_att[k])
         veh_arts.extend(draw_quadrotor_3d(ax3d, dp, R, size=1.5))
-        (dt_t,) = ax_top.plot(dp[0], dp[1], "ko", ms=4, zorder=10)
-        veh_arts.append(dt_t)
+        (dtop,) = ax_top.plot(dp[0], dp[1], "ko", ms=4, zorder=10)
+        veh_arts.append(dtop)
 
         tgt_3d.set_data([tp[0]], [tp[1]])
         tgt_3d.set_3d_properties([tp[2]])
         tgt_top.set_data([tp[0]], [tp[1]])
 
         if visible_hist[k]:
-            cx_k = bbox_cx[k]
-            cy_k = bbox_cy[k]
-            sr = bbox_size[k] * 2
-            half = max(sr, 0.05)
-            xs = [
-                cx_k - half,
-                cx_k + half,
-                cx_k + half,
-                cx_k - half,
-                cx_k - half,
-            ]
-            ys = [
-                cy_k - half,
-                cy_k - half,
-                cy_k + half,
-                cy_k + half,
-                cy_k - half,
-            ]
+            cx = bbox_cx[k]
+            cy = bbox_cy[k]
+            half = max(0.05, bbox_size[k] * 2.0)
+            xs = [cx - half, cx + half, cx + half, cx - half, cx - half]
+            ys = [cy - half, cy - half, cy + half, cy + half, cy - half]
             bbox_rect_art.set_data(xs, ys)
-            target_dot.set_data([cx_k], [cy_k])
+            target_dot.set_data([cx], [cy])
         else:
             bbox_rect_art.set_data([], [])
             target_dot.set_data([], [])
 
-        dist_line.set_data(times[:k], dist_hist[:k])
+        center_line.set_data(times[: k + 1], center_err[: k + 1])
+        size_line.set_data(times[: k + 1], size_err[: k + 1])
 
     anim.animate(update, n_frames)
     anim.save()
