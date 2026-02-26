@@ -98,6 +98,7 @@ def main() -> None:
         planned_path,
         standard=standard,
         obstacles=world.obstacles,
+        fallback_policy="preserve_shape",
     )
     flight_states = mission.states
 
@@ -209,6 +210,8 @@ def main() -> None:
     logger.log_metadata("tracking_fallback", mission.tracking_fallback)
     logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
     logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
+    logger.log_metadata("path_complete_tracking", mission.path_complete)
+    logger.log_metadata("tracking_end_idx", mission.tracking_end_idx)
     for i in range(n_steps):
         logger.log_step(
             t=i * slam_dt,
@@ -275,6 +278,8 @@ def main() -> None:
 
     skip = max(1, n_steps // MAX_ANIM_FRAMES)
     frames = list(range(0, n_steps, skip))
+    if frames[-1] != n_steps - 1:
+        frames.append(n_steps - 1)
     n_frames_anim = len(frames)
 
     fov_arts: list = []

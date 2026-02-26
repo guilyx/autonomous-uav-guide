@@ -44,3 +44,36 @@ Filters fuse noisy sensor data into state estimates:
 - **Complementary Filter**: Fast attitude estimation (accel + gyro)
 - **EKF/UKF**: Full 6DOF state estimation with GPS/IMU fusion
 - **Particle Filter**: Non-Gaussian posterior, GPS localisation
+
+## Simulation Composition API (Quad-First)
+
+`uav_sim.simulations` now exposes a composition-first API so users can assemble scenarios without editing internals:
+
+1. Create environment
+2. Spawn platform
+3. Define mission
+4. Run simulation
+
+```python
+from pathlib import Path
+
+from uav_sim.simulations import (
+    create_environment,
+    create_mission,
+    create_sim,
+    run_sim,
+    spawn_quad_platform,
+)
+
+env = create_environment(n_buildings=0, world_size=30.0)
+platform = spawn_quad_platform()
+mission = create_mission(path=my_path, standard=my_standard, fallback_policy="none")
+sim = create_sim(name="my_demo", out_dir=Path("."), mission=mission)
+result = run_sim(sim=sim, env=env, platform=platform)
+```
+
+### Contracts for extensibility
+
+- `PayloadPlugin`: attach sensors/payload modules that emit standardized packets.
+- `PathPlannerPlugin`, `TrackerPlugin`, `EstimatorPlugin`, `PerceptionPlugin`: pluggable algorithm interfaces.
+- `QuadPlatform`: current reference platform implementation; fixed-wing and VTOL can be added via adapters without changing mission APIs.
