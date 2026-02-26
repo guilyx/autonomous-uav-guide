@@ -7,7 +7,15 @@ from pathlib import Path
 import numpy as np
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.api import (
+    create_environment,
+    create_mission,
+    create_sim,
+    run_sim,
+    spawn_quad_platform,
+)
 from uav_sim.simulations.common import CRUISE_ALT, figure_8_path
+from uav_sim.simulations.contracts import RunResult
 from uav_sim.simulations.standards import SimulationStandard
 
 
@@ -57,3 +65,22 @@ def build_logger(
     if benchmark_mode is not None:
         logger.log_metadata("benchmark_mode", benchmark_mode)
     return logger
+
+
+def run_standard_composed_sim(
+    *,
+    sim_name: str,
+    out_dir: Path,
+    path: np.ndarray,
+    standard: SimulationStandard,
+    n_buildings: int = 0,
+    world_size: float = 30.0,
+    seed: int = 42,
+    fallback_policy: str | None = None,
+) -> RunResult:
+    """One-call composed setup for quad mission runs."""
+    env = create_environment(n_buildings=n_buildings, world_size=world_size, seed=seed)
+    mission = create_mission(path=path, standard=standard, fallback_policy=fallback_policy)
+    sim = create_sim(name=sim_name, out_dir=out_dir, mission=mission)
+    platform = spawn_quad_platform()
+    return run_sim(sim=sim, env=env, platform=platform)
