@@ -43,6 +43,7 @@ SENSOR_FOV = np.radians(270.0)
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
+MAX_ANIM_FRAMES = 400
 
 
 def _motion_model(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -102,7 +103,7 @@ def main() -> None:
 
     # ── EKF-SLAM at reduced rate for efficiency ────────────────────────
     n_raw = len(flight_states)
-    slam_dt = 0.02
+    slam_dt = 0.04
     slam_skip = max(1, int(slam_dt / standard.dt))
     slam_states = flight_states[::slam_skip]
     n_steps = len(slam_states)
@@ -251,7 +252,7 @@ def main() -> None:
         ellipses.append(e)
     viz.ax_top.legend(fontsize=6, loc="upper left")
 
-    anim = SimAnimator("ekf_slam", out_dir=Path(__file__).parent)
+    anim = SimAnimator("ekf_slam", out_dir=Path(__file__).parent, dpi=60)
     anim._fig = viz.fig
 
     trail_true = viz.create_trail_artists(color="black")
@@ -272,7 +273,7 @@ def main() -> None:
     ax_lm.tick_params(labelsize=5, colors="seagreen")
     (lm_line,) = ax_lm.plot([], [], "seagreen", lw=0.7)
 
-    skip = max(1, n_steps // 400)
+    skip = max(1, n_steps // MAX_ANIM_FRAMES)
     frames = list(range(0, n_steps, skip))
     n_frames_anim = len(frames)
 

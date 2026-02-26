@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import matplotlib
@@ -32,11 +33,19 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
+MAX_SENSOR_RECORDS = 80
 
 
 def main() -> None:
-    world, _ = default_world()
-    standard = SimulationStandard.flight_coupled()
+    world, _ = default_world(n_buildings=4)
+    standard = replace(
+        SimulationStandard.flight_coupled(),
+        lookahead=2.2,
+        waypoint_threshold=1.2,
+        stall_window_s=8.0,
+        stall_min_progress_m=0.2,
+        safety_clearance_m=0.1,
+    )
 
     lidar_2d = Lidar2D(
         num_beams=72,
@@ -46,9 +55,9 @@ def main() -> None:
         mount=SensorMount(position=np.array([0.0, 0.0, -0.1])),
     )
     lidar_3d = Lidar3D(
-        num_beams_h=90,
-        num_beams_v=8,
-        max_range=15.0,
+        num_beams_h=72,
+        num_beams_v=6,
+        max_range=12.0,
         h_fov=2 * np.pi,
         v_fov=np.radians(30.0),
         noise_std=0.05,
@@ -84,14 +93,20 @@ def main() -> None:
     states_arr = mission.states
 
     n_steps = len(states_arr)
-    scan_every = max(1, n_steps // 80)
+    scan_every = max(1, n_steps // 64)
     pc_records: list[tuple[np.ndarray, np.ndarray]] = []
 
-    for i in range(0, n_steps, scan_every):
+    sample_indices = list(range(0, n_steps, scan_every))
+    for j, i in enumerate(sample_indices):
         s = states_arr[i]
         ranges_3d = lidar_3d.sense(s, world)
         pc = lidar_3d.to_point_cloud(s, ranges_3d)
         pc_records.append((s.copy(), pc.copy()))
+        if j == 0 or j == len(sample_indices) - 1 or (j + 1) % 16 == 0:
+            print(f"  Sensor scan {j + 1}/{len(sample_indices)}", flush=True)
+    if len(pc_records) > MAX_SENSOR_RECORDS:
+        sample = np.linspace(0, len(pc_records) - 1, MAX_SENSOR_RECORDS, dtype=int)
+        pc_records = [pc_records[i] for i in sample]
 
     pos = states_arr[:, :3]
     speeds = np.linalg.norm(states_arr[:, 6:9], axis=1)
@@ -111,13 +126,20 @@ def main() -> None:
     logger.save()
 
     n_records = len(pc_records)
-    rec_indices = list(range(0, n_steps, scan_every))[:n_records]
+    raw_indices = list(range(0, n_steps, scan_every))
+    if raw_indices and raw_indices[-1] != n_steps - 1:
+        raw_indices.append(n_steps - 1)
+    if len(raw_indices) > n_records:
+        sample = np.linspace(0, len(raw_indices) - 1, n_records, dtype=int)
+        rec_indices = [raw_indices[i] for i in sample]
+    else:
+        rec_indices = raw_indices[:n_records]
 
     viz = ThreePanelViz(title="Sensor Suite - 3D Lidar + Camera FOV", world_size=WORLD_SIZE)
     viz.draw_buildings(world.obstacles)
     viz.draw_path(mission.tracking_path, color="cyan", lw=0.8, alpha=0.3, label="Plan")
 
-    anim = SimAnimator("sensor_suite_demo", out_dir=Path(__file__).parent)
+    anim = SimAnimator("sensor_suite_demo", out_dir=Path(__file__).parent, dpi=60)
     anim._fig = viz.fig
     trail_arts = viz.create_trail_artists(color="dodgerblue")
     fov_arts: list = []

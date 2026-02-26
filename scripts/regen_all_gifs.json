@@ -1,0 +1,7 @@
+{
+  "sims": [
+    "perception/*",
+    "estimation/*",
+    "environment/*"
+  ]
+}

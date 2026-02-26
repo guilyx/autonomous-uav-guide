@@ -9,6 +9,7 @@ occupancy map online. Three map variants are visualised:
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import matplotlib
@@ -38,11 +39,19 @@ matplotlib.use("Agg")
 WORLD_SIZE = 30.0
 GRID_RES = 0.4
 MAX_VEL_FOR_COST = 6.0
+MAX_ANIM_FRAMES = 90
 
 
 def main() -> None:
-    world, _ = default_world()
-    standard = select_standard("flight_coupled")
+    world, _ = default_world(n_buildings=4)
+    standard = replace(
+        select_standard("flight_coupled"),
+        lookahead=2.2,
+        waypoint_threshold=1.2,
+        stall_window_s=8.0,
+        stall_min_progress_m=0.2,
+        safety_clearance_m=0.1,
+    )
     path_3d = default_figure8_path(standard, alt=CRUISE_ALT, rx=8.0, ry=6.0)
 
     quad = Quadrotor()
@@ -59,7 +68,7 @@ def main() -> None:
     if n_steps == 0:
         return
 
-    lidar = Lidar2D(num_beams=120, max_range=12.0, noise_std=0.06, seed=42)
+    lidar = Lidar2D(num_beams=96, max_range=10.0, noise_std=0.05, seed=42)
     occ_grid = OccupancyGrid(
         resolution=GRID_RES,
         bounds_min=np.zeros(3),
@@ -73,17 +82,20 @@ def main() -> None:
     )
     vel_layer = VelocityCostLayer(max_speed=MAX_VEL_FOR_COST, max_penalty=0.35)
 
-    scan_step = max(1, int(0.1 / standard.dt))
+    scan_step = max(1, int(0.25 / standard.dt))
     scan_indices = list(range(0, n_steps, scan_step))
     if scan_indices[-1] != n_steps - 1:
         scan_indices.append(n_steps - 1)
+    if len(scan_indices) > MAX_ANIM_FRAMES:
+        sample = np.linspace(0, len(scan_indices) - 1, MAX_ANIM_FRAMES, dtype=int)
+        scan_indices = [scan_indices[i] for i in sample]
 
     base_maps: list[np.ndarray] = []
     inflated_maps: list[np.ndarray] = []
     velocity_maps: list[np.ndarray] = []
     speed_hist: list[float] = []
 
-    for idx in scan_indices:
+    for j, idx in enumerate(scan_indices):
         s = states[idx]
         ranges = lidar.sense(s, world)
         mapper.update(s[:3], ranges, lidar.angles, max_range=lidar.max_range)
@@ -95,6 +107,8 @@ def main() -> None:
         base_maps.append(base)
         inflated_maps.append(inflated)
         velocity_maps.append(velocity)
+        if j == 0 or j == len(scan_indices) - 1 or (j + 1) % 20 == 0:
+            print(f"  Costmap scan {j + 1}/{len(scan_indices)}", flush=True)
 
     pos = states[:, :3]
     times = np.arange(n_steps) * standard.dt
@@ -128,8 +142,8 @@ def main() -> None:
     )
     logger.save()
 
-    anim = SimAnimator("costmap_navigation", out_dir=Path(__file__).parent, dpi=72)
-    fig = plt.figure(figsize=(18, 8))
+    anim = SimAnimator("costmap_navigation", out_dir=Path(__file__).parent, dpi=56)
+    fig = plt.figure(figsize=(14, 6))
     anim._fig = fig
     gs = fig.add_gridspec(1, 4, width_ratios=[1.25, 1, 1, 1], wspace=0.25)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")

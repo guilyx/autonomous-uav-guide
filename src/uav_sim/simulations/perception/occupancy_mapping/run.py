@@ -42,6 +42,7 @@ matplotlib.use("Agg")
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
 GRID_RES = 0.25
+MAX_ANIM_FRAMES = 400
 
 
 def _lawnmower_path(size: float, alt: float, n_rows: int = 6) -> np.ndarray:
@@ -87,6 +88,11 @@ def main() -> None:
 
     scan_every = max(1, n_steps // 300)
     scan_indices = list(range(0, n_steps, scan_every))
+    if scan_indices and scan_indices[-1] != n_steps - 1:
+        scan_indices.append(n_steps - 1)
+    if len(scan_indices) > MAX_ANIM_FRAMES:
+        sample = np.linspace(0, len(scan_indices) - 1, MAX_ANIM_FRAMES, dtype=int)
+        scan_indices = [scan_indices[i] for i in sample]
     n_frames = len(scan_indices)
 
     grid_snapshots: list[np.ndarray] = []
@@ -146,7 +152,7 @@ def main() -> None:
     logger.save()
 
     # ── 2x2 gridspec layout ─────────────────────────────────────────────
-    fig = plt.figure(figsize=(16, 10))
+    fig = plt.figure(figsize=(14, 8))
     gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
@@ -214,7 +220,7 @@ def main() -> None:
     fov_arts: list = []
     veh_arts: list = []
 
-    anim = SimAnimator("occupancy_mapping", out_dir=Path(__file__).parent, dpi=72)
+    anim = SimAnimator("occupancy_mapping", out_dir=Path(__file__).parent, dpi=60)
     anim._fig = fig
 
     def update(f: int) -> None:
