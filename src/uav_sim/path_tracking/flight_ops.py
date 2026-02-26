@@ -11,6 +11,8 @@ can concatenate a full mission trajectory from sequential operations.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -20,6 +22,17 @@ from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
 _MAX_XY_CMD_DIST = 1.5  # metres — clamp horizontal target for smooth tilt
 _MAX_Z_CMD_DIST = 4.0  # metres — vertical can be larger (no tilt impact)
+
+
+@dataclass(frozen=True)
+class MissionTrace:
+    """Mission trajectory plus phase boundaries in the concatenated trace."""
+
+    states: NDArray[np.floating]
+    takeoff_end_idx: int
+    tracking_end_idx: int
+    loiter_end_idx: int
+    landing_end_idx: int
 
 
 def init_hover(quad: Quadrotor) -> None:
@@ -202,11 +215,44 @@ def fly_mission(
     -------
     (N, 12) state history array.
     """
+    return fly_mission_trace(
+        quad,
+        ctrl,
+        path,
+        cruise_alt=cruise_alt,
+        dt=dt,
+        pursuit=pursuit,
+        takeoff_duration=takeoff_duration,
+        landing_duration=landing_duration,
+        loiter_duration=loiter_duration,
+        fly_timeout=fly_timeout,
+        stall_window_s=stall_window_s,
+        stall_min_progress_m=stall_min_progress_m,
+    ).states
+
+
+def fly_mission_trace(
+    quad: Quadrotor,
+    ctrl: CascadedPIDController,
+    path: NDArray[np.floating],
+    cruise_alt: float | None = None,
+    dt: float = 0.005,
+    pursuit: PurePursuit3D | None = None,
+    takeoff_duration: float = 3.0,
+    landing_duration: float = 4.0,
+    loiter_duration: float = 1.0,
+    fly_timeout: float = 120.0,
+    stall_window_s: float = 0.0,
+    stall_min_progress_m: float = 0.0,
+) -> MissionTrace:
+    """Execute a full mission and return phase boundaries."""
     states: list[NDArray] = []
     alt = cruise_alt if cruise_alt is not None else float(np.mean(path[:, 2]))
 
     init_hover(quad)
     takeoff(quad, ctrl, target_alt=alt, dt=dt, duration=takeoff_duration, states=states)
+    takeoff_end_idx = len(states) - 1
+
     fly_path(
         quad,
         ctrl,
@@ -218,7 +264,19 @@ def fly_mission(
         stall_min_progress_m=stall_min_progress_m,
         states=states,
     )
-    loiter(quad, ctrl, path[-1], dt=dt, duration=loiter_duration, states=states)
-    landing(quad, ctrl, dt=dt, duration=landing_duration, states=states)
+    tracking_end_idx = len(states) - 1
 
-    return np.array(states) if states else np.zeros((1, 12))
+    loiter(quad, ctrl, path[-1], dt=dt, duration=loiter_duration, states=states)
+    loiter_end_idx = len(states) - 1
+
+    landing(quad, ctrl, dt=dt, duration=landing_duration, states=states)
+    landing_end_idx = len(states) - 1
+
+    trace = np.array(states) if states else np.zeros((1, 12))
+    return MissionTrace(
+        states=trace,
+        takeoff_end_idx=max(0, takeoff_end_idx),
+        tracking_end_idx=max(0, tracking_end_idx),
+        loiter_end_idx=max(0, loiter_end_idx),
+        landing_end_idx=max(0, landing_end_idx),
+    )

@@ -8,14 +8,21 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 
-from uav_sim.environment import default_world
+from uav_sim.environment.world import World
 from uav_sim.logging import SimLogger
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.sensors.base import SensorMount
 from uav_sim.sensors.camera import Camera, CameraIntrinsics
 from uav_sim.sensors.lidar import Lidar2D, Lidar3D
+from uav_sim.simulations.api import (
+    create_environment,
+    create_mission,
+    create_sim,
+    run_sim,
+    spawn_quad_platform,
+)
 from uav_sim.simulations.common import figure_8_path
-from uav_sim.simulations.mission_runner import run_standard_mission
+from uav_sim.simulations.contracts import PayloadPlugin, SensorPacket
+from uav_sim.simulations.plugins import StaticPathPlanner
 from uav_sim.simulations.standards import SimulationStandard
 from uav_sim.vehicles.multirotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
@@ -33,13 +40,34 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
-MAX_SENSOR_RECORDS = 80
+MAX_SENSOR_RECORDS = 120
+
+
+class SpeedTelemetryPayload(PayloadPlugin):
+    """Example payload plugin: publish platform speed over time."""
+
+    def reset(self) -> None:
+        return
+
+    def step(
+        self,
+        *,
+        t: float,
+        frame: int,
+        state: np.ndarray,
+        world: World,
+    ) -> SensorPacket:
+        _ = world
+        speed = float(np.linalg.norm(state[6:9])) if len(state) >= 9 else 0.0
+        return SensorPacket(t=t, frame=frame, data={"speed_m_s": speed})
 
 
 def main() -> None:
-    world, _ = default_world(n_buildings=4)
+    env = create_environment(n_buildings=4, world_size=WORLD_SIZE, seed=5)
+    world = env.world
     standard = replace(
         SimulationStandard.flight_coupled(),
+        duration=60.0,
         lookahead=2.2,
         waypoint_threshold=1.2,
         stall_window_s=8.0,
@@ -73,28 +101,42 @@ def main() -> None:
         ),
     )
 
-    planned_path = figure_8_path(
-        duration=standard.duration,
-        dt=0.15,
-        alt=CRUISE_ALT,
-        alt_amp=0.0,
-        rx=8.0,
-        ry=6.0,
+    planner = StaticPathPlanner(
+        figure_8_path(
+            duration=standard.duration,
+            dt=0.15,
+            alt=CRUISE_ALT,
+            alt_amp=0.0,
+            rx=8.0,
+            ry=6.0,
+        )
     )
-    quad = Quadrotor()
-    quad.reset(position=np.array([planned_path[0, 0], planned_path[0, 1], 0.0]))
-    mission = run_standard_mission(
-        quad,
-        CascadedPIDController(),
-        planned_path,
+    planned_path = planner.plan(world=world, standard=standard)
+
+    mission_cfg = create_mission(
+        path=planned_path,
         standard=standard,
-        obstacles=world.obstacles,
+        fallback_policy="preserve_shape",
     )
+    sim_cfg = create_sim(
+        name="sensor_suite_demo",
+        out_dir=Path(__file__).parent,
+        mission=mission_cfg,
+    )
+    platform = spawn_quad_platform()
+    run_result = run_sim(
+        sim=sim_cfg,
+        env=env,
+        platform=platform,
+        payloads=[SpeedTelemetryPayload()],
+    )
+    mission = run_result.mission
     states_arr = mission.states
 
     n_steps = len(states_arr)
-    scan_every = max(1, n_steps // 64)
+    scan_every = max(1, int(0.1 / standard.dt))
     pc_records: list[tuple[np.ndarray, np.ndarray]] = []
+    record_indices: list[int] = []
 
     sample_indices = list(range(0, n_steps, scan_every))
     for j, i in enumerate(sample_indices):
@@ -102,11 +144,13 @@ def main() -> None:
         ranges_3d = lidar_3d.sense(s, world)
         pc = lidar_3d.to_point_cloud(s, ranges_3d)
         pc_records.append((s.copy(), pc.copy()))
+        record_indices.append(i)
         if j == 0 or j == len(sample_indices) - 1 or (j + 1) % 16 == 0:
             print(f"  Sensor scan {j + 1}/{len(sample_indices)}", flush=True)
     if len(pc_records) > MAX_SENSOR_RECORDS:
         sample = np.linspace(0, len(pc_records) - 1, MAX_SENSOR_RECORDS, dtype=int)
         pc_records = [pc_records[i] for i in sample]
+        record_indices = [record_indices[i] for i in sample]
 
     pos = states_arr[:, :3]
     speeds = np.linalg.norm(states_arr[:, 6:9], axis=1)
@@ -118,22 +162,18 @@ def main() -> None:
     logger.log_metadata("tracking_fallback", mission.tracking_fallback)
     logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
     logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
+    logger.log_metadata("path_complete_tracking", mission.path_complete)
+    logger.log_metadata("tracking_end_idx", mission.tracking_end_idx)
     for i in range(0, n_steps, max(1, n_steps // 500)):
         logger.log_step(t=i * standard.dt, position=pos[i].tolist(), speed=float(speeds[i]))
     logger.log_completion(**mission.completion.as_dict())
     logger.log_summary("mean_speed_m_s", float(speeds.mean()))
     logger.log_summary("n_lidar_scans", len(pc_records))
+    logger.log_summary("payload_packets", len(run_result.payload_packets))
     logger.save()
 
     n_records = len(pc_records)
-    raw_indices = list(range(0, n_steps, scan_every))
-    if raw_indices and raw_indices[-1] != n_steps - 1:
-        raw_indices.append(n_steps - 1)
-    if len(raw_indices) > n_records:
-        sample = np.linspace(0, len(raw_indices) - 1, n_records, dtype=int)
-        rec_indices = [raw_indices[i] for i in sample]
-    else:
-        rec_indices = raw_indices[:n_records]
+    rec_indices = record_indices
 
     viz = ThreePanelViz(title="Sensor Suite - 3D Lidar + Camera FOV", world_size=WORLD_SIZE)
     viz.draw_buildings(world.obstacles)

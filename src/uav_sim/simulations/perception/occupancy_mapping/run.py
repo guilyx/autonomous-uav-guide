@@ -13,6 +13,7 @@ Models," CMU Tech Report, 2003.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import matplotlib
@@ -47,23 +48,34 @@ MAX_ANIM_FRAMES = 400
 
 def _lawnmower_path(size: float, alt: float, n_rows: int = 6) -> np.ndarray:
     margin = 3.0
-    xs = np.linspace(margin, size - margin, 30)
+    x_lo = margin
+    x_hi = size - margin
     ys = np.linspace(margin, size - margin, n_rows)
     pts: list[np.ndarray] = []
     for i, y in enumerate(ys):
-        row_x = xs if i % 2 == 0 else xs[::-1]
-        for x in row_x:
-            pts.append(np.array([x, y, alt]))
+        if i % 2 == 0:
+            pts.append(np.array([x_lo, y, alt]))
+            pts.append(np.array([x_hi, y, alt]))
+            end_x = x_hi
+        else:
+            pts.append(np.array([x_hi, y, alt]))
+            pts.append(np.array([x_lo, y, alt]))
+            end_x = x_lo
         if i < n_rows - 1:
             mid_y = (ys[i] + ys[i + 1]) / 2.0
-            end_x = row_x[-1]
             pts.append(np.array([end_x, mid_y, alt]))
     return np.array(pts)
 
 
 def main() -> None:
     world, buildings = default_world()
-    standard = SimulationStandard.flight_coupled()
+    standard = replace(
+        SimulationStandard.flight_coupled(),
+        lookahead=2.0,
+        waypoint_threshold=3.0,
+        stall_min_progress_m=0.0,
+        timeout_multiplier=8.0,
+    )
 
     lidar = Lidar2D(num_beams=120, max_range=12.0, noise_std=0.08, seed=42)
 
@@ -77,6 +89,7 @@ def main() -> None:
         path_3d,
         standard=standard,
         obstacles=world.obstacles,
+        fallback_policy="preserve_shape",
     )
     flight_states = mission.states
     n_steps = len(flight_states)
@@ -140,6 +153,8 @@ def main() -> None:
     logger.log_metadata("tracking_fallback", mission.tracking_fallback)
     logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
     logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
+    logger.log_metadata("path_complete_tracking", mission.path_complete)
+    logger.log_metadata("tracking_end_idx", mission.tracking_end_idx)
     logger.log_metadata("final_coverage_pct", coverage_pct[-1] if coverage_pct else 0.0)
     for i, si in enumerate(scan_indices):
         logger.log_step(
