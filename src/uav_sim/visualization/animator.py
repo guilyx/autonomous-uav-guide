@@ -20,6 +20,7 @@ Typical usage
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import matplotlib
@@ -195,7 +196,14 @@ class SimAnimator:
             raise RuntimeError("Call animate() before save().")
         self.out_dir.mkdir(parents=True, exist_ok=True)
         out = self.out_dir / f"{self.name}.gif"
+        if os.getenv("UAV_SIM_SKIP_GIF", "0") == "1":
+            print(f"  Skipping GIF save (UAV_SIM_SKIP_GIF=1) → {out}", flush=True)
+            # Avoid matplotlib warning when intentionally skipping render/save.
+            self._anim._draw_was_started = True
+            plt.close(self._fig)
+            return out
         writer = animation.PillowWriter(fps=self.fps)
+        print(f"  Saving GIF → {out}", flush=True)
         self._anim.save(str(out), writer=writer, dpi=self.dpi)
         plt.close(self._fig)
         print(f"  GIF saved → {out}")

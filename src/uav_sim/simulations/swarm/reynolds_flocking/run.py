@@ -38,7 +38,17 @@ def main() -> None:
     pos[:, 2] = rng.uniform(30, 70, n_agents)
     vel = rng.uniform(-1.0, 1.0, (n_agents, 3))
 
-    flock = ReynoldsFlocking(r_percept=40.0, r_sep=8.0, w_sep=1.5, w_ali=1.0, w_coh=2.5)
+    flock = ReynoldsFlocking(
+        r_percept=28.0,
+        r_sep=10.0,
+        w_sep=2.6,
+        w_ali=1.0,
+        w_coh=0.45,
+        max_term_norm=1.4,
+        boundary_margin=10.0,
+        boundary_gain=0.5,
+        world_size=WORLD_SIZE,
+    )
     dt = 0.1
     n_steps = 600
     max_speed = 6.0
@@ -55,7 +65,11 @@ def main() -> None:
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > max_speed, vel / speed * max_speed, vel)
         pos = pos + vel * dt
-        pos = np.clip(pos, 5, WORLD_SIZE - 5)
+        for axis in range(3):
+            low = pos[:, axis] < 5.0
+            high = pos[:, axis] > WORLD_SIZE - 5.0
+            vel[low | high, axis] *= -0.35
+            pos[:, axis] = np.clip(pos[:, axis], 5.0, WORLD_SIZE - 5.0)
         positions_hist.append(pos.copy())
         velocities_hist.append(vel.copy())
         mean_speed_hist[step] = np.mean(np.linalg.norm(vel, axis=1))

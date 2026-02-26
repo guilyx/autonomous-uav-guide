@@ -19,6 +19,8 @@ class OccupancyMapper:
     Uses a log-odds representation for efficient Bayesian updates.
     """
 
+    _LOG_ODDS_CLIP = 50.0
+
     def __init__(
         self,
         grid: OccupancyGrid,
@@ -54,7 +56,9 @@ class OccupancyMapper:
                     elif abs(d - r) < self.grid.resolution and r < max_range:
                         self._log_odds[cell] += self.l_occ - self.l0
 
-        prob = 1.0 - 1.0 / (1.0 + np.exp(self._log_odds))
+        # Keep log-odds bounded to avoid overflow in exp() during sigmoid conversion.
+        np.clip(self._log_odds, -self._LOG_ODDS_CLIP, self._LOG_ODDS_CLIP, out=self._log_odds)
+        prob = 1.0 / (1.0 + np.exp(-self._log_odds))
         if self.grid.dimensions == 2:
             self.grid._grid[:] = prob
         else:

@@ -83,6 +83,8 @@ class VisualServoConfig:
     kp_forward: float = 1.0
     desired_size_ratio: float = 0.25
     max_velocity: float = 2.0
+    desired_center_x: float = 0.0
+    desired_center_y: float = 0.0
 
 
 class VisualServoController:
@@ -119,8 +121,8 @@ class VisualServoController:
         if not detection.visible:
             return np.zeros(3)
 
-        err_lateral = detection.center_ndc[0]
-        err_vertical = -detection.center_ndc[1]
+        err_lateral = detection.center_ndc[0] - self.cfg.desired_center_x
+        err_vertical = -(detection.center_ndc[1] - self.cfg.desired_center_y)
         size_err = self.cfg.desired_size_ratio - detection.size_ratio
 
         vx_body = self.cfg.kp_forward * size_err
