@@ -19,20 +19,23 @@ import numpy as np
 from uav_sim.environment import default_world
 from uav_sim.estimation.particle_filter import ParticleFilter
 from uav_sim.logging import SimLogger
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
-from uav_sim.simulations.common import figure_8_path
+from uav_sim.simulations.common import CRUISE_ALT, figure_8_path
+from uav_sim.simulations.mission_runner import MissionResult, run_standard_mission
+from uav_sim.simulations.standards import (
+    SimulationStandard,
+    deterministic_truth_trajectory,
+    evaluate_completion,
+)
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-CRUISE_ALT = 15.0
 GPS_STD = 0.6
 N_PARTICLES = 200
-DT = 0.005
+BENCHMARK_MODE = True
 
 
 def _f_single(
@@ -48,24 +51,59 @@ def _likelihood(z: np.ndarray, x: np.ndarray) -> float:
     return float(np.exp(-0.5 * np.dot(diff, diff) / GPS_STD**2))
 
 
+def _truth_states(
+    benchmark_mode: bool,
+    world_obstacles: list,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, MissionResult | None]:
+    standard = (
+        SimulationStandard.estimation_benchmark()
+        if benchmark_mode
+        else SimulationStandard.flight_coupled()
+    )
+    if benchmark_mode:
+        states, times = deterministic_truth_trajectory(standard, alt=CRUISE_ALT, rx=8.0, ry=6.0)
+        path = figure_8_path(
+            duration=standard.duration,
+            dt=0.1,
+            alt=CRUISE_ALT,
+            alt_amp=0.0,
+            rx=8.0,
+            ry=6.0,
+        )
+        return states, times, path, None
+    path = figure_8_path(
+        duration=standard.duration,
+        dt=0.1,
+        alt=CRUISE_ALT,
+        alt_amp=0.0,
+        rx=8.0,
+        ry=6.0,
+    )
+    quad = Quadrotor()
+    quad.reset(position=np.array([path[0, 0], path[0, 1], 0.0]))
+    mission = run_standard_mission(
+        quad,
+        CascadedPIDController(),
+        path,
+        standard=standard,
+        obstacles=world_obstacles,
+    )
+    times = np.arange(len(mission.states)) * standard.dt
+    return mission.states, times, mission.tracking_path, mission
+
+
 def main() -> None:
     rng = np.random.default_rng(42)
-    world, buildings = default_world()
-
-    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
-
-    quad = Quadrotor()
-    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
-    ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
-    states_list: list[np.ndarray] = []
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT, duration=3.0, states=states_list)
-    init_hover(quad)
-    fly_path(quad, ctrl, path_3d, dt=DT, pursuit=pursuit, timeout=180.0, states=states_list)
-    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
+    world, _ = default_world()
+    flight_states, times, path_3d, mission = _truth_states(BENCHMARK_MODE, world.obstacles)
 
     pf_dt = 0.05
-    pf_skip = max(1, int(pf_dt / DT))
+    dt_flight = (
+        float(times[1] - times[0])
+        if len(times) > 1
+        else SimulationStandard.estimation_benchmark().dt
+    )
+    pf_skip = max(1, int(pf_dt / dt_flight))
     pf_states = flight_states[::pf_skip]
     n_steps = len(pf_states)
 
@@ -102,15 +140,33 @@ def main() -> None:
     err = np.sqrt(np.sum((true_xy - est_xy) ** 2, axis=1))
     pos_3d_true = np.column_stack([true_xy, np.full(n_steps, CRUISE_ALT)])
     pos_3d_est = np.column_stack([est_xy, np.full(n_steps, CRUISE_ALT)])
+    completion = (
+        mission.completion
+        if mission is not None
+        else evaluate_completion(
+            pos_3d_true,
+            path_3d[-1],
+            dt=pf_dt,
+            standard=SimulationStandard.estimation_benchmark(),
+            completed_tracking=True,
+        )
+    )
 
     logger = SimLogger("particle_filter", out_dir=Path(__file__).parent)
     logger.log_metadata("algorithm", "Particle Filter")
+    logger.log_metadata("benchmark_mode", BENCHMARK_MODE)
+    logger.log_metadata("flight_coupled", not BENCHMARK_MODE)
     logger.log_metadata("dt", pf_dt)
     logger.log_metadata("n_particles", N_PARTICLES)
+    if mission is not None:
+        logger.log_metadata("tracking_fallback", mission.tracking_fallback)
+        logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
+        logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
     for i in range(n_steps):
         logger.log_step(
             t=times[i], position=true_xy[i], estimate=est_xy[i], error=err[i], n_eff=n_eff_hist[i]
         )
+    logger.log_completion(**completion.as_dict())
     logger.log_summary("mean_error_m", float(err.mean()))
     logger.log_summary("max_error_m", float(err.max()))
     logger.save()
@@ -171,7 +227,7 @@ def main() -> None:
         viz.update_trail(trail_est, pos_3d_est, k)
         fi = pf_to_flight[k]
         viz.update_vehicle(
-            np.array([true_xy[k, 0], true_xy[k, 1], CRUISE_ALT]),
+            np.array([est_xy[k, 0], est_xy[k, 1], CRUISE_ALT]),
             flight_states[fi, 3:6],
             size=1.5,
         )

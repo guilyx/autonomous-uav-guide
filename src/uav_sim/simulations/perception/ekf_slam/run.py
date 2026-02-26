@@ -1,5 +1,4 @@
-# Erwin Lejeune - 2026-02-18
-"""EKF-SLAM: quadrotor maps landmarks while localising itself.
+"""EKF-SLAM with standardized mission orchestration.
 
 Three panels (3D, top-down, side) + insets:
   - 3D scene with quadrotor, true landmarks, estimated landmarks.
@@ -19,11 +18,12 @@ import matplotlib
 import numpy as np
 from matplotlib.patches import Ellipse, Wedge
 
+from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
-from uav_sim.path_tracking.flight_ops import fly_path
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
 from uav_sim.simulations.common import figure_8_path
+from uav_sim.simulations.mission_runner import run_standard_mission
+from uav_sim.simulations.standards import SimulationStandard
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 from uav_sim.visualization.vehicle_artists import clear_vehicle_artists
@@ -43,6 +43,7 @@ SENSOR_FOV = np.radians(270.0)
 
 WORLD_SIZE = 30.0
 CRUISE_ALT = 12.0
+MAX_ANIM_FRAMES = 400
 
 
 def _motion_model(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -62,6 +63,8 @@ def _range_bearing(rx: float, ry: float, ryaw: float, lx: float, ly: float):
 
 def main() -> None:
     rng = np.random.default_rng(42)
+    world, _ = default_world()
+    standard = SimulationStandard.flight_coupled()
 
     cx, cy = 15.0, 15.0
     landmarks = np.array(
@@ -79,20 +82,29 @@ def main() -> None:
     )[:_N_LM]
     lm_z = np.full(_N_LM, 5.0)
 
-    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
-
+    planned_path = figure_8_path(
+        duration=standard.duration,
+        dt=0.15,
+        alt=CRUISE_ALT,
+        alt_amp=0.0,
+        rx=8.0,
+        ry=6.0,
+    )
     quad = Quadrotor()
-    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], CRUISE_ALT]))
-    ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=3.0, waypoint_threshold=1.5, adaptive=True)
-    states_list: list[np.ndarray] = []
-    fly_path(quad, ctrl, path_3d, dt=0.005, pursuit=pursuit, timeout=180.0, states=states_list)
-    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
+    quad.reset(position=np.array([planned_path[0, 0], planned_path[0, 1], 0.0]))
+    mission = run_standard_mission(
+        quad,
+        CascadedPIDController(),
+        planned_path,
+        standard=standard,
+        obstacles=world.obstacles,
+    )
+    flight_states = mission.states
 
     # ── EKF-SLAM at reduced rate for efficiency ────────────────────────
     n_raw = len(flight_states)
-    slam_dt = 0.02
-    slam_skip = max(1, int(slam_dt / 0.005))
+    slam_dt = 0.04
+    slam_skip = max(1, int(slam_dt / standard.dt))
     slam_states = flight_states[::slam_skip]
     n_steps = len(slam_states)
 
@@ -190,9 +202,13 @@ def main() -> None:
 
     logger = SimLogger("ekf_slam", out_dir=Path(__file__).parent)
     logger.log_metadata("algorithm", "EKF-SLAM")
+    logger.log_metadata("flight_coupled", True)
     logger.log_metadata("slam_dt", slam_dt)
     logger.log_metadata("n_landmarks", _N_LM)
     logger.log_metadata("n_steps", n_steps)
+    logger.log_metadata("tracking_fallback", mission.tracking_fallback)
+    logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
+    logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
     for i in range(n_steps):
         logger.log_step(
             t=i * slam_dt,
@@ -201,6 +217,7 @@ def main() -> None:
             pos_error=float(pos_err_hist[i]),
             n_landmarks_seen=int(n_seen_hist[i]),
         )
+    logger.log_completion(**mission.completion.as_dict())
     logger.log_summary("mean_pos_error_m", float(pos_err_hist.mean()))
     logger.log_summary("max_pos_error_m", float(pos_err_hist.max()))
     logger.log_summary("final_landmarks_seen", int(n_seen_hist[-1]))
@@ -208,7 +225,7 @@ def main() -> None:
 
     # ── 3-Panel viz + insets ──────────────────────────────────────────
     viz = ThreePanelViz(
-        title="EKF-SLAM — Landmark Mapping", world_size=WORLD_SIZE, figsize=(18, 9)
+        title="EKF-SLAM - Landmark Mapping", world_size=WORLD_SIZE, figsize=(18, 9)
     )
 
     viz.ax3d.scatter(
@@ -235,7 +252,7 @@ def main() -> None:
         ellipses.append(e)
     viz.ax_top.legend(fontsize=6, loc="upper left")
 
-    anim = SimAnimator("ekf_slam", out_dir=Path(__file__).parent)
+    anim = SimAnimator("ekf_slam", out_dir=Path(__file__).parent, dpi=60)
     anim._fig = viz.fig
 
     trail_true = viz.create_trail_artists(color="black")
@@ -256,7 +273,7 @@ def main() -> None:
     ax_lm.tick_params(labelsize=5, colors="seagreen")
     (lm_line,) = ax_lm.plot([], [], "seagreen", lw=0.7)
 
-    skip = max(1, n_steps // 400)
+    skip = max(1, n_steps // MAX_ANIM_FRAMES)
     frames = list(range(0, n_steps, skip))
     n_frames_anim = len(frames)
 

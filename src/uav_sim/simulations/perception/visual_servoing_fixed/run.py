@@ -1,9 +1,4 @@
-"""Legacy visual-servoing entrypoint.
-
-Use dedicated variants instead:
-  - perception/visual_servoing_gimbal
-  - perception/visual_servoing_fixed
-"""
+"""Visual servoing with fixed camera (drone-only control)."""
 
 from __future__ import annotations
 
@@ -14,9 +9,9 @@ from uav_sim.simulations.perception.visual_servoing._core import run_visual_serv
 
 def main() -> None:
     run_visual_servoing(
-        sim_name="visual_servoing",
+        sim_name="visual_servoing_fixed",
         out_dir=Path(__file__).parent,
-        gimbal_tracking=True,
+        gimbal_tracking=False,
     )
 
 

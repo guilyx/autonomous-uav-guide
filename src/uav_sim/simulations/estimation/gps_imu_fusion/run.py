@@ -18,41 +18,77 @@ import numpy as np
 from uav_sim.environment import default_world
 from uav_sim.estimation.ekf import ExtendedKalmanFilter
 from uav_sim.logging import SimLogger
-from uav_sim.path_tracking.flight_ops import fly_path, init_hover, takeoff
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
-from uav_sim.simulations.common import figure_8_path
+from uav_sim.simulations.common import CRUISE_ALT, figure_8_path
+from uav_sim.simulations.mission_runner import MissionResult, run_standard_mission
+from uav_sim.simulations.standards import (
+    SimulationStandard,
+    deterministic_truth_trajectory,
+    evaluate_completion,
+)
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-CRUISE_ALT = 15.0
 GPS_STD = 0.5
 IMU_ACCEL_STD = 0.10
 GPS_RATE_HZ = 5
-DT = 0.005
+BENCHMARK_MODE = True
+
+
+def _truth_states(
+    benchmark_mode: bool,
+    world_obstacles: list,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, MissionResult | None]:
+    standard = (
+        SimulationStandard.estimation_benchmark()
+        if benchmark_mode
+        else SimulationStandard.flight_coupled()
+    )
+    if benchmark_mode:
+        states, times = deterministic_truth_trajectory(standard, alt=CRUISE_ALT, rx=8.0, ry=6.0)
+        path = figure_8_path(
+            duration=standard.duration,
+            dt=0.1,
+            alt=CRUISE_ALT,
+            alt_amp=0.0,
+            rx=8.0,
+            ry=6.0,
+        )
+        return states, times, path, None
+    path = figure_8_path(
+        duration=standard.duration,
+        dt=0.1,
+        alt=CRUISE_ALT,
+        alt_amp=0.0,
+        rx=8.0,
+        ry=6.0,
+    )
+    quad = Quadrotor()
+    quad.reset(position=np.array([path[0, 0], path[0, 1], 0.0]))
+    mission = run_standard_mission(
+        quad,
+        CascadedPIDController(),
+        path,
+        standard=standard,
+        obstacles=world_obstacles,
+    )
+    times = np.arange(len(mission.states)) * standard.dt
+    return mission.states, times, mission.tracking_path, mission
 
 
 def main() -> None:
     rng = np.random.default_rng(42)
-    world, buildings = default_world()
-
-    path_3d = figure_8_path(duration=45.0, dt=0.15, alt=CRUISE_ALT, alt_amp=0.0, rx=8.0, ry=6.0)
-
-    quad = Quadrotor()
-    quad.reset(position=np.array([path_3d[0, 0], path_3d[0, 1], 0.0]))
-    ctrl = CascadedPIDController()
-    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
-
-    states_list: list[np.ndarray] = []
-    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=DT, duration=3.0, states=states_list)
-    init_hover(quad)
-    fly_path(quad, ctrl, path_3d, dt=DT, pursuit=pursuit, timeout=180.0, states=states_list)
-
-    flight_states = np.array(states_list) if states_list else np.zeros((1, 12))
+    world, _ = default_world()
+    flight_states, times, path_3d, mission = _truth_states(BENCHMARK_MODE, world.obstacles)
     n_steps = len(flight_states)
+    dt = (
+        float(times[1] - times[0])
+        if len(times) > 1
+        else SimulationStandard.estimation_benchmark().dt
+    )
 
     # ── EKF setup: state = [x, y, z, vx, vy, vz] ──────────────────────
     def _f(x: np.ndarray, u: np.ndarray, dt_: float) -> np.ndarray:
@@ -98,7 +134,7 @@ def main() -> None:
     ekf.x[:3] = flight_states[0, :3]
     ekf.P = np.eye(6) * 0.5
 
-    gps_period = int(1.0 / (GPS_RATE_HZ * DT))
+    gps_period = max(1, int(1.0 / (GPS_RATE_HZ * dt)))
 
     true_xyz = np.zeros((n_steps, 3))
     ekf_xyz = np.zeros((n_steps, 3))
@@ -106,17 +142,22 @@ def main() -> None:
     gps_xyz_list: list[np.ndarray] = []
     cov_trace = np.zeros(n_steps)
     imu_pos = flight_states[0, :3].copy()
+    imu_vel = flight_states[0, 6:9].copy()
+    prev_vel = flight_states[0, 6:9].copy()
 
     for i in range(n_steps):
         s = flight_states[i]
         true_xyz[i] = s[:3]
 
-        accel_noisy = s[6:9] + rng.normal(0, IMU_ACCEL_STD, 3)
+        true_accel = (s[6:9] - prev_vel) / dt if i > 0 else np.zeros(3)
+        prev_vel = s[6:9].copy()
+        accel_noisy = true_accel + rng.normal(0, IMU_ACCEL_STD, 3)
         if i > 0:
-            imu_pos = imu_pos + accel_noisy * DT
+            imu_vel = imu_vel + accel_noisy * dt
+            imu_pos = imu_pos + imu_vel * dt
         imu_xyz[i] = imu_pos
 
-        ekf.predict(accel_noisy, DT)
+        ekf.predict(accel_noisy, dt)
 
         if i % gps_period == 0:
             gps_meas = s[:3] + rng.normal(0, GPS_STD, 3)
@@ -127,14 +168,30 @@ def main() -> None:
         cov_trace[i] = np.trace(ekf.P[:3, :3])
 
     gps_xyz = np.array(gps_xyz_list) if gps_xyz_list else np.zeros((1, 3))
-    times = np.arange(n_steps) * DT
+    completion = (
+        mission.completion
+        if mission is not None
+        else evaluate_completion(
+            true_xyz,
+            path_3d[-1],
+            dt=dt,
+            standard=SimulationStandard.estimation_benchmark(),
+            completed_tracking=True,
+        )
+    )
     err_ekf = np.sqrt(np.sum((true_xyz - ekf_xyz) ** 2, axis=1))
     err_imu = np.sqrt(np.sum((true_xyz - imu_xyz) ** 2, axis=1))
 
     logger = SimLogger("gps_imu_fusion", out_dir=Path(__file__).parent, downsample=20)
     logger.log_metadata("algorithm", "GPS+IMU EKF Fusion")
-    logger.log_metadata("dt", DT)
+    logger.log_metadata("benchmark_mode", BENCHMARK_MODE)
+    logger.log_metadata("flight_coupled", not BENCHMARK_MODE)
+    logger.log_metadata("dt", dt)
     logger.log_metadata("gps_rate_hz", GPS_RATE_HZ)
+    if mission is not None:
+        logger.log_metadata("tracking_fallback", mission.tracking_fallback)
+        logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
+        logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
     for i in range(n_steps):
         logger.log_step(
             t=times[i],
@@ -144,6 +201,7 @@ def main() -> None:
             ekf_error=err_ekf[i],
             imu_error=err_imu[i],
         )
+    logger.log_completion(**completion.as_dict())
     logger.log_summary("mean_ekf_error_m", float(err_ekf.mean()))
     logger.log_summary("mean_imu_error_m", float(err_imu.mean()))
     logger.save()
@@ -188,7 +246,7 @@ def main() -> None:
         k = idx[f]
         viz.update_trail(trail_true, true_xyz, k)
         viz.update_trail(trail_ekf, ekf_xyz, k)
-        viz.update_vehicle(true_xyz[k], flight_states[k, 3:6], size=1.5)
+        viz.update_vehicle(ekf_xyz[k], flight_states[k, 3:6], size=1.5)
 
         err_ekf_line.set_data(times[:k], err_ekf[:k])
         err_imu_line.set_data(times[:k], err_imu[:k])

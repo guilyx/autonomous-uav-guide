@@ -56,7 +56,15 @@ class SimLogger:
         self._metadata: dict[str, Any] = {}
         self._summary: dict[str, Any] = {}
         self._timeseries: dict[str, list[Any]] = {}
+        self._completion: dict[str, Any] = {}
         self._step_count = 0
+
+    _REQUIRED_COMPLETION_KEYS = (
+        "goal_reached_xy",
+        "divergence",
+        "stall",
+        "timeout_reason",
+    )
 
     # ------------------------------------------------------------------
     # Public API
@@ -83,13 +91,31 @@ class SimLogger:
         """Store a final summary metric (mean error, max speed, …)."""
         self._summary[key] = value
 
+    def log_completion(self, **kwargs: Any) -> None:
+        """Store standardized completion status fields for a simulation."""
+        self._completion.update(kwargs)
+
+    def _validate_completion_schema(self) -> None:
+        """Validate mandatory completion fields for flight-coupled simulations."""
+        if not bool(self._metadata.get("flight_coupled", False)):
+            return
+        missing = [k for k in self._REQUIRED_COMPLETION_KEYS if k not in self._completion]
+        if missing:
+            msg = ", ".join(missing)
+            raise ValueError(
+                f"Missing required completion keys for '{self._sim_name}': {msg}. "
+                "Call log_completion(...) before save()."
+            )
+
     def save(self) -> Path:
         """Write the accumulated data to ``<out_dir>/<sim_name>_log.json``."""
+        self._validate_completion_schema()
         payload = {
             "simulation": self._sim_name,
             "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "metadata": self._metadata,
             "summary": self._summary,
+            "completion": self._completion,
             "timeseries": self._timeseries,
         }
         payload = _to_serializable(payload)

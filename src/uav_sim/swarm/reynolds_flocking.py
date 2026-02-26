@@ -32,12 +32,27 @@ class ReynoldsFlocking:
         w_sep: float = 2.0,
         w_ali: float = 1.0,
         w_coh: float = 1.0,
+        max_term_norm: float = 1.5,
+        boundary_margin: float = 6.0,
+        boundary_gain: float = 0.25,
+        world_size: float | None = None,
     ) -> None:
         self.r_percept = r_percept
         self.r_sep = r_sep
         self.w_sep = w_sep
         self.w_ali = w_ali
         self.w_coh = w_coh
+        self.max_term_norm = max_term_norm
+        self.boundary_margin = boundary_margin
+        self.boundary_gain = boundary_gain
+        self.world_size = world_size
+
+    @staticmethod
+    def _clip_norm(vec: NDArray[np.floating], max_norm: float) -> NDArray[np.floating]:
+        n = float(np.linalg.norm(vec))
+        if n <= max_norm or n < 1e-9:
+            return vec
+        return vec * (max_norm / n)
 
     def compute_forces(
         self,
@@ -76,7 +91,8 @@ class ReynoldsFlocking:
                 diff = positions[i] - positions[j]
                 dist = np.linalg.norm(diff)
                 if dist < self.r_sep and dist > 1e-6:
-                    f_sep += diff / dist**2
+                    # Strong near-field repulsion keeps the flock from collapsing.
+                    f_sep += diff / max(dist**2, 1e-6)
 
             avg_vel = np.mean(velocities[neighbours], axis=0)
             f_ali = avg_vel - velocities[i]
@@ -84,6 +100,22 @@ class ReynoldsFlocking:
             centroid = np.mean(positions[neighbours], axis=0)
             f_coh = centroid - positions[i]
 
-            forces[i] = self.w_sep * f_sep + self.w_ali * f_ali + self.w_coh * f_coh
+            f_sep = self._clip_norm(f_sep, self.max_term_norm)
+            f_ali = self._clip_norm(f_ali, self.max_term_norm)
+            f_coh = self._clip_norm(f_coh, self.max_term_norm)
+            force = self.w_sep * f_sep + self.w_ali * f_ali + self.w_coh * f_coh
+
+            if self.world_size is not None:
+                repulse = np.zeros(3)
+                for axis in range(3):
+                    low = positions[i, axis]
+                    high = self.world_size - positions[i, axis]
+                    if low < self.boundary_margin:
+                        repulse[axis] += (self.boundary_margin - low) / self.boundary_margin
+                    if high < self.boundary_margin:
+                        repulse[axis] -= (self.boundary_margin - high) / self.boundary_margin
+                force += self.boundary_gain * repulse
+
+            forces[i] = self._clip_norm(force, self.max_term_norm * 2.0)
 
         return forces
