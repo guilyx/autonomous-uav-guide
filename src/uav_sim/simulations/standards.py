@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Literal, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -41,6 +41,7 @@ class SimulationStandard:
     stall_min_progress_m: float
     timeout_multiplier: float
     safety_clearance_m: float
+    fallback_policy: Literal["start_goal", "preserve_shape", "none"]
 
     @property
     def timeout(self) -> float:
@@ -63,6 +64,7 @@ class SimulationStandard:
             stall_min_progress_m=0.35,
             timeout_multiplier=3.0,
             safety_clearance_m=0.25,
+            fallback_policy="start_goal",
         )
 
     @classmethod
@@ -82,6 +84,7 @@ class SimulationStandard:
             stall_min_progress_m=0.0,
             timeout_multiplier=1.1,
             safety_clearance_m=0.0,
+            fallback_policy="none",
         )
 
     @classmethod
@@ -101,6 +104,7 @@ class SimulationStandard:
             stall_min_progress_m=0.0,
             timeout_multiplier=1.1,
             safety_clearance_m=0.0,
+            fallback_policy="none",
         )
 
 

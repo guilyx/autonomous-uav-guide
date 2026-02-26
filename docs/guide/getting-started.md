@@ -24,6 +24,40 @@ python -m uav_sim.simulations.estimation.ekf
 
 This produces a GIF animation and a JSON log file in the simulation directory.
 
+## Building a Simulation Programmatically
+
+For open-source users integrating their own algorithms, use the composition API:
+
+```python
+from pathlib import Path
+
+from uav_sim.simulations import (
+    StaticPathPlanner,
+    create_environment,
+    create_mission,
+    create_sim,
+    run_sim,
+    spawn_quad_platform,
+)
+from uav_sim.simulations.common import figure_8_path
+from uav_sim.simulations.standards import SimulationStandard
+
+standard = SimulationStandard.flight_coupled()
+planner = StaticPathPlanner(
+    figure_8_path(duration=standard.duration, dt=0.15, alt=12.0, alt_amp=0.0, rx=8.0, ry=6.0)
+)
+env = create_environment(n_buildings=0, world_size=30.0)
+platform = spawn_quad_platform()
+mission = create_mission(
+    path=planner.plan(world=env.world, standard=standard),
+    standard=standard,
+    fallback_policy="none",
+)
+sim = create_sim(name="my_first_sim", out_dir=Path("."), mission=mission)
+result = run_sim(sim=sim, env=env, platform=platform)
+print(result.mission.completion.timeout_reason)
+```
+
 ## Running Tests
 
 ```bash

@@ -43,9 +43,10 @@ MAX_ANIM_FRAMES = 90
 
 
 def main() -> None:
-    world, _ = default_world(n_buildings=4)
+    world, _ = default_world(n_buildings=4, seed=5)
     standard = replace(
         select_standard("flight_coupled"),
+        duration=60.0,
         lookahead=2.2,
         waypoint_threshold=1.2,
         stall_window_s=8.0,
@@ -62,6 +63,7 @@ def main() -> None:
         path_3d,
         standard=standard,
         obstacles=world.obstacles,
+        fallback_policy="preserve_shape",
     )
     states = mission.states
     n_steps = len(states)
@@ -127,6 +129,8 @@ def main() -> None:
     logger.log_metadata("tracking_fallback", mission.tracking_fallback)
     logger.log_metadata("tracking_fallback_reason", mission.fallback_reason)
     logger.log_metadata("path_min_clearance_m", mission.path_min_clearance_m)
+    logger.log_metadata("path_complete_tracking", mission.path_complete)
+    logger.log_metadata("tracking_end_idx", mission.tracking_end_idx)
     for i in range(n_steps):
         logger.log_step(
             t=times[i],
