@@ -52,7 +52,7 @@ def main() -> None:
         inertia=quad.params.inertia,
     )
 
-    dur = 15.0
+    dur = 45.0
     sim_steps_per_ctrl = max(1, int(DT_CTRL / DT_SIM))
     max_ctrl_steps = int(dur / DT_CTRL)
 

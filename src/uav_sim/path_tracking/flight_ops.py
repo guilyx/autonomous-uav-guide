@@ -140,6 +140,8 @@ def fly_path(
     dt: float = 0.005,
     pursuit: PurePursuit3D | None = None,
     timeout: float = 30.0,
+    stall_window_s: float = 0.0,
+    stall_min_progress_m: float = 0.0,
     states: list[NDArray] | None = None,
 ) -> list[NDArray]:
     """Fly along *path* using pure pursuit, recording states.
@@ -160,6 +162,7 @@ def fly_path(
 
     pursuit.reset()
     max_steps = int(timeout / dt)
+    window_steps = max(2, int(stall_window_s / max(dt, 1e-6)))
     for _ in range(max_steps):
         s = quad.state
         if not _is_sane(s):
@@ -167,6 +170,11 @@ def fly_path(
         states.append(s.copy())
         if pursuit.is_path_complete(s[:3], path):
             break
+        if stall_window_s > 0.0 and stall_min_progress_m > 0.0 and len(states) > window_steps:
+            progress = float(np.linalg.norm(states[-1][:2] - states[-window_steps][:2]))
+            goal_xy = float(np.linalg.norm(s[:2] - path[-1, :2]))
+            if progress < stall_min_progress_m and goal_xy > pursuit.waypoint_threshold:
+                break
         vel = s[6:9] if len(s) >= 9 else None
         target = pursuit.compute_target(s[:3], path, velocity=vel)
         cmd = _limit_target(s[:3], target)
@@ -185,6 +193,8 @@ def fly_mission(
     landing_duration: float = 4.0,
     loiter_duration: float = 1.0,
     fly_timeout: float = 120.0,
+    stall_window_s: float = 0.0,
+    stall_min_progress_m: float = 0.0,
 ) -> NDArray[np.floating]:
     """Execute a full mission: takeoff -> fly path -> loiter -> land.
 
@@ -197,7 +207,17 @@ def fly_mission(
 
     init_hover(quad)
     takeoff(quad, ctrl, target_alt=alt, dt=dt, duration=takeoff_duration, states=states)
-    fly_path(quad, ctrl, path, dt=dt, pursuit=pursuit, timeout=fly_timeout, states=states)
+    fly_path(
+        quad,
+        ctrl,
+        path,
+        dt=dt,
+        pursuit=pursuit,
+        timeout=fly_timeout,
+        stall_window_s=stall_window_s,
+        stall_min_progress_m=stall_min_progress_m,
+        states=states,
+    )
     loiter(quad, ctrl, path[-1], dt=dt, duration=loiter_duration, states=states)
     landing(quad, ctrl, dt=dt, duration=landing_duration, states=states)
 
