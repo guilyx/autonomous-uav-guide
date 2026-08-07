@@ -46,15 +46,33 @@ jobs:
       - name: Static analysis (bandit)
         run: uvx bandit -q -r src scripts
 
-      # Dependencies. Advisories appear against pinned versions with no
-      # warning and no fix available, so these report rather than gate --
-      # a red X nobody can clear teaches contributors to ignore CI.
-      - name: Python dependency audit
-        continue-on-error: true
+      # Producing the input gates, even though auditing it does not. An
+      # audit that cannot read its input reports nothing, which looks
+      # exactly like an audit that found nothing.
+      #
+      # --no-header matters: FORCE_COLOR is set for the whole workflow, so
+      # uv wraps its header comment in ANSI codes. The escape byte lands
+      # before the '#', pip-audit stops seeing a comment, and it rejects
+      # the entire file on line 1.
+      - name: Export the locked dependency set
         run: |
           uv export --all-groups --format requirements-txt \
-            --no-emit-project --no-hashes > deps.txt
-          uvx pip-audit -r deps.txt --desc
+            --no-emit-project --no-hashes --no-header --no-annotate > deps.txt
+          test -s deps.txt
+          # Written as an `if`, not `! grep ...`: bash ignores errexit for a
+          # command whose status is inverted with `!`, so the negated form
+          # can never fail the step.
+          if grep -q $'\x1b' deps.txt; then
+            echo "deps.txt contains ANSI escapes; pip-audit will reject it" >&2
+            exit 1
+          fi
+
+      # Advisories appear against pinned versions with no warning and no fix
+      # available, so the audit itself reports rather than gates -- a red X
+      # nobody can clear teaches contributors to ignore CI.
+      - name: Python dependency audit
+        continue-on-error: true
+        run: uvx pip-audit -r deps.txt --desc
 
       - uses: actions/setup-node@v4
         with:
