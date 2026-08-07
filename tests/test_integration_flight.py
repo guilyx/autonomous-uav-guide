@@ -118,9 +118,9 @@ class TestPathFollowing:
         fly_path(quad, ctrl, path, dt=0.005, pursuit=pp, timeout=40.0, states=states)
         arr = np.array(states)
         max_tilt = np.max(np.abs(arr[:, 3:5]))
-        assert max_tilt < np.radians(
-            _MAX_TILT_DEG
-        ), f"Max tilt: {np.degrees(max_tilt):.1f}° > {_MAX_TILT_DEG}°"
+        assert max_tilt < np.radians(_MAX_TILT_DEG), (
+            f"Max tilt: {np.degrees(max_tilt):.1f}° > {_MAX_TILT_DEG}°"
+        )
 
     def test_velocity_stays_reasonable(self) -> None:
         """Drone should never exceed _MAX_VEL during normal path following."""
