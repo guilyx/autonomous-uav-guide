@@ -825,7 +825,7 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     return output
 
 
-def build_scenes(skip_training: bool) -> list[Scene]:
+def build_scenes(reuse_policy: bool = True) -> list[Scene]:
     print("simulating quadrotor...", flush=True)
     quad_states, quad_reference = simulate_quadrotor()
 
@@ -841,8 +841,7 @@ def build_scenes(skip_training: bool) -> list[Scene]:
     print("planning...", flush=True)
     obstacles, path = simulate_planner()
 
-    print("training a hover policy...", flush=True)
-    curve, trajectories = _learning_material(skip_training)
+    curve, trajectories = _learning_material(reuse_policy)
 
     return [
         make_title_scene(),
@@ -856,8 +855,13 @@ def build_scenes(skip_training: bool) -> list[Scene]:
     ]
 
 
-def _learning_material(skip_training: bool):
-    """Learning curve and rollout trajectories for the RL scene."""
+def _learning_material(reuse_policy: bool):
+    """Learning curve and rollout trajectories for the RL scene.
+
+    Training from scratch takes roughly an hour, so a previously saved
+    policy is reused unless ``--retrain`` is given. Re-rendering the video
+    after a copy tweak should not cost an hour of CPU.
+    """
     from uav_sim.gym import make
     from uav_sim.gym.policy import MLPPolicy
     from uav_sim.gym.train import TrainConfig, rollout, train
@@ -865,14 +869,13 @@ def _learning_material(skip_training: bool):
     policy_path = Path("policies/hover.npz")
     env = make("hover", seed=0)
 
-    if skip_training and policy_path.exists():
+    curve_path = Path("policies/hover_curve.npy")
+    if reuse_policy and policy_path.exists() and curve_path.exists():
+        print(f"reusing {policy_path}...", flush=True)
         policy = MLPPolicy.load(policy_path)
-        curve = (
-            np.load("policies/hover_curve.npy")
-            if Path("policies/hover_curve.npy").exists()
-            else np.linspace(20, 400, 60)
-        )
+        curve = np.load(curve_path)
     else:
+        print("training a hover policy (roughly an hour)...", flush=True)
         # These are the settings the training documentation quotes. Cutting
         # episodes_per_candidate to save time also costs a lot of return —
         # with fewer episodes the finite differences stop resolving the
@@ -895,7 +898,7 @@ def _learning_material(skip_training: bool):
         curve = _forward_fill(holdout)
         policy_path.parent.mkdir(parents=True, exist_ok=True)
         policy.save(policy_path)
-        np.save("policies/hover_curve.npy", curve)
+        np.save(curve_path, curve)
 
     trajectories = []
     for episode in range(4):
@@ -922,13 +925,16 @@ def main() -> None:
     parser.add_argument("--output", default="media/promo.mp4", type=Path)
     parser.add_argument("--fps", type=int, default=FPS)
     parser.add_argument(
-        "--skip-training",
+        "--retrain",
         action="store_true",
-        help="reuse policies/hover.npz instead of training a fresh policy",
+        help=(
+            "train a fresh hover policy instead of reusing policies/hover.npz. "
+            "Takes about an hour; the saved policy is reused by default."
+        ),
     )
     args = parser.parse_args()
 
-    scenes = build_scenes(args.skip_training)
+    scenes = build_scenes(reuse_policy=not args.retrain)
     total = sum(scene.seconds for scene in scenes)
     print(f"rendering {len(scenes)} scenes, {total:.0f}s at {args.fps} fps")
     path = render(scenes, args.output, args.fps)
