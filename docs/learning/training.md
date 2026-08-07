@@ -4,6 +4,8 @@
 uav-sim train hover
 ```
 
+The output has this shape:
+
 ```text
 Training 'hover'
 ────────────────
@@ -11,20 +13,24 @@ Training 'hover'
   policy      linear
   budget      120 iterations
 
-  ██████████████████████████████████ iter  120/120  return     412.7
+  ██████████████████████████████████ iter  120/120  return       ...
 
-  trained in  518.3s (14232 episodes)
-  best return 412.7
+  trained in  ...s (... episodes)
+  best return ...
 
 Held-out evaluation
 ───────────────────
-  mean_return          389.42
-  mean_length          468.10
-  pct_time_limit       88.00
-  pct_ground_contact   12.00
+  mean_return          ...
+  mean_length          ...
+  pct_time_limit       ...
+  pct_ground_contact   ...
 
   saved policies/hover.npz
 ```
+
+The progress bar tracks the **held-out** return — re-measured on unseen
+episodes every few iterations — not the training score. For actual figures
+from a real run, see [measured learning](#measured-learning) below.
 
 From Python:
 
@@ -166,6 +172,8 @@ Hover, ARS, linear policy, `directions=8`, `episodes_per_candidate=8`,
 | 10 | 30.8 | 25.4 |
 | 20 | 212.8 | 92.2 |
 | 30 | 316.3 | 240.2 |
+| 40 | 443.2 | 405.3 |
+| 50 | 438.2 | 458.6 |
 
 For scale: an untrained zero policy scores about 2 and survives ~140 steps
 before drifting out of the volume; a hand-written cascaded controller
@@ -175,8 +183,9 @@ scores 638 and holds station for the full 500.
 ```bash
 uav-sim train hover --iterations 100 --directions 8 --episodes 8 --seed 0
 ```
-Runs in a few minutes on one core. Every number in the table above came
-from that command.
+Every number in the table above came from that command. It takes several
+minutes on one core, and gets slower as it improves — a policy that keeps
+flying runs the full 500-step episode instead of crashing at step 30.
 :::
 
 ## Watching a policy fly

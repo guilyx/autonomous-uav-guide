@@ -29,6 +29,8 @@ dev = [
     "pre-commit>=4.0",
     "ruff>=0.8",
     "mypy>=1.13",
+    # Bundled ffmpeg binary, used by scripts/make_promo.py.
+    "imageio-ffmpeg>=0.5",
 ]
 
 [tool.pytest.ini_options]

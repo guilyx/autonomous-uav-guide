@@ -488,7 +488,11 @@ def build_parser() -> argparse.ArgumentParser:
         "-p", "--population", type=int, default=40, help="CEM candidates per generation"
     )
     p_train.add_argument(
-        "-e", "--episodes", type=int, default=3, help="episodes averaged per candidate"
+        "-e",
+        "--episodes",
+        type=int,
+        default=8,
+        help="episodes averaged per evaluation (fewer is faster and worse)",
     )
     p_train.add_argument(
         "--hidden",

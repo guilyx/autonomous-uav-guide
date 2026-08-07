@@ -74,7 +74,7 @@ uav-sim train hover --optimizer cem --population 40
 | `-d, --directions` | 16 | ARS perturbation directions per iteration |
 | `--optimizer` | `ars` | `ars` or `cem` |
 | `-p, --population` | 40 | CEM candidates per generation |
-| `-e, --episodes` | 3 | Episodes averaged per evaluation |
+| `-e, --episodes` | 8 | Episodes averaged per evaluation |
 | `--hidden` | — | Hidden layer sizes; omit for a linear policy |
 | `--seed` | 0 | Random seed |
 | `--eval-episodes` | 20 | Held-out evaluation episodes |

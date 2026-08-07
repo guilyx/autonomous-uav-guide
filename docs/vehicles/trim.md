@@ -63,25 +63,51 @@ uav-sim trim aerosonde
 ```
 
 ```text
-Va m/s  alpha deg  elev deg   throttle
-  13.2      14.83    -30.00      0.335
-  17.6       7.13    -19.20      0.302
-  22.0       4.06    -10.45      0.335
-  26.4       2.44     -5.44      0.386
-  30.8       1.48     -2.32      0.447
-  35.2       0.85     -1.56      0.464
-  39.6       0.06      0.61      0.529
+Va m/s  alpha deg    elev deg   throttle
+  13.1  unreachable
+  17.1  unreachable
+  21.1     6.69         -17.72     0.287
+  25.1     4.01         -10.32     0.336
+  29.1     2.35          -5.72     0.387
+  33.1     1.25          -2.68     0.439
+  37.0     0.49          -0.56     0.491
+  41.0    -0.07           0.97     0.543
+  45.0    -0.48           2.11     0.596
+  49.0    -0.80           2.99     0.648
 ```
 
 Three physically-correct trends fall out:
 
-- **Alpha decreases with airspeed.** Faster flight needs less incidence for
-  the same lift, since lift goes as $V_a^2$.
+- **Alpha decreases with airspeed**, going slightly negative above about
+  40 m/s. Faster flight needs less incidence for the same lift, since lift
+  goes as $V_a^2$.
 - **Elevator moves from strongly negative toward positive.** Holding a high
   incidence at low speed takes a lot of up-elevator.
-- **Throttle has a minimum in the middle.** This is the classic
-  power-required curve: induced drag dominates at low speed, parasitic drag
-  at high speed, and the cheapest cruise sits between them.
+- **Throttle rises monotonically** across this range. The classic
+  power-required curve has a minimum where induced and parasitic drag
+  cross, but for the Aerosonde that minimum sits below the trimmable
+  speed range — see below.
+
+## Trimmable is not the same as flyable
+
+The two lowest rows are `unreachable`, even though the Aerosonde's
+aerodynamic stall speed is about 12.5 m/s. That is not a solver failure:
+the aircraft runs out of **elevator** before it runs out of lift.
+
+At 17 m/s the wing needs roughly 11° of incidence to carry the weight.
+Balancing the pitching moment at that incidence takes
+
+$$
+\delta_e = -\frac{C_{m_0} + C_{m_\alpha}\alpha}{C_{m_{\delta_e}}} \approx -29°
+$$
+
+which is essentially the full ±30° deflection limit. Below that speed there
+is simply no elevator setting that holds the nose where the wing needs it.
+
+So a stable aircraft has two low-speed limits, and the higher one binds:
+the speed at which the wing stalls, and the speed below which the tail can
+no longer trim it. Making an aircraft more statically stable — a more
+negative $C_{m_\alpha}$ — raises the second one.
 
 ## Climbing trim
 
@@ -105,7 +131,7 @@ try:
     compute_trim(params, airspeed=5.0)      # well below stall
 except TrimError as error:
     print(error)
-    # No trim found at 5.0 m/s with +0.0 m/s climb (residual 0.42).
+    # No trim found at 5.0 m/s with +0.0 m/s climb (residual 7.43).
     # The airspeed is likely below stall (~12.5 m/s) or the climb rate
     # is too steep.
 ```

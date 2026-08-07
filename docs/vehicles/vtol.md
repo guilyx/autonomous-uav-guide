@@ -126,8 +126,8 @@ the horizontal component that turns it:
 | Bank | Lateral acceleration |
 |---|---|
 | 0° | 0.00 m/s² |
-| 20° | −3.48 m/s² |
-| 40° | −7.56 m/s² |
+| 20° | −4.50 m/s² |
+| 40° | −7.28 m/s² |
 
 If lift is instead pinned to world-vertical, banking does nothing and
 coordinated turns are impossible.

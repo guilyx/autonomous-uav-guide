@@ -873,13 +873,17 @@ def _learning_material(skip_training: bool):
             else np.linspace(20, 400, 60)
         )
     else:
+        # These are the settings the training documentation quotes. Cutting
+        # episodes_per_candidate to save time also costs a lot of return —
+        # with fewer episodes the finite differences stop resolving the
+        # difference between candidates, and the run plateaus early.
         result = train(
             "hover",
             config=TrainConfig(
-                iterations=45,
+                iterations=60,
                 directions=8,
                 top_directions=4,
-                episodes_per_candidate=6,
+                episodes_per_candidate=8,
                 step_size=0.05,
                 noise=0.05,
                 seed=0,
