@@ -58,13 +58,20 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: docs/package-lock.json
       - name: Docs dependency audit
-        continue-on-error: true
         working-directory: docs
-        run: npm audit
+        run: |
+          # Print the full report. Two findings survive here, both in the
+          # vite range that VitePress 1.6.4 pins, both Windows-only and
+          # dev-server-only, and neither reaching the built site. See the
+          # `overrides` note in docs/package.json.
+          npm audit || true
+          # Gate on critical alone, so this step stays green until something
+          # lands that genuinely cannot wait for an upstream release.
+          npm audit --audit-level=critical
 
   test:
     name: Test (Python ${{ matrix.python }})
@@ -122,7 +129,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: docs/package-lock.json
       - run: npm ci
