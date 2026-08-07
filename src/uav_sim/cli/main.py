@@ -355,11 +355,12 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     ]:
         found = importlib.util.find_spec(name) is not None
         if found:
-            version = ""
             try:
                 version = importlib.import_module(name).__version__
-            except Exception:  # noqa: BLE001 - version is cosmetic
-                pass
+            except Exception:  # noqa: BLE001
+                # The package is installed, which is what `doctor` is checking.
+                # Reporting its version is a nicety, not a diagnosis.
+                version = "version unknown"
             mark, colour = "ok", "green"
         else:
             version = "not installed"

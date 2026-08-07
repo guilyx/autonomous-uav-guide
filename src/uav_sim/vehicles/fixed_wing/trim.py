@@ -153,7 +153,8 @@ def compute_trim(
         np.array([0.15, -0.1, 0.7]),
         np.array([0.02, 0.05, 0.3]),
     )
-    best = None
+    best_x: np.ndarray | None = None
+    best_norm = np.inf
     bounds = (
         np.array([-0.5, -np.radians(30.0), 0.0]),
         np.array([0.5, np.radians(30.0), 1.0]),
@@ -161,21 +162,19 @@ def compute_trim(
     for seed in seeds:
         solution = least_squares(residual, seed, bounds=bounds, xtol=1e-12, ftol=1e-12)
         norm = float(np.linalg.norm(solution.fun))
-        if best is None or norm < best[1]:
-            best = (solution.x, norm)
-        if norm < residual_tolerance:
+        if norm < best_norm:
+            best_x, best_norm = solution.x, norm
+        if best_norm < residual_tolerance:
             break
 
-    assert best is not None
-    x, norm = best
-    if norm > residual_tolerance:
+    if best_x is None or best_norm > residual_tolerance:
         raise TrimError(
             f"No trim found at {airspeed:.1f} m/s with {climb_rate:+.1f} m/s climb "
-            f"(residual {norm:.3g}). The airspeed is likely below stall "
+            f"(residual {best_norm:.3g}). The airspeed is likely below stall "
             f"(~{params.stall_airspeed:.1f} m/s) or the climb rate is too steep."
         )
 
-    alpha, elevator, throttle = x
+    alpha, elevator, throttle = best_x
     return TrimPoint(
         airspeed=airspeed,
         alpha=float(alpha),

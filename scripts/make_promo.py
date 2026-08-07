@@ -16,7 +16,9 @@ Requires the ``video`` extra for the ffmpeg binary::
 from __future__ import annotations
 
 import argparse
-import subprocess
+
+# Only ever used to pipe raw frames into the ffmpeg that imageio-ffmpeg bundles.
+import subprocess  # nosec B404
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -761,7 +763,9 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     total_frames = sum(int(scene.seconds * fps) for scene in scenes)
 
-    process = subprocess.Popen(
+    # Argument list, no shell: the binary comes from imageio-ffmpeg and every
+    # argument but the output path is a literal.
+    process = subprocess.Popen(  # noqa: S603  # nosec B603
         [
             ffmpeg,
             "-y",

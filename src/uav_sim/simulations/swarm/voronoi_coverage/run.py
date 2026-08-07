@@ -16,7 +16,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.spatial import Voronoi
+from scipy.spatial import QhullError, Voronoi
 
 from uav_sim.logging import SimLogger
 from uav_sim.swarm.coverage import CoverageController
@@ -176,7 +176,10 @@ def main() -> None:
                     )
                     ax_top.add_patch(poly)
                     voronoi_patches.append(poly)
-        except Exception:
+        except QhullError:
+            # Qhull cannot tessellate a degenerate set — two agents landing on
+            # the same point, or all of them collinear. Drop the overlay for
+            # this frame; the agents themselves still draw.
             pass
 
         for i in range(n_ag):

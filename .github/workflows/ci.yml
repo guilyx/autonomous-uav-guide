@@ -30,6 +30,42 @@ jobs:
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.1
 
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: latest
+          enable-cache: true
+      - run: uv python install 3.12
+
+      # Our own code. This gates the build: anything bandit flags here is
+      # something we wrote and can fix.
+      - name: Static analysis (bandit)
+        run: uvx bandit -q -r src scripts
+
+      # Dependencies. Advisories appear against pinned versions with no
+      # warning and no fix available, so these report rather than gate --
+      # a red X nobody can clear teaches contributors to ignore CI.
+      - name: Python dependency audit
+        continue-on-error: true
+        run: |
+          uv export --all-groups --format requirements-txt \
+            --no-emit-project --no-hashes > deps.txt
+          uvx pip-audit -r deps.txt --desc
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: Docs dependency audit
+        continue-on-error: true
+        working-directory: docs
+        run: npm audit
+
   test:
     name: Test (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
