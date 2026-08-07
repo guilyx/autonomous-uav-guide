@@ -182,28 +182,19 @@ class Quadrotor:
         tau_b = np.array([tau_x, tau_y, tau_z])
         omega_dot = np.linalg.solve(inertia, tau_b - np.cross(omega_b, inertia @ omega_b))
 
-        # Euler angle kinematics.
+        # Euler angle kinematics (ZYX), with the cos(theta) denominator
+        # floored so the result stays finite at the gimbal-lock singularity.
         cp, sp = np.cos(phi), np.sin(phi)
         ct = np.cos(theta)
         if abs(ct) < 1e-10:
-            ct = 1e-10  # avoid gimbal lock singularity
+            ct = 1e-10
 
+        common = bq * sp + br * cp
         euler_dot = np.array(
             [
-                bp
-                + sp * (bq * np.sin(theta) + br * np.cos(theta)) / ct
-                - cp * (-bq * np.cos(theta) + br * np.sin(theta)) / ct
-                + sp * bq * np.sin(theta) / ct,
+                bp + common * np.tan(theta),
                 bq * cp - br * sp,
-                (bq * sp + br * cp) / ct,
-            ]
-        )
-        # Simplified ZYX euler rate:
-        euler_dot = np.array(
-            [
-                bp + (bq * sp + br * cp) * np.tan(theta),
-                bq * cp - br * sp,
-                (bq * sp + br * cp) / ct,
+                common / ct,
             ]
         )
 
