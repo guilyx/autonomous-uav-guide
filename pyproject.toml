@@ -4,13 +4,20 @@ build-backend = "hatchling.build"
 
 [project]
 name = "uav-sim"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.0",
     "scipy>=1.14",
     "matplotlib>=3.9",
 ]
+
+[project.scripts]
+uav-sim = "uav_sim.cli.main:main"
+
+[project.optional-dependencies]
+gym = ["gymnasium>=1.0"]
+video = ["imageio-ffmpeg>=0.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/uav_sim"]

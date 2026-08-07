@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/guilyx/autonomous-uav-guide/discussions
+    about: Ask how something works, or propose an algorithm to add.

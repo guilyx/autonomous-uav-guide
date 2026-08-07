@@ -1,0 +1,458 @@
+/* Erwin Lejeune — 2026-02-23
+ *
+ * Design system: "flight deck".
+ *
+ * The visual language borrows from aircraft instrumentation — a dark
+ * panel, a sky-blue horizon, amber for anything that wants attention, and
+ * monospaced numerals wherever a value is being read rather than prose.
+ *
+ * Everything below is driven by the tokens in this first block. Change a
+ * token and the whole site follows; nothing further down hard-codes a
+ * colour.
+ */
+
+/* ══════════════════════════════════════════════════════════════════════
+   1. Tokens
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Brand ramp — a single hue family so accents never fight each other. */
+  --uav-sky-50: #eff8ff;
+  --uav-sky-200: #b9e3fe;
+  --uav-sky-300: #7cd0fd;
+  --uav-sky-400: #38bdf8;
+  --uav-sky-500: #0ea5e9;
+  --uav-sky-600: #0284c7;
+  --uav-sky-700: #0369a1;
+
+  /* Supporting hues, chosen at matched lightness so they read as a set. */
+  --uav-teal: #2dd4bf;
+  --uav-amber: #fbbf24;
+  --uav-violet: #a78bfa;
+  --uav-rose: #fb7185;
+  --uav-lime: #a3e635;
+
+  /* Neutral ramp. */
+  --uav-ink-950: #070b14;
+  --uav-ink-900: #0b1220;
+  --uav-ink-850: #0f172a;
+  --uav-ink-800: #16203a;
+  --uav-ink-700: #1e293b;
+  --uav-ink-600: #334155;
+  --uav-ink-400: #94a3b8;
+  --uav-ink-300: #cbd5e1;
+  --uav-ink-100: #e6edf7;
+
+  --uav-radius: 14px;
+  --uav-radius-sm: 9px;
+  --uav-shadow: 0 18px 50px -22px rgb(2 8 23 / 65%);
+
+  --uav-font-display: 'Inter var', Inter, ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --uav-font-mono: 'JetBrains Mono', 'SFMono-Regular', 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+}
+
+/* ── Light theme ──────────────────────────────────────────────────────── */
+
+:root {
+  --vp-c-brand-1: var(--uav-sky-600);
+  --vp-c-brand-2: var(--uav-sky-500);
+  --vp-c-brand-3: var(--uav-sky-400);
+  --vp-c-brand-soft: rgb(14 165 233 / 14%);
+
+  --vp-font-family-base: var(--uav-font-display);
+  --vp-font-family-mono: var(--uav-font-mono);
+
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f6f9fc;
+  --vp-c-bg-soft: #f1f5f9;
+
+  --uav-panel: #ffffff;
+  --uav-panel-border: rgb(15 23 42 / 9%);
+  --uav-panel-hover: rgb(14 165 233 / 30%);
+  --uav-grid-line: rgb(15 23 42 / 6%);
+  --uav-glow: rgb(14 165 233 / 12%);
+  --uav-code-bg: #f8fafc;
+
+  /* Hero gradient. Two stops from the same ramp, plus one warm accent. */
+  --uav-hero-1: var(--uav-sky-500);
+  --uav-hero-2: var(--uav-teal);
+  --uav-hero-3: var(--uav-violet);
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────── */
+
+.dark {
+  --vp-c-brand-1: var(--uav-sky-400);
+  --vp-c-brand-2: var(--uav-sky-300);
+  --vp-c-brand-3: var(--uav-sky-500);
+  --vp-c-brand-soft: rgb(56 189 248 / 16%);
+
+  --vp-c-bg: var(--uav-ink-900);
+  --vp-c-bg-alt: var(--uav-ink-950);
+  --vp-c-bg-soft: var(--uav-ink-850);
+  --vp-c-divider: rgb(148 163 184 / 14%);
+  --vp-c-text-1: var(--uav-ink-100);
+  --vp-c-text-2: var(--uav-ink-400);
+
+  --uav-panel: rgb(22 32 58 / 55%);
+  --uav-panel-border: rgb(148 163 184 / 16%);
+  --uav-panel-hover: rgb(56 189 248 / 45%);
+  --uav-grid-line: rgb(148 163 184 / 7%);
+  --uav-glow: rgb(56 189 248 / 16%);
+  --uav-code-bg: rgb(7 11 20 / 70%);
+
+  --uav-hero-1: var(--uav-sky-400);
+  --uav-hero-2: var(--uav-teal);
+  --uav-hero-3: var(--uav-violet);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   2. Page canvas
+   ══════════════════════════════════════════════════════════════════════ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* A faint engineering grid behind everything, so the page reads as a
+   drawing surface rather than a document. Kept very low contrast — it
+   should register only peripherally. */
+.dark body::before,
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--uav-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--uav-grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 35%, transparent 100%);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   3. Typography
+   ══════════════════════════════════════════════════════════════════════ */
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+.vp-doc h1 {
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 2.6rem);
+  line-height: 1.15;
+}
+
+.vp-doc h2 {
+  margin-top: 3rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+/* Section markers: a small accent rule above each h2, like a panel label. */
+.vp-doc h2::before {
+  content: '';
+  display: block;
+  width: 34px;
+  height: 2px;
+  margin-bottom: 0.85rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--uav-hero-1), var(--uav-hero-2));
+}
+
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.75;
+}
+
+/* Numerals in tables and inline code read as instrument values. */
+.vp-doc table {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+}
+
+.vp-doc th {
+  font-family: var(--uav-font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc tr {
+  border-color: var(--vp-c-divider);
+}
+
+.vp-doc tr:nth-child(2n) {
+  background: transparent;
+}
+
+.vp-doc tbody tr:hover {
+  background: var(--uav-glow);
+}
+
+.vp-doc :not(pre) > code {
+  font-size: 0.86em;
+  padding: 0.16em 0.42em;
+  border-radius: 6px;
+  background: var(--uav-code-bg);
+  border: 1px solid var(--uav-panel-border);
+}
+
+.vp-doc div[class*='language-'] {
+  border-radius: var(--uav-radius-sm);
+  border: 1px solid var(--uav-panel-border);
+  box-shadow: var(--uav-shadow);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. Callouts — styled as instrument annunciators
+   ══════════════════════════════════════════════════════════════════════ */
+
+.vp-doc .custom-block {
+  border-radius: var(--uav-radius-sm);
+  border: 1px solid var(--uav-panel-border);
+  border-left-width: 3px;
+  background: var(--uav-panel);
+}
+
+.vp-doc .custom-block-title {
+  font-family: var(--uav-font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.vp-doc .custom-block.tip {
+  border-left-color: var(--uav-teal);
+}
+.vp-doc .custom-block.info {
+  border-left-color: var(--uav-sky-400);
+}
+.vp-doc .custom-block.warning {
+  border-left-color: var(--uav-amber);
+}
+.vp-doc .custom-block.danger {
+  border-left-color: var(--uav-rose);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5. Media
+   ══════════════════════════════════════════════════════════════════════ */
+
+.vp-doc img {
+  border-radius: var(--uav-radius-sm);
+  border: 1px solid var(--uav-panel-border);
+  box-shadow: var(--uav-shadow);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   6. Home page
+   ══════════════════════════════════════════════════════════════════════ */
+
+.VPHome {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    100deg,
+    var(--uav-hero-1) 0%,
+    var(--uav-hero-2) 48%,
+    var(--uav-hero-3) 100%
+  );
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    var(--uav-hero-1) 20%,
+    var(--uav-hero-3) 80%
+  );
+  --vp-home-hero-image-filter: blur(58px);
+}
+
+.VPHome .VPHero .name {
+  letter-spacing: -0.035em;
+}
+
+.VPHome .VPHero .tagline {
+  max-width: 46ch;
+  line-height: 1.6;
+}
+
+/* Feature cards: quiet by default, lit on hover. */
+.VPHome .VPFeature {
+  background: var(--uav-panel);
+  border: 1px solid var(--uav-panel-border);
+  border-radius: var(--uav-radius);
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.VPHome .VPFeature:hover {
+  transform: translateY(-3px);
+  border-color: var(--uav-panel-hover);
+  box-shadow:
+    var(--uav-shadow),
+    0 0 0 1px var(--uav-glow);
+}
+
+.VPHome .VPFeature .title {
+  letter-spacing: -0.015em;
+}
+
+.VPHome .VPFeature .icon {
+  background: transparent !important;
+  font-size: 1.7rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7. Chrome
+   ══════════════════════════════════════════════════════════════════════ */
+
+.VPNavBar {
+  backdrop-filter: saturate(160%) blur(14px);
+}
+
+.VPNavBar.has-sidebar .content-body,
+.VPNavBar .content-body {
+  background: transparent;
+}
+
+.VPSidebarItem .text {
+  font-size: 0.87rem;
+}
+
+.VPSidebarItem.level-0 > .item > .text {
+  font-family: var(--uav-font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   8. Custom components
+   ══════════════════════════════════════════════════════════════════════ */
+
+.uav-stat-band {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  margin: 2.5rem 0;
+  border: 1px solid var(--uav-panel-border);
+  border-radius: var(--uav-radius);
+  overflow: hidden;
+  background: var(--uav-panel-border);
+}
+
+.uav-stat {
+  padding: 1.15rem 1.3rem;
+  background: var(--vp-c-bg);
+}
+
+.uav-stat__value {
+  font-family: var(--uav-font-mono);
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, var(--uav-hero-1), var(--uav-hero-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.uav-stat__label {
+  margin-top: 0.35rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+/* Card grid used by the atlas pages. */
+.uav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+  gap: 1rem;
+  margin: 1.8rem 0;
+}
+
+.uav-card {
+  display: block;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--uav-panel-border);
+  border-radius: var(--uav-radius);
+  background: var(--uav-panel);
+  text-decoration: none !important;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.uav-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--uav-panel-hover);
+  box-shadow: var(--uav-shadow);
+}
+
+.uav-card__title {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  letter-spacing: -0.01em;
+}
+
+.uav-card__meta {
+  margin-top: 0.15rem;
+  font-family: var(--uav-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vp-c-brand-1);
+}
+
+.uav-card__body {
+  margin-top: 0.5rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--vp-c-text-2);
+}
+
+/* Difficulty / status pills. */
+.uav-pill {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-family: var(--uav-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid currentcolor;
+}
+
+.uav-pill--easy {
+  color: var(--uav-teal);
+}
+.uav-pill--medium {
+  color: var(--uav-amber);
+}
+.uav-pill--hard {
+  color: var(--uav-rose);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .VPHome .VPFeature,
+  .uav-card {
+    transition: none;
+  }
+}
