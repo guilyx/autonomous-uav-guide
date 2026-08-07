@@ -27,6 +27,7 @@ matplotlib.use("Agg")
 
 import matplotlib.patheffects as path_effects  # noqa: E402
 import numpy as np  # noqa: E402
+from matplotlib.backends.backend_agg import FigureCanvasAgg  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
 # ── palette ───────────────────────────────────────────────────────────────
@@ -336,27 +337,33 @@ def make_title_scene():
         radius = 0.145
         bank = np.radians(18.0 * np.sin(progress * 2.4 * np.pi))
 
+        # The axes span the whole 16:9 figure, so a true circle in data
+        # coordinates would render as a wide ellipse. Squashing x by the
+        # aspect ratio makes it read as round.
+        aspect = HEIGHT / WIDTH
         theta = np.linspace(0, 2 * np.pi, 200)
         axes.plot(
-            centre[0] + radius * np.cos(theta) * 0.5625,
+            centre[0] + radius * np.cos(theta) * aspect,
             centre[1] + radius * np.sin(theta),
             color=SKY,
             lw=2.5,
             alpha=0.95,
         )
-        # Horizon line through the dial.
+
+        # Sky and ground, clipped to the bezel. Without the clip the fills
+        # extend to their bounding box and the dial reads as a square.
+        bezel = matplotlib.patches.Ellipse(
+            centre, 2 * radius * aspect, 2 * radius, transform=axes.transData
+        )
+        span = np.linspace(-1.6, 1.6, 60)
         for sign, colour in ((1, SKY), (-1, "#334155")):
-            span = np.linspace(-1, 1, 60)
-            xs = centre[0] + span * radius * 0.5625 * np.cos(bank)
+            xs = centre[0] + span * radius * aspect * np.cos(bank)
             ys = centre[1] + span * radius * np.sin(bank)
-            axes.fill_between(
-                xs,
-                ys,
-                centre[1] + sign * radius,
-                color=colour,
-                alpha=0.28,
-                where=np.ones_like(xs, dtype=bool),
+            band = axes.fill_between(
+                xs, ys, centre[1] + sign * radius * 1.6, color=colour, alpha=0.28
             )
+            band.set_clip_path(bezel)
+
         span = np.linspace(-1, 1, 60)
         axes.plot(
             centre[0] + span * radius * 0.5625 * np.cos(bank),
@@ -472,7 +479,7 @@ def make_fixed_wing_scene(states, telemetry):
             ("course [deg]", telemetry[:, 2], VIOLET, (-30, 150)),
         ]
         for index, (label, series, colour, ylim) in enumerate(panels):
-            panel = figure.add_axes([0.655, 0.66 - index * 0.185, 0.30, 0.145])
+            panel = figure.add_axes([0.655, 0.665 - index * 0.19, 0.30, 0.135])
             panel.set_facecolor(PANEL)
             panel.plot(times[:cursor], series[:cursor], color=colour, lw=1.8)
             panel.set_xlim(0, times[-1])
@@ -481,7 +488,7 @@ def make_fixed_wing_scene(states, telemetry):
             panel.grid(True, color=GRID, alpha=0.5, lw=0.5)
             for spine in panel.spines.values():
                 spine.set_color(GRID)
-            panel.set_title(label, color=MUTED, fontsize=9, loc="left", pad=4)
+            panel.set_title(label, color=MUTED, fontsize=9, loc="left", pad=6)
 
         scene.stats = [
             (f"{telemetry[cursor - 1, 1]:.1f}", "m/s"),
@@ -524,7 +531,7 @@ def make_vtol_scene(states, telemetry):
             ("airspeed [m/s]", telemetry[:, 2], SKY, (-1, 30)),
         ]
         for index, (label, series, colour, ylim) in enumerate(panels):
-            panel = figure.add_axes([0.655, 0.66 - index * 0.185, 0.30, 0.145])
+            panel = figure.add_axes([0.655, 0.665 - index * 0.19, 0.30, 0.135])
             panel.set_facecolor(PANEL)
             panel.plot(times[:cursor], series[:cursor], color=colour, lw=1.8)
             panel.set_xlim(0, times[-1])
@@ -533,7 +540,7 @@ def make_vtol_scene(states, telemetry):
             panel.grid(True, color=GRID, alpha=0.5, lw=0.5)
             for spine in panel.spines.values():
                 spine.set_color(GRID)
-            panel.set_title(label, color=MUTED, fontsize=9, loc="left", pad=4)
+            panel.set_title(label, color=MUTED, fontsize=9, loc="left", pad=6)
 
         scene.stats = [
             (f"{telemetry[cursor - 1, 0]:.0f}", "deg tilt"),
@@ -807,7 +814,11 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
             elif frame > frames - fade_frames:
                 _fade(figure, (frame - (frames - fade_frames)) / fade_frames)
 
-            canvas = figure.canvas
+            # A bare Figure() carries a FigureCanvasBase, which cannot
+            # rasterise. Attaching an Agg canvas explicitly is what makes
+            # buffer_rgba() available — and keeps us off pyplot's global
+            # figure registry, which would otherwise leak a figure per frame.
+            canvas = FigureCanvasAgg(figure)
             canvas.draw()
             buffer = np.asarray(canvas.buffer_rgba())[:, :, :3]
             process.stdin.write(buffer.tobytes())

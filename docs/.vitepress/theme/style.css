@@ -456,3 +456,14 @@ body::before {
     transition: none;
   }
 }
+
+/* Promo video on the home page. */
+.uav-promo {
+  display: block;
+  width: 100%;
+  margin: 2rem 0;
+  border: 1px solid var(--uav-panel-border);
+  border-radius: var(--uav-radius);
+  box-shadow: var(--uav-shadow);
+  background: var(--uav-ink-950);
+}

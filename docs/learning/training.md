@@ -4,40 +4,39 @@
 uav-sim train hover
 ```
 
-The output has this shape:
-
 ```text
 Training 'hover'
 ────────────────
   method      augmented random search
   policy      linear
-  budget      120 iterations
+  budget      60 iterations
 
-  ██████████████████████████████████ iter  120/120  return       ...
+  ██████████████████████████████████ iter    60/60  return     469.0
 
-  trained in  ...s (... episodes)
-  best return ...
+  best return 469.0
 
 Held-out evaluation
 ───────────────────
-  mean_return          ...
-  mean_length          ...
-  pct_time_limit       ...
-  pct_ground_contact   ...
+  mean_return          440.81
+  mean_length          481.95
+  pct_time_limit       95.00
+  pct_tumbled          5.00
 
   saved policies/hover.npz
 ```
 
 The progress bar tracks the **held-out** return — re-measured on unseen
-episodes every few iterations — not the training score. For actual figures
-from a real run, see [measured learning](#measured-learning) below.
+episodes every few iterations — not the training score.
+
+That policy holds station for 482 of 500 steps and survives the full
+episode 95% of the time.
 
 From Python:
 
 ```python
 from uav_sim.gym import train, evaluate
 
-result = train("hover", iterations=120, seed=0, save_path="policies/hover.npz")
+result = train("hover", iterations=60, seed=0, save_path="policies/hover.npz")
 print(evaluate("hover", result.policy, episodes=25))
 ```
 
@@ -166,26 +165,29 @@ normalisation makes it far less sensitive than a raw learning rate.
 Hover, ARS, linear policy, `directions=8`, `episodes_per_candidate=8`,
 `seed=0`:
 
-| Iteration | Training return | Held-out return |
-|---|---|---|
-| 0 | 21.7 | 23.6 |
-| 10 | 30.8 | 25.4 |
-| 20 | 212.8 | 92.2 |
-| 30 | 316.3 | 240.2 |
-| 40 | 443.2 | 405.3 |
-| 50 | 438.2 | 458.6 |
+| Iteration | Held-out return |
+|---|---|
+| 0 | 23.6 |
+| 10 | 25.4 |
+| 20 | 92.2 |
+| 30 | 240.2 |
+| 40 | 405.3 |
+| 50 | 458.6 |
+| 59 | 469.0 |
 
 For scale: an untrained zero policy scores about 2 and survives ~140 steps
 before drifting out of the volume; a hand-written cascaded controller
-scores 638 and holds station for the full 500.
+scores 638 and holds station for the full 500. The learned policy reaches
+roughly 70% of the hand-written controller's return, from nothing but the
+reward signal.
 
 ::: tip Reproduce it
 ```bash
-uav-sim train hover --iterations 100 --directions 8 --episodes 8 --seed 0
+uav-sim train hover --iterations 60 --directions 8 --episodes 8 --seed 0
 ```
-Every number in the table above came from that command. It takes several
-minutes on one core, and gets slower as it improves — a policy that keeps
-flying runs the full 500-step episode instead of crashing at step 30.
+Every number above came from that command. It takes tens of minutes on one
+core, and gets *slower* as it improves — a policy that keeps flying runs
+the full 500-step episode instead of crashing at step 30.
 :::
 
 ## Watching a policy fly

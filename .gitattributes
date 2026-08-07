@@ -1,6 +1,9 @@
-# Large media lives in Git LFS.
+# Simulation GIFs live in Git LFS and are linked from the docs through
+# media.githubusercontent.com, so the site never has to check LFS out.
 *.gif filter=lfs diff=lfs merge=lfs -text
-*.mp4 filter=lfs diff=lfs merge=lfs -text
+
+# The promo video is deliberately NOT in LFS: it sits under docs/public/, so
+# it has to be a real file at build time for the site to bundle and serve it.
 
 # Don't skew language statistics with generated or vendored content.
 docs/package-lock.json linguist-generated=true
