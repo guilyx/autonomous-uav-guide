@@ -11,8 +11,10 @@ export default defineConfig({
     'Multirotor, fixed-wing and VTOL flight models, 40+ runnable simulations, ' +
     'and reinforcement-learning environments for teaching a drone to fly.',
 
-  // GitHub Pages project site. Change this if you deploy at a domain root.
-  base: '/autonomous-uav-guide/',
+  // GitHub Pages serves this as a project site, so assets live under the
+  // repository name. Vercel (used for per-PR previews) serves at the domain
+  // root instead, and would 404 on every asset with that prefix.
+  base: process.env.VERCEL ? '/' : '/autonomous-uav-guide/',
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: [/^https?:\/\/localhost/],
