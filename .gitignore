@@ -44,3 +44,11 @@ htmlcov/
 
 # Generated simulation artifacts
 src/uav_sim/simulations/**/*_log.json
+
+# Trained policies, other than the checked-in reference ones
+policies/*
+!policies/hover.npz
+
+# Docs build output
+docs/.vitepress/dist/
+docs/.vitepress/cache/

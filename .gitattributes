@@ -1,1 +1,17 @@
+# Large media lives in Git LFS.
 *.gif filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+
+# Keep line endings sane across platforms for text.
+*.py   text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.ts   text eol=lf
+*.vue  text eol=lf
+*.css  text eol=lf
+
+# Don't skew language statistics with generated or vendored content.
+docs/package-lock.json linguist-generated=true
+uv.lock                linguist-generated=true
