@@ -30,11 +30,17 @@ jobs:
         with:
           # VitePress reads git history to show last-updated timestamps.
           fetch-depth: 0
-          lfs: true
+          # No LFS. The simulation GIFs are the only LFS content, and the
+          # docs link them through media.githubusercontent.com rather than
+          # bundling them -- checking them out would spend LFS bandwidth on
+          # every deploy for files the build never opens. The promo video
+          # under docs/public/ is a normal git object precisely so that this
+          # stays true. CI's `Docs build` job proves it: same build, no LFS.
+          lfs: false
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
