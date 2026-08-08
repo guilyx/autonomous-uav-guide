@@ -4,9 +4,11 @@ repos:
   # Conventional commits: feat:, fix:, chore:, docs:, style:, refactor:, test:, etc.
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.27.0
-    stages: [commit-msg]
     hooks:
+      # `stages` belongs on the hook, not the repo — pre-commit warns about
+      # it at the repo level and then ignores it.
       - id: commitizen
+        stages: [commit-msg]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -18,8 +20,12 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
+  # Keep this in step with the ruff version in pyproject's dev group.
+  # A stale pin here is worse than no pin: ruff's formatter changes between
+  # releases, so the two versions fight over the same files and every CI run
+  # reformats what the last local run just formatted.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.15.1
     hooks:
       - id: ruff
         args: [--fix]

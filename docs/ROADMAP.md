@@ -1,10 +1,27 @@
-# Roadmap — Future Evolutions
+# Roadmap
 
 > Erwin Lejeune — 2026-02-19
 
-This document captures planned improvements, new features, and architectural
-evolutions for the Autonomous UAV Guide project. Items are grouped by domain
-and roughly prioritised within each section (high → low).
+Planned improvements, grouped by domain and roughly prioritised within each
+section. Items marked **done** have shipped; the rest are open, and most are
+a reasonable first contribution.
+
+See [CONTRIBUTING](https://github.com/guilyx/autonomous-uav-guide/blob/main/CONTRIBUTING.md)
+for the bar a new algorithm has to clear, and
+[CHANGELOG](https://github.com/guilyx/autonomous-uav-guide/blob/main/CHANGELOG.md)
+for what has already landed.
+
+## Recently shipped
+
+- **Fixed-wing aerodynamics rebuilt** on the full Beard & McLain
+  coefficient model, with a numerical trim solver, four airframe presets
+  and a derived-gain autopilot.
+- **VTOL transition** with a shared wing model, a rate-limited tilt
+  actuator and a mode-scheduled controller that holds altitude across the
+  handover.
+- **Reinforcement-learning gym** — six environments and a dependency-free
+  trainer.
+- **`uav-sim` CLI** with catalogue discovery and a physics self-check.
 
 ---
 
@@ -25,17 +42,25 @@ and roughly prioritised within each section (high → low).
 - Add ground-effect thrust augmentation when `z < 2 * rotor_radius`.
 
 ### 1.3 VTOL Improvements
-- Full tilt-wing model (not just tilt-rotor): wing generates lift as
-  a function of angle-of-attack and airspeed.
-- Transition corridor planner: auto-compute safe tilt schedule given
-  wing CL, weight, and desired forward speed.
-- Back-transition stall protection.
+- **done** — wing lift as a function of angle of attack and airspeed,
+  shared with the fixed-wing airframe model.
+- **done** — airspeed-scheduled transition, so the rotors only tilt
+  further forward once the wing can take up the slack.
+- Back-transition stall protection. The current back-transition
+  deliberately passes through stall while decelerating; the rotors carry
+  the aircraft, but an explicit envelope guard would be better.
+- Full tilt-*wing* model, where the wing itself rotates.
+- More than one tilt-rotor preset.
 
 ### 1.4 Fixed-Wing Autonomy
-- Full mission waypoint navigation for fixed-wing (orbit, racetrack,
-  return-to-launch patterns).
-- L1 adaptive guidance law for fixed-wing path following.
-- Wind-aware Dubins path planner for fixed-wing.
+- **done** — altitude, airspeed and course hold, with gains derived from
+  each airframe's control authority.
+- Mission waypoint navigation: orbit, racetrack and return-to-launch
+  patterns.
+- L1 adaptive guidance law for path following.
+- Wind-aware Dubins path planner.
+- Wind and gust models. The aerodynamics already work from an
+  air-relative velocity, so wind enters in one place.
 
 ---
 
@@ -51,10 +76,13 @@ and roughly prioritised within each section (high → low).
 - Sliding mode controller for aggressive manoeuvres.
 
 ### 2.3 Reinforcement Learning
-- PPO/SAC agent for aggressive trajectory tracking (replace PID in
-  the inner loop during acrobatic manoeuvres).
-- Sim-to-real transfer pipeline with domain randomisation on mass,
-  inertia, motor time constants, and wind.
+- **done** — six environments plus a pure-NumPy trainer (ARS and CEM),
+  and optional Gymnasium registration.
+- PPO/SAC agent for aggressive trajectory tracking, replacing the inner
+  loop during acrobatic manoeuvres.
+- Domain randomisation over mass, inertia, motor time constants and wind.
+  Policies trained today are tuned to a single airframe.
+- Recurrent policies for the partially-observed tasks.
 
 ### 2.4 Unified Controller Architecture
 - Merge `CascadedPIDController` and `FlightController` into a single

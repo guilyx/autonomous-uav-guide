@@ -1,0 +1,53 @@
+name: Algorithm request
+description: Suggest an algorithm to implement
+labels: [enhancement, algorithm]
+body:
+  - type: input
+    id: algorithm
+    attributes:
+      label: Algorithm
+      placeholder: Informed RRT*
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - path planning
+        - trajectory planning
+        - path tracking
+        - trajectory tracking
+        - state estimation
+        - perception
+        - swarm
+        - vehicle model
+        - reinforcement learning
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: reference
+    attributes:
+      label: Reference
+      description: Author, title, venue, year. A DOI or arXiv link is ideal.
+      placeholder: Gammell et al., "Informed RRT*", IROS 2014
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why this one
+      description: What does it do that the existing implementations do not?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this myself

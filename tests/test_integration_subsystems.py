@@ -156,9 +156,9 @@ class TestVisualServoConvergence:
             pos[2] = np.clip(pos[2], 3.0, 20.0)
             max_dist = max(max_dist, float(np.linalg.norm(pos - target)))
 
-        assert (
-            max_dist < initial_dist * 2.0
-        ), f"Drone diverged: max distance {max_dist:.1f} > 2× initial {initial_dist:.1f}"
+        assert max_dist < initial_dist * 2.0, (
+            f"Drone diverged: max distance {max_dist:.1f} > 2× initial {initial_dist:.1f}"
+        )
 
     def test_no_divergence(self) -> None:
         gimbal = Gimbal(max_rate=3.0)
@@ -339,9 +339,9 @@ class TestSwarmConvergence:
             positions += velocities * 0.05
 
         final_spread = float(np.std(positions))
-        assert (
-            final_spread < initial_spread * 0.5
-        ), f"Spread should decrease: {initial_spread:.1f} → {final_spread:.1f}"
+        assert final_spread < initial_spread * 0.5, (
+            f"Spread should decrease: {initial_spread:.1f} → {final_spread:.1f}"
+        )
 
     def test_reynolds_agents_dont_diverge(self) -> None:
         from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking

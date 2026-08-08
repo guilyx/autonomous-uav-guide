@@ -1,0 +1,22 @@
+name: Documentation issue
+description: Something in the docs is wrong, missing or unclear
+labels: [documentation]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: URL or file path
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong
+      description: |
+        If something was hard to understand, say what you expected it to
+        say. "I could not tell which pitch sign convention applies" is more
+        actionable than "the docs are confusing".
+    validations:
+      required: true

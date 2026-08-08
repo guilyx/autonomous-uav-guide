@@ -58,6 +58,75 @@ def euler_to_rotation(phi: float, theta: float, psi: float) -> NDArray[np.floati
 
 
 # ---------------------------------------------------------------------------
+# Body-frame convention bridge (FLU <-> FRD)
+# ---------------------------------------------------------------------------
+#
+# This library uses a Forward-Left-Up body frame throughout, because the
+# world frame is ENU and that keeps "up is +z" true everywhere. Classical
+# aerodynamics texts (Beard & McLain, Stevens & Lewis) instead use
+# Forward-Right-Down. The two differ by a 180 deg rotation about the shared
+# forward axis, so converting either way is the same sign flip on y and z.
+#
+# Note this also flips the sign of pitch- and yaw-like quantities: a body
+# rate ``q`` that is "nose up" in FRD is "nose down" in FLU.
+
+_FLU_FRD_FLIP = np.array([1.0, -1.0, -1.0])
+
+
+def flu_to_frd(vector_flu: NDArray[np.floating]) -> NDArray[np.floating]:
+    """Convert a body-frame vector from Forward-Left-Up to Forward-Right-Down."""
+    return np.asarray(vector_flu, dtype=float) * _FLU_FRD_FLIP
+
+
+def frd_to_flu(vector_frd: NDArray[np.floating]) -> NDArray[np.floating]:
+    """Convert a body-frame vector from Forward-Right-Down to Forward-Left-Up.
+
+    The transform is its own inverse — it is a 180 deg rotation about ``x``.
+    """
+    return np.asarray(vector_frd, dtype=float) * _FLU_FRD_FLIP
+
+
+def gravity_in_body(
+    phi: float,
+    theta: float,
+    gravity: float = 9.81,
+) -> NDArray[np.floating]:
+    """Gravity vector expressed in the FLU body frame.
+
+    Equivalent to ``R.T @ [0, 0, -g]`` but written out in closed form. In
+    level flight this returns ``[0, 0, -g]``: gravity points along body-down,
+    which is ``-z`` in a Forward-Left-Up frame.
+    """
+    cp, sp = np.cos(phi), np.sin(phi)
+    ct, st = np.cos(theta), np.sin(theta)
+    return np.array([gravity * st, -gravity * ct * sp, -gravity * ct * cp])
+
+
+def euler_rates_from_body_rates(
+    phi: float,
+    theta: float,
+    rates_body: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Body angular rates ``[p, q, r]`` → Euler rates ``[phi', theta', psi']``.
+
+    Standard ZYX kinematic relation. The ``cos(theta)`` denominator is
+    floored to keep the result finite at the gimbal-lock singularity.
+    """
+    p_rate, q_rate, r_rate = rates_body
+    cp, sp = np.cos(phi), np.sin(phi)
+    ct = np.cos(theta)
+    ct = ct if abs(ct) > 1e-9 else np.sign(ct or 1.0) * 1e-9
+    common = q_rate * sp + r_rate * cp
+    return np.array(
+        [
+            p_rate + common * np.tan(theta),
+            q_rate * cp - r_rate * sp,
+            common / ct,
+        ]
+    )
+
+
+# ---------------------------------------------------------------------------
 # Single-point transforms
 # ---------------------------------------------------------------------------
 

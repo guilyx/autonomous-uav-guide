@@ -73,7 +73,7 @@ def main() -> None:
             failed.append(sim)
             print("  -> FAILED", flush=True)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Done: {len(sims) - len(failed)}/{len(sims)} succeeded")
     if failed:
         print("Failed:")

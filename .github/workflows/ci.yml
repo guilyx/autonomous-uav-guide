@@ -6,27 +6,151 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
 
 jobs:
-  lint-and-test:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
         with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --all-groups
-
+          version: latest
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --all-groups
       - name: Run pre-commit checks
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          version: latest
+          enable-cache: true
+      - run: uv python install 3.12
+
+      # Our own code. This gates the build: anything bandit flags here is
+      # something we wrote and can fix.
+      - name: Static analysis (bandit)
+        run: uvx bandit -q -r src scripts
+
+      # Producing the input gates, even though auditing it does not. An
+      # audit that cannot read its input reports nothing, which looks
+      # exactly like an audit that found nothing.
+      #
+      # --no-header matters: FORCE_COLOR is set for the whole workflow, so
+      # uv wraps its header comment in ANSI codes. The escape byte lands
+      # before the '#', pip-audit stops seeing a comment, and it rejects
+      # the entire file on line 1.
+      - name: Export the locked dependency set
+        run: |
+          uv export --all-groups --format requirements-txt \
+            --no-emit-project --no-hashes --no-header --no-annotate > deps.txt
+          test -s deps.txt
+          # Written as an `if`, not `! grep ...`: bash ignores errexit for a
+          # command whose status is inverted with `!`, so the negated form
+          # can never fail the step.
+          if grep -q $'\x1b' deps.txt; then
+            echo "deps.txt contains ANSI escapes; pip-audit will reject it" >&2
+            exit 1
+          fi
+
+      # Advisories appear against pinned versions with no warning and no fix
+      # available, so the audit itself reports rather than gates -- a red X
+      # nobody can clear teaches contributors to ignore CI.
+      - name: Python dependency audit
+        continue-on-error: true
+        run: uvx pip-audit -r deps.txt --desc
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: Docs dependency audit
+        working-directory: docs
+        run: |
+          # Print the full report. Two findings survive here, both in the
+          # vite range that VitePress 1.6.4 pins, both Windows-only and
+          # dev-server-only, and neither reaching the built site. See the
+          # `overrides` note in docs/package.json.
+          npm audit || true
+          # Gate on critical alone, so this step stays green until something
+          # lands that genuinely cannot wait for an upstream release.
+          npm audit --audit-level=critical
+
+  test:
+    name: Test (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          lfs: false
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          version: latest
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: uv sync --all-groups
       - name: Run tests
-        run: uv run pytest
+        run: uv run pytest -q --cov=uav_sim --cov-report=xml --cov-report=term-missing
+      - name: Upload coverage
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: warn
+
+  smoke:
+    name: CLI smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          version: latest
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --all-groups
+      - name: Physics self-check
+        run: uv run uav-sim doctor
+      - name: Catalogue is discoverable
+        run: |
+          uv run uav-sim list
+          uv run uav-sim envs
+      - name: Trim solver
+        run: uv run uav-sim trim skywalker_x8
+      - name: Training loop runs end to end
+        run: uv run uav-sim train hover --iterations 3 --directions 4 --eval-episodes 3
+
+  docs:
+    name: Docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci
+        working-directory: docs
+      - run: npm run build
+        working-directory: docs

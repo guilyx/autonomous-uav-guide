@@ -1,0 +1,59 @@
+name: Bug report
+description: Something behaves incorrectly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Physics bugs are the interesting ones. The most useful report says
+        what you started from, what you applied, what happened, and what
+        should have happened.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe?
+      placeholder: The fixed-wing climbs away instead of holding altitude.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      placeholder: Trimmed flight should hold altitude to within a metre.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A short script beats a description. This is rendered as Python.
+      render: python
+      placeholder: |
+        from uav_sim.vehicles.fixed_wing import FixedWing
+
+        aircraft = FixedWing()
+        controls = aircraft.reset_trimmed(airspeed=35.0, altitude=200.0)
+        for _ in range(5000):
+            aircraft.step(controls, 0.002)
+        print(aircraft.state[2])  # expected ~200, got 812
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `uav-sim --version`
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Environment
+      description: Output of `uav-sim doctor`
+      render: shell

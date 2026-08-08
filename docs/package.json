@@ -11,7 +11,12 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "markdown-it-mathjax3": "^4.3.2",
     "vitepress": "^1.6.0",
     "vue": "^3.5.0"
+  },
+  "//overrides": "esbuild is forced ahead of what VitePress 1.6.4 resolves (0.21.x), which clears the dev-server advisory in that range. The build is verified against it. Drop this once VitePress 2 ships a stable release and brings its own vite 7 / esbuild 0.25 tree.",
+  "overrides": {
+    "esbuild": "^0.25.12"
   }
 }
