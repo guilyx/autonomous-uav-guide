@@ -25,6 +25,16 @@ from uav_sim.cli.console import heading, style, table
 
 __all__ = ["main", "build_parser"]
 
+# (module name, required). Checked by `doctor` -- fixed at import time, never
+# built from a command-line argument or any other external input.
+_DEPENDENCY_CHECKS = (
+    ("numpy", True),
+    ("scipy", True),
+    ("matplotlib", True),
+    ("gymnasium", False),
+    ("imageio_ffmpeg", False),
+)
+
 _BANNER = r"""
    __  _____ _   __  ______
   / / / /   | | / / / ___/ /__ _
@@ -346,13 +356,7 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
 
     print(heading("Dependencies"))
     ok = True
-    for name, required in [
-        ("numpy", True),
-        ("scipy", True),
-        ("matplotlib", True),
-        ("gymnasium", False),
-        ("imageio_ffmpeg", False),
-    ]:
+    for name, required in _DEPENDENCY_CHECKS:
         found = importlib.util.find_spec(name) is not None
         if found:
             try:

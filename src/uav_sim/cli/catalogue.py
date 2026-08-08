@@ -78,7 +78,17 @@ class SimulationEntry:
 
     def load(self):
         """Import the simulation module and return it."""
-        return importlib.import_module(self.module)
+        module_name = self.module
+        # `module_name` is built from `category`/`name`, and discover() only
+        # ever populates those from directories it finds walking our own
+        # package -- never from a caller-supplied string (see `resolve()`,
+        # which filters already-discovered entries rather than building a
+        # module path from its `selector` argument). This check is the
+        # boundary that keeps that true if a future caller stops going
+        # through discover().
+        if not module_name.startswith("uav_sim.simulations."):
+            raise ValueError(f"refusing to import {module_name!r}: outside uav_sim.simulations")
+        return importlib.import_module(module_name)
 
 
 @lru_cache(maxsize=1)

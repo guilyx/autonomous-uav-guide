@@ -750,6 +750,9 @@ def make_outro_scene():
 
 def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     """Render every scene and encode to MP4."""
+    if not 1 <= fps <= 240:
+        raise ValueError(f"fps must be in [1, 240], got {fps}")
+
     try:
         import imageio_ffmpeg
     except ImportError:  # pragma: no cover - depends on the optional extra
@@ -763,9 +766,12 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     total_frames = sum(int(scene.seconds * fps) for scene in scenes)
 
-    # Argument list, no shell: the binary comes from imageio-ffmpeg and every
-    # argument but the output path is a literal.
-    process = subprocess.Popen(  # noqa: S603  # nosec B603
+    # Argument list, no shell: the binary comes from imageio-ffmpeg, fps is
+    # bounds-checked above, and the output path is exactly the file this
+    # function's caller asked to be written -- the same trust boundary as
+    # `open(output, "wb")`. Static scanners flag any Popen with a non-literal
+    # argument regardless of shell=False; this one has none.
+    process = subprocess.Popen(  # noqa: S603  # nosec B603  # nosemgrep
         [
             ffmpeg,
             "-y",
