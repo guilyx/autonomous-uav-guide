@@ -179,7 +179,7 @@ def main() -> None:
             n_show = max(1, int(frac * len(tree_nodes)))
             l_nodes.set_data([frac], [n_show])
             title.set_text(
-                f"RRT* Growing — {n_show}/{len(tree_nodes)} nodes, " f"{int(frac * n_segs)} edges"
+                f"RRT* Growing — {n_show}/{len(tree_nodes)} nodes, {int(frac * n_segs)} edges"
             )
         elif f < p2_end:
             raw_3d.set_alpha(1.0)

@@ -1,85 +1,143 @@
-<!-- Erwin Lejeune — 2026-02-23 -->
-# Getting Started
+# First flight
 
-## Prerequisites
+Five minutes, four things: hover a quadrotor, read its state, fly a wing,
+and render a simulation.
 
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+If you have not installed it yet, see [Installation](/guide/installation).
 
-## Installation
-
-```bash
-git clone https://github.com/guilyx/autonomous-quadrotor-guide.git
-cd autonomous-quadrotor-guide
-uv sync
-```
-
-## Running a Simulation
-
-Every simulation lives under `src/uav_sim/simulations/<category>/<name>/` and can be run as a Python module:
-
-```bash
-python -m uav_sim.simulations.estimation.ekf
-```
-
-This produces a GIF animation and a JSON log file in the simulation directory.
-
-## Building a Simulation Programmatically
-
-For open-source users integrating their own algorithms, use the composition API:
+## 1. Hover a quadrotor
 
 ```python
-from pathlib import Path
+import numpy as np
+from uav_sim.vehicles.multirotor import Quadrotor
 
-from uav_sim.simulations import (
-    StaticPathPlanner,
-    create_environment,
-    create_mission,
-    create_sim,
-    run_sim,
-    spawn_quad_platform,
-)
-from uav_sim.simulations.common import figure_8_path
-from uav_sim.simulations.standards import SimulationStandard
+quad = Quadrotor()
+quad.reset(position=np.array([0.0, 0.0, 2.0]))
 
-standard = SimulationStandard.flight_coupled()
-planner = StaticPathPlanner(
-    figure_8_path(duration=standard.duration, dt=0.15, alt=12.0, alt_amp=0.0, rx=8.0, ry=6.0)
-)
-env = create_environment(n_buildings=0, world_size=30.0)
-platform = spawn_quad_platform()
-mission = create_mission(
-    path=planner.plan(world=env.world, standard=standard),
-    standard=standard,
-    fallback_policy="none",
-)
-sim = create_sim(name="my_first_sim", out_dir=Path("."), mission=mission)
-result = run_sim(sim=sim, env=env, platform=platform)
-print(result.mission.completion.timeout_reason)
+# Thrust that exactly balances weight.
+hover = quad.hover_wrench()          # [T, tau_x, tau_y, tau_z]
+
+# Spin the motors up first: they start at zero and have a time constant,
+# so commanding hover thrust to stopped motors still drops the aircraft.
+for motor in quad.motors:
+    motor.reset(motor.thrust_to_omega(hover[0] / 4.0))
+
+for _ in range(500):
+    quad.step(hover, 0.005)
+
+print(quad.position)     # [0. 0. 2.]
 ```
 
-## Running Tests
+Open-loop hover holds because the wrench is exact. Perturb it and the
+quadrotor drifts, as it should — a real one needs a controller.
+
+## 2. Read the state
+
+The 12-element state is the same shape for every vehicle:
+
+```python
+quad.state          # [x y z  φ θ ψ  vx vy vz  p q r]
+quad.position       # [x, y, z]        world ENU
+quad.euler          # [roll, pitch, yaw]
+quad.velocity       # world ENU
+quad.angular_velocity
+```
+
+`z` is **altitude**, increasing upward, and positive pitch is
+**nose-down**. Both are consequences of the ENU/FLU convention — see
+[Frames and conventions](/guide/conventions), which is worth ten minutes
+before you write a controller.
+
+## 3. Fly it under closed-loop control
+
+```python
+import numpy as np
+from uav_sim.vehicles.multirotor import Quadrotor
+from uav_sim.path_tracking.pid_controller import CascadedPIDController
+
+quad = Quadrotor()
+quad.reset(position=np.array([0.0, 0.0, 1.0]))
+controller = CascadedPIDController()
+
+target = np.array([3.0, 2.0, 4.0])
+for _ in range(3000):
+    wrench = controller.compute(quad.state, target, dt=0.005)
+    quad.step(wrench, 0.005)
+
+print(np.round(quad.position, 2))    # close to [3. 2. 4.]
+```
+
+## 4. Fly a fixed wing
+
+A wing cannot hover, so the interesting starting point is not "at rest" but
+**trimmed** — the attitude and control setting at which steady flight is an
+equilibrium. The library solves for it:
+
+```python
+from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+
+aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
+controls = aircraft.reset_trimmed(airspeed=18.0, altitude=120.0)
+
+print(controls)              # [elevator, aileron, rudder, throttle]
+
+for _ in range(6000):
+    aircraft.step(controls, 0.005)
+
+print(aircraft.state[2])     # still 120.0 — trim is a real equilibrium
+print(aircraft.airspeed)     # still 18.0
+```
+
+Thirty seconds of open-loop flight with no altitude drift is the strongest
+single statement that the aerodynamics are self-consistent. Add a
+controller to go somewhere:
+
+```python
+from uav_sim.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
+
+pilot = FixedWingAutopilot(aircraft.fw_params)
+command = AutopilotCommand(altitude=160.0, airspeed=20.0, course=1.0)
+
+for _ in range(12_000):
+    aircraft.step(pilot.compute(aircraft.state, command, 0.01), 0.01)
+```
+
+The autopilot derives its own gains from the airframe's control
+derivatives, so the same code flies a 0.6 kg foam trainer and a 25 kg cargo
+UAV. See [Autopilots](/vehicles/autopilots).
+
+## 5. Run a simulation
+
+Forty-odd simulations render an animated three-panel view:
 
 ```bash
-uv run pytest tests/
+uav-sim list                       # browse them
+uav-sim info astar_3d              # references, module path, command
+uav-sim run astar_3d               # render the GIF
 ```
 
-## Project Structure
+Or as a module:
 
+```bash
+python -m uav_sim.simulations.path_planning.astar_3d
 ```
-src/uav_sim/
-├── vehicles/          # 6DOF dynamics (Quadrotor, Fixed-Wing, VTOL)
-├── control/           # Cascaded PID, State Machine
-├── sensors/           # GPS, IMU, Lidar, Camera, Gimbal
-├── estimation/        # EKF, UKF, Complementary, Particle Filter
-├── perception/        # Occupancy mapping, SLAM, visual servoing
-├── path_planning/     # A*, RRT*, PRM, Coverage
-├── path_tracking/     # PID, LQR, Pure Pursuit
-├── trajectory_planning/  # Min-Snap, Polynomial, Frenet
-├── trajectory_tracking/  # Feedback Lin., MPPI, NMPC
-├── swarm/             # Reynolds, Consensus, Virtual Structure
-├── costmap/           # Occupancy grid, inflation layers
-├── environment/       # World, obstacles, buildings
-├── visualization/     # 3-panel viz, vehicle artists
-└── simulations/       # 40+ runnable demos
+
+Each writes its GIF next to its `run.py`, plus a JSON log of the run.
+
+## 6. Teach one to fly itself
+
+```bash
+uav-sim envs                       # the six RL tasks
+uav-sim train hover                # train a policy from scratch
+uav-sim play hover --policy policies/hover.npz --gif hover.gif
 ```
+
+The trainer is pure NumPy — no deep-learning stack required. See
+[Reinforcement learning](/learning/).
+
+## Where to go next
+
+- [Frames and conventions](/guide/conventions) — the sign rules. Read this one.
+- [Flight models](/vehicles/) — what each airframe models, and what it does not.
+- [CLI reference](/guide/cli) — the full command surface.
+- [Algorithm atlas](/simulations/) — every simulation with a preview.

@@ -1,2 +1,6 @@
 [bandit]
-skips = S101
+# S101 — assert_used. Pytest is built on assert; flagging it is noise.
+# B404/B603 — subprocess use in scripts/make_promo.py. It invokes the
+#   ffmpeg binary shipped by imageio-ffmpeg with a fixed argument list and
+#   shell=False. No part of the command line comes from user input.
+skips = S101,B404,B603
