@@ -1152,7 +1152,7 @@ def load_atlas_tiles():
             for index, frame in enumerate(ImageSequence.Iterator(source)):
                 if index in wanted:
                     picked[index] = np.asarray(
-                        frame.convert("RGB").resize((width, height), Image.BILINEAR),
+                        frame.convert("RGB").resize((width, height), Image.Resampling.BILINEAR),
                         dtype=np.uint8,
                     )
                 if len(picked) == len(wanted):
@@ -1195,9 +1195,7 @@ def make_atlas_scene(tiles):
         within = position - page
         alpha = float(np.clip(min(within, 1.0 - within) / 0.16, 0.0, 1.0))
 
-        montage = np.repeat(
-            np.repeat(ink.reshape(1, 1, 3), grid_h, axis=0), grid_w, axis=1
-        ).astype(np.float32)
+        montage = np.tile(ink, (grid_h, grid_w, 1)).astype(np.float32)
 
         shown = tiles[page * per_page : (page + 1) * per_page]
         for index, (_, _, frames) in enumerate(shown):
@@ -1243,8 +1241,9 @@ def make_atlas_scene(tiles):
                 family="DejaVu Sans Mono",
             )
 
-        scene.stats = [(str(len(tiles)), "simulations"), ("9", "domains")]
+        scene.stats = [(str(len(tiles)), "simulations"), (str(categories), "domains")]
 
+    categories = len({category for _, category, _ in tiles})
     scene = Scene(
         "The whole atlas",
         "every simulation in the library, as it renders",
@@ -1460,7 +1459,7 @@ def write_poster(scenes: list[Scene], output: Path, *, scene_index: int, progres
         raise SystemExit(1) from None
 
     # Half size: it is a poster behind a play button, not a still to study.
-    Image.fromarray(frame).resize((WIDTH // 2, HEIGHT // 2), Image.LANCZOS).save(output)
+    Image.fromarray(frame).resize((WIDTH // 2, HEIGHT // 2), Image.Resampling.LANCZOS).save(output)
     return output
 
 
