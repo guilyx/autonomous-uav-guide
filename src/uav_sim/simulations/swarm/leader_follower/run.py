@@ -35,13 +35,16 @@ def main() -> None:
     offsets = np.array([[8, 0, 0], [-8, 0, 0], [0, 8, 0.0]])
     ctrl = LeaderFollower(offsets=offsets, kp=3.0, kd=2.0)
     n_ag = 1 + ctrl.num_followers
+    # Seeded: the global np.random state is shared with everything else in
+    # the process, so drawing from it makes the run irreproducible.
+    rng = np.random.default_rng(11)
+    orbit_rate, climb_rate, r = 0.08, 0.04, 25.0
     pos = np.zeros((n_ag, 3))
-    pos[0] = [50, 50, CRUISE_ALT]
+    pos[0] = [50 + r, 50, CRUISE_ALT]
     for i in range(ctrl.num_followers):
-        pos[1 + i] = pos[0] + offsets[i] + np.random.randn(3) * 15
+        pos[1 + i] = pos[0] + offsets[i] + rng.normal(0, 1, 3) * 15
     vel = np.zeros((n_ag, 3))
     dt, n_steps = 0.1, 300
-    damping = 0.85
 
     snap = [pos.copy()]
     follower_err = np.zeros((n_steps, ctrl.num_followers))
@@ -49,18 +52,29 @@ def main() -> None:
 
     for step in range(n_steps):
         t = step * dt
-        r = 25.0
         new_leader = np.array(
             [
-                50 + r * np.cos(0.08 * t),
-                50 + r * np.sin(0.08 * t),
-                CRUISE_ALT + 5 * np.sin(0.04 * t),
+                50 + r * np.cos(orbit_rate * t),
+                50 + r * np.sin(orbit_rate * t),
+                CRUISE_ALT + 5 * np.sin(climb_rate * t),
             ]
         )
-        leader_vel = (new_leader - pos[0]) / dt
+        # Analytic derivative, not a backward difference: differencing
+        # against the initial position produced a 250 m/s spike on step 0
+        # and kicked every follower out of formation.
+        leader_vel = np.array(
+            [
+                -r * orbit_rate * np.sin(orbit_rate * t),
+                r * orbit_rate * np.cos(orbit_rate * t),
+                5 * climb_rate * np.cos(climb_rate * t),
+            ]
+        )
         pos[0] = new_leader
         forces = ctrl.compute_forces(pos[0], leader_vel, pos[1:], vel[1:])
-        vel[1:] = vel[1:] * damping + forces * dt
+        # Double integrator: kd in the PD is the damping. A multiplicative
+        # decay on top behaves like drag and leaves the followers trailing
+        # their slots by a constant offset.
+        vel[1:] = vel[1:] + forces * dt
         pos[1:] = pos[1:] + vel[1:] * dt
         snap.append(pos.copy())
         for fi in range(ctrl.num_followers):
@@ -161,6 +175,8 @@ def main() -> None:
                     R,
                     size=3.0,
                     arm_colors=(cmap_colors[ai], cmap_colors[ai]),
+                    center_color=cmap_colors[ai],
+                    motor_color=cmap_colors[ai],
                 )
             )
 

@@ -54,7 +54,10 @@ class SimulationStandard:
             duration=STANDARD_DURATION,
             takeoff_duration=3.0,
             landing_duration=4.0,
-            loiter_duration=1.0,
+            # Long enough for the position loop to actually settle on the
+            # final waypoint (its time constant is ~1.2 s). One second left
+            # the vehicle still decelerating when the mission was scored.
+            loiter_duration=3.0,
             lookahead=3.0,
             waypoint_threshold=1.5,
             adaptive=True,

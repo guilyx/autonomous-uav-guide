@@ -17,6 +17,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.ekf import ExtendedKalmanFilter
+from uav_sim.estimation.process_noise import constant_acceleration_input_q
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.simulations.common import CRUISE_ALT, figure_8_path
@@ -34,6 +35,9 @@ matplotlib.use("Agg")
 WORLD_SIZE = 30.0
 GPS_STD = 0.5
 IMU_ACCEL_STD = 0.10
+# Constant turn-on bias, the term that makes dead-reckoning actually
+# diverge. White noise alone only random-walks and stays small over 30 s.
+IMU_ACCEL_BIAS = np.array([0.035, -0.025, 0.02])
 GPS_RATE_HZ = 5
 BENCHMARK_MODE = True
 
@@ -119,15 +123,12 @@ def main() -> None:
         return H
 
     ekf = ExtendedKalmanFilter(state_dim=6, meas_dim=3, f=_f, h=_h, F_jac=_F, H_jac=_H)
-    ekf.Q = np.diag(
-        [
-            0.001,
-            0.001,
-            0.001,
-            IMU_ACCEL_STD**2,
-            IMU_ACCEL_STD**2,
-            IMU_ACCEL_STD**2,
-        ]
+    # Q is the covariance accumulated over ONE step, so it has to scale
+    # with dt. Feeding a dt-independent diag() here (0.1 on the velocity
+    # states at 200 Hz) tells the filter its velocity is worthless, and it
+    # degenerates into echoing raw GPS — worse than dead-reckoning.
+    ekf.Q = constant_acceleration_input_q(
+        dt, sigma_a=IMU_ACCEL_STD, sigma_bias=float(np.linalg.norm(IMU_ACCEL_BIAS))
     )
     ekf.R = np.diag([GPS_STD**2, GPS_STD**2, GPS_STD**2])
     ekf.x = np.zeros(6)
@@ -151,7 +152,7 @@ def main() -> None:
 
         true_accel = (s[6:9] - prev_vel) / dt if i > 0 else np.zeros(3)
         prev_vel = s[6:9].copy()
-        accel_noisy = true_accel + rng.normal(0, IMU_ACCEL_STD, 3)
+        accel_noisy = true_accel + IMU_ACCEL_BIAS + rng.normal(0, IMU_ACCEL_STD, 3)
         if i > 0:
             imu_vel = imu_vel + accel_noisy * dt
             imu_pos = imu_pos + imu_vel * dt

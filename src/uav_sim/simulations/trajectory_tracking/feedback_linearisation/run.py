@@ -22,9 +22,9 @@ from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.simulations.common import (
     STANDARD_DURATION,
     WORLD_SIZE,
-    figure_8_ref,
     frame_indices,
 )
+from uav_sim.simulations.standards import figure_8_reference
 from uav_sim.trajectory_tracking.feedback_linearisation import (
     FeedbackLinearisationTracker,
 )
@@ -39,8 +39,8 @@ def main() -> None:
     world, buildings = default_world()
 
     quad = Quadrotor()
-    rp0, _ = figure_8_ref(0.0)
-    quad.reset(position=rp0.copy())
+    rp0, rv0, _ = figure_8_reference(0.0)
+    quad.reset(position=rp0.copy(), velocity=rv0.copy())
     init_hover(quad)
 
     tracker = FeedbackLinearisationTracker(
@@ -60,11 +60,12 @@ def main() -> None:
         if not (np.all(np.isfinite(s[:3])) and np.all(np.abs(s[:3]) < 500)):
             break
         t = i * dt
-        rp, rv = figure_8_ref(t)
+        rp, rv, ra = figure_8_reference(t)
         refs[i] = rp
         states[i] = s
         times[i] = t
-        ra = np.zeros(3)
+        # The reference acceleration is the flat feed-forward this tracker
+        # exists to exploit; zeroing it reduces it to a plain PD loop.
         quad.step(tracker.compute(s, rp, rv, ra), dt)
 
     pos = states[:, :3]

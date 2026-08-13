@@ -27,11 +27,27 @@ $$
 3. Project predicted points into measurement space.
 4. Compute gain from cross-covariance and update posterior state.
 
+## What This Simulation Measures
+
+GPS is unavailable; the drone localises from noisy **ranges to four
+surveyed ground anchors**. That measurement model is nonlinear in the
+state, which is what makes it a UKF demo — given a linear model the UKF
+reduces exactly to the Kalman filter and there is nothing to show.
+
 ## Tuning Guidance
 
 - Use small `\alpha` (`1e-3` to `1e-1`) for local spread control.
 - Set `\beta=2` for approximately Gaussian priors.
 - Increase process noise if sigma clouds collapse under model mismatch.
+- **Scale `Q` with the step size.** `Q` is the covariance accumulated over
+  one step. A fixed `diag([...])` at 200 Hz claims the velocity
+  random-walks by 0.32 m/s every 5 ms; the filter concludes its own
+  prediction is worthless and degenerates into echoing the measurement.
+  Build it from an acceleration noise density instead
+  (`uav_sim.estimation.constant_velocity_q`), and the tuning survives a
+  change of rate.
+- Sanity-check the reported 1σ against the actual error. A filter whose
+  covariance is much tighter than its error has stopped listening.
 
 ## Failure Modes and Diagnostics
 

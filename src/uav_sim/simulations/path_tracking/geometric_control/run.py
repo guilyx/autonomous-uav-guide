@@ -24,9 +24,9 @@ from uav_sim.path_tracking.geometric_controller import GeometricController
 from uav_sim.simulations.common import (
     STANDARD_DURATION,
     WORLD_SIZE,
-    figure_8_ref,
     frame_indices,
 )
+from uav_sim.simulations.standards import figure_8_reference
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.three_panel import ThreePanelViz
@@ -38,8 +38,8 @@ def main() -> None:
     world, buildings = default_world()
 
     quad = Quadrotor()
-    rp0, _ = figure_8_ref(0.0)
-    quad.reset(position=rp0.copy())
+    rp0, rv0, _ = figure_8_reference(0.0)
+    quad.reset(position=rp0.copy(), velocity=rv0.copy())
     init_hover(quad)
 
     ctrl = GeometricController()
@@ -53,11 +53,15 @@ def main() -> None:
 
     for i in range(steps):
         t = i * dt
-        rp, rv = figure_8_ref(t)
+        rp, rv, ra = figure_8_reference(t)
         refs[i] = rp
         states[i] = quad.state
         times[i] = t
-        w = ctrl.compute(quad.state, rp, target_vel=rv)
+        # Acceleration feed-forward and dt (for the desired angular rate)
+        # are what turn this into a tracking controller. Without them the
+        # error is driven by the reference acceleration itself and the
+        # quadrotor overshoots the fast axis of the figure-8 by ~17%.
+        w = ctrl.compute(quad.state, rp, target_vel=rv, target_acc=ra, dt=dt)
         thrust_hist[i] = w[0]
         quad.step(w, dt)
 

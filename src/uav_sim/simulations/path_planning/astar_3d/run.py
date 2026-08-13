@@ -168,6 +168,10 @@ def main() -> None:
     ax_d.set_xlim(0, 1)
     ax_d.set_ylim(0, len(explored) * 1.1)
     ax_d.set_xlabel("Progress", fontsize=7)
+    # Precomputed curve, revealed progressively. Setting a single point per
+    # frame (as this did) leaves a one-point line, which draws as nothing.
+    search_progress = np.linspace(0.0, 1.0, len(explore_frames))
+    search_nodes = np.array([k + 1 for k in explore_frames], dtype=float)
     (l_nodes,) = ax_d.plot([], [], "c-", lw=0.8, label="Explored")
     ax_d.axhline(len(explored), color="gray", ls="--", lw=0.5, alpha=0.5)
     ax_d.text(
@@ -196,10 +200,11 @@ def main() -> None:
             pts = explored_arr[: k + 1]
             explore_scat_3d._offsets3d = (pts[:, 0], pts[:, 1], pts[:, 2])
             explore_scat_top.set_offsets(pts[:, :2])
-            frac = (ei + 1) / len(explore_frames)
-            l_nodes.set_data([frac], [k + 1])
+            j = min(ei + 1, len(explore_frames))
+            l_nodes.set_data(search_progress[:j], search_nodes[:j])
             title.set_text(f"A* Exploration — {k + 1}/{n_explored_total} nodes")
         elif f < p2_end:
+            l_nodes.set_data(search_progress, search_nodes)
             raw_3d.set_alpha(1.0)
             raw_3d.set_data(raw_path[:, 0], raw_path[:, 1])
             raw_3d.set_3d_properties(raw_path[:, 2])

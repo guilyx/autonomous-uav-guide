@@ -1,9 +1,22 @@
 # Erwin Lejeune - 2026-02-19
 """MPPI trajectory tracking — figure-8 with sampled trajectories.
 
-Tracks a figure-8 reference using MPPI as a local planner. All sampled
-rollouts are rendered (faded cyan) with the chosen optimal trajectory
-highlighted in green. A data panel shows tracking error and speed.
+MPPI is the **local planner** here: it samples control sequences over a
+double-integrator model of the vehicle, weights them by cost, and returns
+a nominal trajectory. A geometric SE(3) controller then tracks that plan
+on the full 6-DOF quadrotor. All sampled rollouts are rendered (faded
+cyan) with the nominal plan highlighted in green.
+
+Three things this demo has to get right to be MPPI at all:
+
+* Score each horizon step against the reference **at that step**, not
+  against where the reference is now. The latter asks the plan to stop
+  at the present reference point and costs roughly half a horizon of lag.
+* Hand the tracker the nominal plan's position *and velocity*, not a
+  position setpoint synthesised by multiplying an acceleration by an
+  arbitrary speed constant.
+* Draw the nominal rollout as "optimal", not the unweighted mean of the
+  samples — that mean is an average of mostly-rejected candidates.
 
 Reference: G. Williams et al., "Information Theoretic MPC for Model-Based
 Reinforcement Learning," ICRA, 2017. DOI: 10.1109/ICRA.2017.7989202
@@ -19,12 +32,12 @@ import numpy as np
 from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from uav_sim.path_tracking.geometric_controller import GeometricController
 from uav_sim.simulations.common import (
     WORLD_SIZE,
-    figure_8_ref,
     frame_indices,
 )
+from uav_sim.simulations.standards import figure_8_reference
 from uav_sim.trajectory_tracking.mppi import MPPITracker
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -34,24 +47,26 @@ matplotlib.use("Agg")
 
 DT_SIM = 0.005
 DT_MPPI = 0.05
-SPEED_SCALE = 12.0
-
-_OBS_SPHERES: list[tuple[np.ndarray, float]] = []
+HORIZON = 20
 
 
 def _dyn(x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    """Double integrator: control is acceleration."""
     pos, vel = x[:3], x[3:6]
     nv = vel + u * dt
     np_ = pos + nv * dt
     return np.concatenate([np_, nv])
 
 
-def _cost(x: np.ndarray, u: np.ndarray, ref: np.ndarray | None) -> float:
+def _cost(x: np.ndarray, u: np.ndarray, ref: np.ndarray | None, k: int) -> float:
+    """Quadratic cost against the reference *at horizon step k*."""
     if ref is None:
         return 0.0
-    goal_cost = float(np.sum((x[:3] - ref[:3]) ** 2))
-    vel_cost = 0.05 * float(np.sum(u**2))
-    return goal_cost + vel_cost
+    target = ref[k]
+    pos_cost = float(np.sum((x[:3] - target[:3]) ** 2))
+    vel_cost = 0.3 * float(np.sum((x[3:6] - target[3:6]) ** 2))
+    effort = 0.02 * float(np.sum(u**2))
+    return pos_cost + vel_cost + effort
 
 
 def main() -> None:
@@ -60,7 +75,7 @@ def main() -> None:
     tracker = MPPITracker(
         state_dim=6,
         control_dim=3,
-        horizon=20,
+        horizon=HORIZON,
         num_samples=200,
         lambda_=0.3,
         control_std=np.array([3.0, 3.0, 1.5]),
@@ -70,11 +85,11 @@ def main() -> None:
     )
 
     quad = Quadrotor()
-    rp0, _ = figure_8_ref(0.0)
-    quad.reset(position=rp0.copy())
+    rp0, rv0, _ = figure_8_reference(0.0)
+    quad.reset(position=rp0.copy(), velocity=rv0.copy())
     init_hover(quad)
 
-    ctrl = CascadedPIDController()
+    ctrl = GeometricController()
 
     dur = 30.0
     sim_steps_per_mppi = max(1, int(DT_MPPI / DT_SIM))
@@ -82,7 +97,8 @@ def main() -> None:
 
     states_list: list[np.ndarray] = []
     refs_list: list[np.ndarray] = []
-    rollout_snapshots: list[np.ndarray | None] = []
+    rollout_snapshots: list[np.ndarray] = []
+    nominal_snapshots: list[np.ndarray] = []
     seed_counter = 0
 
     for ci in range(max_mppi_steps):
@@ -91,24 +107,38 @@ def main() -> None:
             break
 
         t = ci * DT_MPPI
-        rp, rv = figure_8_ref(t)
+        rp, rv, _ = figure_8_reference(t)
+
+        # Reference sampled forward over the whole horizon, so the plan is
+        # scored against where the trajectory *will be*.
+        horizon_ref = np.array(
+            [np.concatenate(figure_8_reference(t + (k + 1) * DT_MPPI)[:2]) for k in range(HORIZON)]
+        )
 
         mppi_state = np.concatenate([s[:3], s[6:9]])
-        mppi_ref = np.concatenate([rp, rv])
-        result = tracker.compute(
-            mppi_state, reference=mppi_ref, seed=seed_counter, return_rollouts=True
+        u_mppi, rollouts = tracker.compute(
+            mppi_state, reference=horizon_ref, seed=seed_counter, return_rollouts=True
         )
-        u_mppi, rollouts = result
         seed_counter += 1
+        nominal = tracker.nominal_rollout(mppi_state)
         rollout_snapshots.append(rollouts.copy())
+        nominal_snapshots.append(nominal[:, :3].copy())
 
-        desired_pos = s[:3] + u_mppi * DT_MPPI * SPEED_SCALE
-        desired_pos = np.clip(desired_pos, 0.0, WORLD_SIZE)
+        # Track the first step of the nominal plan: position, velocity and
+        # the acceleration MPPI chose, all of which the tracker can use.
+        plan_pos = np.clip(nominal[0, :3], 0.0, WORLD_SIZE)
+        plan_vel = nominal[0, 3:6]
 
         for _ in range(sim_steps_per_mppi):
             states_list.append(quad.state.copy())
             refs_list.append(rp.copy())
-            wrench = ctrl.compute(quad.state, desired_pos, dt=DT_SIM)
+            wrench = ctrl.compute(
+                quad.state,
+                plan_pos,
+                target_vel=plan_vel,
+                target_acc=u_mppi,
+                dt=DT_SIM,
+            )
             quad.step(wrench, DT_SIM)
 
     states = np.array(states_list) if states_list else np.zeros((1, 12))
@@ -153,12 +183,12 @@ def main() -> None:
     rollout_lines_3d = []
     rollout_lines_top = []
     for _ in range(n_show):
-        (ln3d,) = viz.ax3d.plot([], [], [], "c-", lw=0.3, alpha=0.15)
+        (ln3d,) = viz.ax3d.plot([], [], [], "c-", lw=0.6, alpha=0.45)
         rollout_lines_3d.append(ln3d)
-        (lnt,) = viz.ax_top.plot([], [], "c-", lw=0.3, alpha=0.15)
+        (lnt,) = viz.ax_top.plot([], [], "c-", lw=0.6, alpha=0.45)
         rollout_lines_top.append(lnt)
-    (opt_3d,) = viz.ax3d.plot([], [], [], "lime", lw=1.5, alpha=0.8, label="MPPI Optimal")
-    (opt_top,) = viz.ax_top.plot([], [], "lime", lw=1.2, alpha=0.7)
+    (opt_3d,) = viz.ax3d.plot([], [], [], "lime", lw=2.0, alpha=0.95, label="MPPI nominal plan")
+    (opt_top,) = viz.ax_top.plot([], [], "lime", lw=1.6, alpha=0.9)
     viz.ax3d.legend(fontsize=7, loc="upper left")
 
     ax_d = viz.setup_data_axes(title="Tracking Error [m]", ylabel="Error")
@@ -188,24 +218,23 @@ def main() -> None:
 
         mppi_idx = min(k // sim_steps_per_mppi, len(rollout_snapshots) - 1)
         rolls = rollout_snapshots[mppi_idx]
-        if rolls is not None:
-            rng_vis = np.random.default_rng(f)
-            sample_ids = rng_vis.choice(len(rolls), size=min(n_show, len(rolls)), replace=False)
-            for j, ln3d in enumerate(rollout_lines_3d):
-                if j < len(sample_ids):
-                    r = rolls[sample_ids[j]]
-                    ln3d.set_data(r[:, 0], r[:, 1])
-                    ln3d.set_3d_properties(r[:, 2])
-                    rollout_lines_top[j].set_data(r[:, 0], r[:, 1])
-                else:
-                    ln3d.set_data([], [])
-                    ln3d.set_3d_properties([])
-                    rollout_lines_top[j].set_data([], [])
+        rng_vis = np.random.default_rng(f)
+        sample_ids = rng_vis.choice(len(rolls), size=min(n_show, len(rolls)), replace=False)
+        for j, ln3d in enumerate(rollout_lines_3d):
+            if j < len(sample_ids):
+                r = rolls[sample_ids[j]]
+                ln3d.set_data(r[:, 0], r[:, 1])
+                ln3d.set_3d_properties(r[:, 2])
+                rollout_lines_top[j].set_data(r[:, 0], r[:, 1])
+            else:
+                ln3d.set_data([], [])
+                ln3d.set_3d_properties([])
+                rollout_lines_top[j].set_data([], [])
 
-            mean_roll = np.mean(rolls, axis=0)
-            opt_3d.set_data(mean_roll[:, 0], mean_roll[:, 1])
-            opt_3d.set_3d_properties(mean_roll[:, 2])
-            opt_top.set_data(mean_roll[:, 0], mean_roll[:, 1])
+        nominal = nominal_snapshots[mppi_idx]
+        opt_3d.set_data(nominal[:, 0], nominal[:, 1])
+        opt_3d.set_3d_properties(nominal[:, 2])
+        opt_top.set_data(nominal[:, 0], nominal[:, 1])
 
         l_err.set_data(times[:k], err[:k])
         l_spd.set_data(times[:k], speed[:k])

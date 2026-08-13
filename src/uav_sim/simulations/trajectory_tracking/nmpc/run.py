@@ -2,8 +2,14 @@
 """NMPC online trajectory tracking — figure-8.
 
 A nonlinear MPC (single-shooting, RK2 integration) runs as a
-receding-horizon controller at 50 Hz, tracking a figure-8 reference
-trajectory.
+receding-horizon controller at 20 Hz, tracking a figure-8 reference
+trajectory. Decision variables are collective thrust and body rates over
+four control blocks spanning a 1 s prediction horizon; a proportional rate
+loop turns the commanded rates into torques.
+
+The reference is sampled **forward over the horizon**, not held at its
+present value. Freezing it is the difference between a tracking controller
+and one that is permanently arriving where the trajectory used to be.
 
 Reference: M. Diehl et al., "Real-Time Optimization and Nonlinear Model
 Predictive Control of Processes Governed by Differential-Algebraic
@@ -21,10 +27,11 @@ from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.simulations.common import (
+    STANDARD_DURATION,
     WORLD_SIZE,
-    figure_8_ref,
     frame_indices,
 )
+from uav_sim.simulations.standards import figure_8_reference
 from uav_sim.trajectory_tracking.nmpc import NMPCTracker
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -33,26 +40,29 @@ from uav_sim.visualization.three_panel import ThreePanelViz
 matplotlib.use("Agg")
 
 DT_SIM = 0.01
-DT_CTRL = 0.02
+DT_CTRL = 0.05
+HORIZON = 20
+PRED_DT = 0.05
 
 
 def main() -> None:
     world, buildings = default_world()
 
     quad = Quadrotor()
-    rp0, _ = figure_8_ref(0.0)
-    quad.reset(position=rp0.copy())
+    rp0, rv0, _ = figure_8_reference(0.0)
+    quad.reset(position=rp0.copy(), velocity=rv0.copy())
     init_hover(quad)
 
     nmpc = NMPCTracker(
-        horizon=6,
-        dt=DT_CTRL,
+        horizon=HORIZON,
+        dt=PRED_DT,
+        n_blocks=4,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dur = 45.0
+    dur = STANDARD_DURATION
     sim_steps_per_ctrl = max(1, int(DT_CTRL / DT_SIM))
     max_ctrl_steps = int(dur / DT_CTRL)
 
@@ -66,8 +76,13 @@ def main() -> None:
             break
 
         t = ci * DT_CTRL
-        rp, rv = figure_8_ref(t)
-        wrench = nmpc.compute(s, rp, ref_vel=rv)
+        rp, rv, _ = figure_8_reference(t)
+        horizon_ref = [figure_8_reference(t + (k + 1) * PRED_DT) for k in range(HORIZON)]
+        wrench = nmpc.compute(
+            s,
+            np.array([h[0] for h in horizon_ref]),
+            ref_vel=np.array([h[1] for h in horizon_ref]),
+        )
 
         for _ in range(sim_steps_per_ctrl):
             states_list.append(quad.state.copy())
@@ -86,6 +101,8 @@ def main() -> None:
     logger.log_metadata("algorithm", "NMPC")
     logger.log_metadata("dt_sim", DT_SIM)
     logger.log_metadata("dt_ctrl", DT_CTRL)
+    logger.log_metadata("horizon_s", HORIZON * PRED_DT)
+    logger.log_metadata("control_blocks", nmpc.n_blocks)
     logger.log_metadata("duration", times[-1] if len(times) > 0 else 0.0)
     for i in range(n_total):
         logger.log_step(

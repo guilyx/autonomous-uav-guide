@@ -19,7 +19,8 @@ from uav_sim.environment import default_world
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.flight_ops import init_hover
 from uav_sim.path_tracking.mpc_controller import MPCController
-from uav_sim.simulations.common import WORLD_SIZE, figure_8_ref, frame_indices
+from uav_sim.simulations.common import STANDARD_DURATION, WORLD_SIZE, frame_indices
+from uav_sim.simulations.standards import figure_8_reference
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.three_panel import ThreePanelViz
@@ -31,19 +32,20 @@ def main() -> None:
     world, buildings = default_world()
 
     quad = Quadrotor()
-    rp0, _ = figure_8_ref(0.0)
-    quad.reset(position=rp0.copy())
+    rp0, rv0, _ = figure_8_reference(0.0)
+    quad.reset(position=rp0.copy(), velocity=rv0.copy())
     init_hover(quad)
 
+    horizon = 8
     ctrl = MPCController(
-        horizon=8,
+        horizon=horizon,
         dt=0.05,
         mass=quad.params.mass,
         gravity=quad.params.gravity,
         inertia=quad.params.inertia,
     )
 
-    dt, dur = 0.01, 20.0
+    dt, dur = 0.01, STANDARD_DURATION
     ctrl_dt = 0.05
     steps = int(dur / dt)
     states = np.zeros((steps, 12))
@@ -54,14 +56,22 @@ def main() -> None:
     ctrl_counter = 0
     for i in range(steps):
         t = i * dt
-        rp, rv = figure_8_ref(t)
+        rp, rv, _ = figure_8_reference(t)
         refs[i] = rp
         states[i] = quad.state
         times[i] = t
 
         ctrl_counter += dt
         if ctrl_counter >= ctrl_dt - 1e-8:
-            wrench = ctrl.compute(quad.state, rp, target_vel=rv)
+            # Preview: the reference sampled over the whole horizon. This
+            # is what MPC buys over LQR; hold it at its current value and
+            # the two are the same controller with a slower solver.
+            preview = [figure_8_reference(t + k * ctrl_dt) for k in range(horizon + 1)]
+            wrench = ctrl.compute(
+                quad.state,
+                np.array([p[0] for p in preview]),
+                target_vel=np.array([p[1] for p in preview]),
+            )
             ctrl_counter = 0.0
         quad.step(wrench, dt)
 
@@ -73,7 +83,7 @@ def main() -> None:
     logger.log_metadata("algorithm", "MPC")
     logger.log_metadata("dt", dt)
     logger.log_metadata("duration", dur)
-    logger.log_metadata("horizon", 8)
+    logger.log_metadata("horizon", horizon)
     for i in range(steps):
         logger.log_step(
             t=times[i],

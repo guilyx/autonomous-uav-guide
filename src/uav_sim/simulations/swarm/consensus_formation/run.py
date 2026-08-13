@@ -162,6 +162,8 @@ def main() -> None:
                     R,
                     size=3.0,
                     arm_colors=(colors[i][:3], colors[i][:3]),
+                    center_color=colors[i][:3],
+                    motor_color=colors[i][:3],
                 )
             )
 

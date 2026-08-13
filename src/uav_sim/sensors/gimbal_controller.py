@@ -63,14 +63,23 @@ class PointTracker:
 
 @dataclass
 class BBoxTrackerConfig:
-    """Gains for keeping a bounding box centred in the image."""
+    """Gains for keeping a bounding box centred in the image.
 
-    kp_pan: float = 1.5
-    kp_tilt: float = 1.5
-    kd_pan: float = 0.3
-    kd_tilt: float = 0.3
+    Gains are **angular rates**: radians per second of gimbal motion per
+    radian of pointing error, i.e. units of 1/s.  The natural closed-loop
+    time constant is ``1 / kp``.
+    """
+
+    kp_pan: float = 6.0
+    kp_tilt: float = 6.0
+    kd_pan: float = 0.4
+    kd_tilt: float = 0.4
     ema_alpha: float = 0.3
     desired_size_ratio: float = 0.3
+    h_fov: float = 1.0
+    """Horizontal field of view [rad], used to convert NDC into an angle."""
+    v_fov: float = 0.8
+    """Vertical field of view [rad]."""
 
 
 class BBoxTracker:
@@ -79,10 +88,18 @@ class BBoxTracker:
     Uses EMA filtering on the raw detection and PD control to reduce
     jitter from noisy measurements.
 
+    Normalised image coordinates are converted to a **pointing angle**
+    before entering the loop.  They are not angles: NDC spans the whole
+    field of view over [-1, 1], so with a 0.6 rad FOV a unit of NDC is
+    about 3.2 radians of apparent gain.  Feeding NDC straight into a
+    positional gimbal command makes the loop's real gain depend on the
+    lens, drives it far past its stability limit, and leaves the gimbal
+    bouncing between its rate limits instead of tracking.
+
     Parameters
     ----------
     gimbal : the gimbal to control.
-    config : PD gains and EMA smoothing coefficient.
+    config : rate gains, FOV, and EMA smoothing coefficient.
     """
 
     def __init__(
@@ -111,24 +128,35 @@ class BBoxTracker:
         bbox_size_ratio : bbox diagonal / image diagonal.
         dt : timestep.
         """
-        a = self.cfg.ema_alpha
+        c = self.cfg
+        a = c.ema_alpha
         if self._filtered is None:
             self._filtered = np.array(bbox_center_norm, dtype=float)
         else:
             self._filtered = a * bbox_center_norm + (1.0 - a) * self._filtered
 
-        err_pan = float(self._filtered[0])
-        err_tilt = float(-self._filtered[1])
+        # NDC → pointing angle. Image +x points right and +y points down,
+        # while pan increases counter-clockwise (left) and tilt increases
+        # upwards, so both errors enter with a negative sign.
+        err_pan = -float(np.arctan(self._filtered[0] * np.tan(c.h_fov / 2.0)))
+        err_tilt = -float(np.arctan(self._filtered[1] * np.tan(c.v_fov / 2.0)))
 
         d_pan = (err_pan - self._prev_err_pan) / max(dt, 1e-6)
         d_tilt = (err_tilt - self._prev_err_tilt) / max(dt, 1e-6)
         self._prev_err_pan = err_pan
         self._prev_err_tilt = err_tilt
 
-        desired_pan = self.gimbal.pan + self.cfg.kp_pan * err_pan + self.cfg.kd_pan * d_pan
-        desired_tilt = self.gimbal.tilt + self.cfg.kp_tilt * err_tilt + self.cfg.kd_tilt * d_tilt
+        # Angular rate command, integrated over the step. The gimbal's own
+        # rate limit is then a limit, not the thing holding the loop
+        # together.
+        pan_rate = c.kp_pan * err_pan + c.kd_pan * d_pan
+        tilt_rate = c.kp_tilt * err_tilt + c.kd_tilt * d_tilt
 
-        self.gimbal.step(desired_pan, desired_tilt, dt)
+        self.gimbal.step(
+            self.gimbal.pan + pan_rate * dt,
+            self.gimbal.tilt + tilt_rate * dt,
+            dt,
+        )
 
 
 def project_to_image(
@@ -140,6 +168,9 @@ def project_to_image(
     yaw: float = 0.0,
 ) -> tuple[NDArray[np.floating], bool]:
     """Project a world point into normalised image coordinates.
+
+    Normalised device coordinates follow the image convention: ``+x`` is
+    right and ``+y`` is down, both spanning ``[-1, 1]`` across the FOV.
 
     Returns
     -------

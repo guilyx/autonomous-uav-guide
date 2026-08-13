@@ -58,8 +58,14 @@ def main() -> None:
             velocity=states[i, 6:9],
             tracking_error=err[i],
         )
+    # The mean over the whole trace is dominated by the 22 m transit from
+    # the launch point, which says nothing about how well it holds. Score
+    # the hold separately.
+    settled = times >= times[-1] - 5.0
     logger.log_summary("mean_error_m", float(err.mean()))
     logger.log_summary("max_error_m", float(err.max()))
+    logger.log_summary("settled_error_m", float(err[settled].mean()))
+    logger.log_summary("settled_max_error_m", float(err[settled].max()))
     logger.log_summary("final_error_m", float(err[-1]))
     logger.save()
 

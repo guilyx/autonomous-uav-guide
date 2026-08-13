@@ -31,6 +31,17 @@ class PurePursuit3D:
         Desired forward speed along the path [m/s].
     adaptive : bool
         If True, scale look-ahead with speed for smoother conservative tracking.
+    goal_threshold : float | None
+        Distance at which the *final* waypoint counts as reached.
+        Defaults to ``waypoint_threshold``, but the two want different
+        values: advancing between waypoints early is what keeps the path
+        smooth, while declaring the mission finished early leaves the
+        vehicle short of the goal by exactly that slack.
+    progress_window : float
+        How far ahead **along the path** to search when snapping the
+        segment index to the nearest waypoint, as a multiple of the
+        look-ahead distance.  Bounded so the tracker cannot skip a whole
+        lobe of a self-intersecting trajectory.
     """
 
     def __init__(
@@ -41,11 +52,17 @@ class PurePursuit3D:
         *,
         adaptive: bool = True,
         smoothing: float = 0.3,
+        goal_threshold: float | None = None,
+        progress_window: float = 1.5,
     ) -> None:
         self.lookahead = lookahead
         self.waypoint_threshold = waypoint_threshold
         self.speed = speed
         self.adaptive = adaptive
+        self.goal_threshold = (
+            waypoint_threshold if goal_threshold is None else float(goal_threshold)
+        )
+        self._progress_window = max(0.0, float(progress_window))
         self._smoothing = smoothing
         self._idx = 0
         self._prev_target: NDArray[np.floating] | None = None
@@ -82,7 +99,23 @@ class PurePursuit3D:
         if n == 0:
             return position.copy()
 
-        # Advance segment index when close to current waypoint
+        # Advance the segment index to the nearest waypoint ahead, searching
+        # only as far along the path as the look-ahead reaches. Advancing
+        # purely on proximity is not enough: on a trajectory that loops back
+        # near itself the tracker can sit outside the threshold of path[idx]
+        # while the look-ahead sphere keeps intersecting an earlier segment,
+        # and it circles there forever.
+        #
+        # The window is measured in *arc length*, not waypoint count. On a
+        # lawnmower path adjacent lanes pass within a metre of each other
+        # while being many metres apart along the path, so an index window
+        # lets the tracker hop lanes and skip most of the coverage.
+        window = self._search_window(path, self._idx)
+        if window > self._idx:
+            ahead = path[self._idx : window + 1]
+            nearest = int(np.argmin(np.linalg.norm(ahead - position, axis=1)))
+            self._idx += nearest
+
         while self._idx < n - 1:
             if float(np.linalg.norm(position - path[self._idx])) < self.waypoint_threshold:
                 self._idx += 1
@@ -114,6 +147,16 @@ class PurePursuit3D:
 
         return raw_target
 
+    def _search_window(self, path: NDArray[np.floating], start: int) -> int:
+        """Last waypoint index within ``progress_window`` look-aheads along the path."""
+        budget = self._progress_window * self.lookahead
+        idx = start
+        travelled = 0.0
+        while idx < len(path) - 1 and travelled < budget:
+            travelled += float(np.linalg.norm(path[idx + 1] - path[idx]))
+            idx += 1
+        return idx
+
     def is_path_complete(
         self,
         position: NDArray[np.floating],
@@ -122,7 +165,7 @@ class PurePursuit3D:
         """Check if the UAV has reached the final waypoint."""
         if len(path) == 0:
             return True
-        return float(np.linalg.norm(position - path[-1])) < self.waypoint_threshold
+        return float(np.linalg.norm(position - path[-1])) < self.goal_threshold
 
     @staticmethod
     def _intersect_sphere_segment(
