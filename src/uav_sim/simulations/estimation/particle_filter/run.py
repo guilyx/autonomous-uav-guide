@@ -125,9 +125,7 @@ def main() -> None:
         ),
         seed=7,
     )
-    init_state = np.array(
-        [pf_states[0, 0], pf_states[0, 1], pf_states[0, 6], pf_states[0, 7]]
-    )
+    init_state = np.array([pf_states[0, 0], pf_states[0, 1], pf_states[0, 6], pf_states[0, 7]])
     pf.reset(init_state, spread=np.array([1.5, 1.5, 0.5, 0.5]))
 
     true_xy = np.zeros((n_steps, 2))

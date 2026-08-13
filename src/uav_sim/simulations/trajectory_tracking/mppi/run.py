@@ -112,10 +112,7 @@ def main() -> None:
         # Reference sampled forward over the whole horizon, so the plan is
         # scored against where the trajectory *will be*.
         horizon_ref = np.array(
-            [
-                np.concatenate(figure_8_reference(t + (k + 1) * DT_MPPI)[:2])
-                for k in range(HORIZON)
-            ]
+            [np.concatenate(figure_8_reference(t + (k + 1) * DT_MPPI)[:2]) for k in range(HORIZON)]
         )
 
         mppi_state = np.concatenate([s[:3], s[6:9]])

@@ -153,9 +153,7 @@ def main() -> None:
             boundaries.append(i)
     boundaries.append(n_steps - 1)
     for a, b in zip(boundaries[:-1], boundaries[1:]):
-        ax_d.axvspan(
-            times[a], times[b], color=_MODE_COLORS[modes[a]], alpha=0.12, lw=0, zorder=0
-        )
+        ax_d.axvspan(times[a], times[b], color=_MODE_COLORS[modes[a]], alpha=0.12, lw=0, zorder=0)
         ax_d.text(
             0.5 * (times[a] + times[b]),
             114,

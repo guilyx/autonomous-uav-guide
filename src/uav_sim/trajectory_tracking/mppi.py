@@ -85,7 +85,9 @@ class MPPITracker:
         self.U = np.zeros((self.horizon, self.control_dim))
 
     def _cost(self, x, u, reference, k: int) -> float:
-        assert self.cost_fn is not None
+        """Evaluate the cost, passing the horizon step when it is accepted."""
+        if self.cost_fn is None:
+            raise RuntimeError("cost_fn must be set before evaluating cost.")
         if self._cost_takes_step:
             return float(self.cost_fn(x, u, reference, k))
         return float(self.cost_fn(x, u, reference))

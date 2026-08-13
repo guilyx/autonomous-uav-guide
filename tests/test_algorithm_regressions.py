@@ -75,9 +75,7 @@ class TestCameraFrameHandedness:
         g = Gimbal()
         g.reset(pan=0.0, tilt=0.0)
         cam = np.array([0.0, 0.0, 10.0])
-        ndc, visible = project_to_image(
-            np.array([10.0, 0.0, 8.0]), cam, g, h_fov=1.0, v_fov=0.8
-        )
+        ndc, visible = project_to_image(np.array([10.0, 0.0, 8.0]), cam, g, h_fov=1.0, v_fov=0.8)
         assert visible
         assert ndc[1] > 0.0
 
@@ -266,9 +264,7 @@ class TestVirtualStructureFeedforward:
             )
             vel = vel + forces * 0.05
             pos = pos + vel * 0.05
-            errors.append(
-                np.linalg.norm(pos - ctrl.desired_positions(body_pos), axis=1).mean()
-            )
+            errors.append(np.linalg.norm(pos - ctrl.desired_positions(body_pos), axis=1).mean())
         return errors[-1]
 
     def test_velocity_feedforward_removes_the_standing_lag(self):

@@ -65,9 +65,7 @@ def _command(t: float) -> AutopilotCommand:
     """Mission schedule: straight leg → climbing turn → cruise → descending turn."""
     for end_t, course, altitude in _LEGS:
         if t < end_t:
-            return AutopilotCommand(
-                altitude=altitude, airspeed=CRUISE_SPEED, course=float(course)
-            )
+            return AutopilotCommand(altitude=altitude, airspeed=CRUISE_SPEED, course=float(course))
     return AutopilotCommand(altitude=DESCEND_ALT, airspeed=CRUISE_SPEED, course=0.0)
 
 
