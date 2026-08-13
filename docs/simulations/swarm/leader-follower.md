@@ -21,6 +21,18 @@ $$
 
 ## Practical Notes
 
+- Differentiate the leader's trajectory **analytically**. Differencing its
+  position against the previous value works everywhere except the first
+  step, where "previous" is the initialisation — the atlas demo produced a
+  250 m/s velocity spike on step 0 and blew the formation apart before it
+  began.
+- The leader velocity term is what lets followers hold station on a moving
+  leader at all; without it they trail by an offset proportional to leader
+  speed. Follower error on the atlas demo: 1.90 m mean before, 0.64 m after.
+- Seed the RNG that places the followers. Drawing from the global
+  `np.random` state makes the run irreproducible and couples it to whatever
+  else in the process touched that state.
+
 - Robust leader estimation is critical for formation stability.
 - Follower chain topologies are simple but vulnerable to upstream failure.
 - Relative-sensing noise can cause accordion oscillations.

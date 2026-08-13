@@ -6,7 +6,7 @@ hero:
   text: Flight algorithms, from scratch
   tagline: >
     Multirotor, fixed-wing and VTOL flight models with the physics written
-    out in full — plus 40 runnable simulations and a gym for teaching a
+    out in full — plus 42 runnable simulations and a gym for teaching a
     drone to fly itself.
   actions:
     - theme: brand
@@ -68,9 +68,11 @@ features:
   - icon: 🔬
     title: Reproducible, not decorative
     details: >
-      Every parameter in a model is read by that model. Every claim in these
-      pages has a test behind it. Where a number is representative rather
-      than measured, the docs say so.
+      Every parameter in a model is read by that model. Tests assert on
+      flight behaviour, not array shapes — because a controller that
+      overshoots and a filter that ignores its own prediction both pass a
+      shape check. Where a number is representative rather than measured,
+      the docs say so.
     link: /guide/conventions
     linkText: Conventions
 ---
@@ -81,16 +83,17 @@ features:
 
 <video class="uav-promo" controls playsinline preload="none" poster="/media/promo-poster.png" src="/media/promo.mp4"></video>
 
-Fifty seconds, and every frame of it is simulated by
+Seventy-eight seconds: nine algorithm families in depth, then every one
+of the 42 simulations in the library. Every frame is simulated by
 [`scripts/make_promo.py`](https://github.com/guilyx/autonomous-uav-guide/blob/main/scripts/make_promo.py)
 at render time — the same models this library ships, integrated live. No
 stock footage, and nothing that can drift out of sync with the code.
 
 <StatBand :items="[
-  { value: '40+', label: 'runnable simulations' },
+  { value: '42', label: 'runnable simulations' },
   { value: '3', label: 'airframe families' },
   { value: '6', label: 'RL environments' },
-  { value: '430+', label: 'tests' },
+  { value: '600+', label: 'tests' },
 ]" />
 
 ## Sixty seconds to first flight
@@ -99,7 +102,7 @@ stock footage, and nothing that can drift out of sync with the code.
 pip install uav-sim
 
 uav-sim doctor            # verify the install, run the physics self-checks
-uav-sim list              # browse 40+ simulations
+uav-sim list              # browse 42 simulations
 uav-sim run pid_hover     # render one to a GIF
 uav-sim train hover       # teach a quadrotor to hold position
 ```

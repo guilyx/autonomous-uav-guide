@@ -34,6 +34,27 @@ $$
 
 ## Tuning Guidance
 
+- **`Q` is the covariance accumulated over one step, so it must scale with
+  `dt`.** A fixed `diag([...])` means something different at every rate: at
+  200 Hz a "reasonable looking" `0.1` on the velocity states claims the
+  velocity random-walks by 0.32 m/s every 5 ms. The filter concludes its
+  own prediction is worthless and degenerates into echoing the raw
+  measurement — all the machinery, none of the benefit.
+- Build it from an acceleration noise density instead, and the tuning
+  survives a change of step size:
+
+```python
+from uav_sim.estimation import constant_velocity_q
+ekf.Q = constant_velocity_q(dt, psd=1.0)
+```
+
+- **Sanity-check the reported 1σ against the actual error.** They should be
+  the same order. A filter whose covariance is far tighter than its error
+  has stopped listening; one whose covariance is far looser is wasting the
+  prediction. The atlas demo reports 0.33 m of 1σ against 0.47 m of error.
+- The result to expect: the filter must beat its own sensor. Here, 0.47 m
+  against 0.63 m of raw GPS.
+
 - Start with conservative `Q` to avoid overconfident predictions.
 - Increase `R` for noisy GPS updates in urban or multipath environments.
 - Validate filter consistency using normalized innovation squared (NIS).

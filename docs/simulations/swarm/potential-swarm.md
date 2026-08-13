@@ -17,6 +17,20 @@ where `U_{ij}` can be Lennard-Jones-like or quadratic barrier potentials.
 
 ## Practical Notes
 
+- **Saturate the goal attraction.** Unsaturated linear attraction is
+  thousands of times stronger than the lattice forces at the start of a
+  long transit, so the swarm crosses the map as a disordered blob and only
+  forms up on arrival. Capping it at a fixed radius keeps formation-keeping
+  and navigation comparable throughout.
+- **Clamp the obstacle repulsion.** The `1/d²` term is unbounded, so an
+  agent that clips an obstacle receives an infinite kick and leaves the
+  world. Floor the surface distance and cap the total force.
+- **Score the centroid, not the agents.** A lattice converges with each
+  agent one spacing away from the goal by construction, so mean
+  agent-to-goal distance never goes to zero and reads like a failure. The
+  meaningful numbers are centroid-to-goal error and nearest-neighbour
+  spacing against `d_des`.
+
 - Potential shape determines spacing and rigidity.
 - Local minima are a known issue in cluttered environments.
 - Add damping terms to prevent oscillatory interactions.
