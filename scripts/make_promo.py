@@ -50,6 +50,11 @@ ROSE = "#fb7185"
 TRACE_COLOURS = [SKY, TEAL, VIOLET, AMBER, ROSE]
 
 FPS = 30
+# x264 quality. The video is committed to docs/public/ rather than LFS, so
+# it has to stay under the repository's large-file guard: the atlas scene's
+# forty-two plots are fine detail on a flat background, and cost several
+# times the bitrate of the vector-art scenes around them.
+CRF = 23
 # Index into build_scenes() output: the multirotor scene.
 POSTER_SCENE = 1
 WIDTH, HEIGHT = 1920, 1080
@@ -1383,7 +1388,7 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
             "-preset",
             "medium",
             "-crf",
-            "20",
+            str(CRF),
             # Web-friendly: move the index to the front so it streams.
             "-movflags",
             "+faststart",

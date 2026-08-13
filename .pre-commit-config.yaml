@@ -17,6 +17,11 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
         args: ["--maxkb=6000"]
+        # The promo video is the one binary deliberately committed outside
+        # LFS — it has to be a real file under docs/public/ for the site to
+        # bundle it. Exempting it by name keeps the limit meaningful for
+        # everything else, which is what the check is actually for.
+        exclude: ^docs/public/media/promo\.mp4$
       - id: check-merge-conflict
       - id: debug-statements
 
