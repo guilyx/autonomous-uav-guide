@@ -36,13 +36,26 @@ def main() -> None:
     pos[:, 2] = rng.uniform(35, 65, n_ag)
     vel = np.zeros_like(pos)
     goal = np.array([80.0, 80.0, 50.0])
-    ctrl = PotentialSwarm(d_des=10.0, a=6, b=3, goal_gain=0.5)
+    d_des = 10.0
+    ctrl = PotentialSwarm(
+        d_des=d_des,
+        a=6,
+        b=3,
+        goal_gain=1.0,
+        # Saturate the pull to goal so it stays comparable to the lattice
+        # forces during the 100 m transit; unsaturated it is ~50x stronger
+        # at the start and the swarm crosses the map as a disordered blob.
+        goal_saturation=15.0,
+        max_force=10.0,
+    )
     dt, n_steps = 0.1, 300
     damping = 0.85
 
     snap = [pos.copy()]
     dist_to_goal = np.zeros((n_steps, n_ag))
     mean_dist = np.zeros(n_steps)
+    centroid_err = np.zeros(n_steps)
+    spacing_err = np.zeros(n_steps)
 
     for step in range(n_steps):
         forces = ctrl.compute_forces(pos, goal=goal)
@@ -56,6 +69,12 @@ def main() -> None:
             dist_to_goal[step, i] = np.linalg.norm(pos[i] - goal)
         dists = [np.linalg.norm(pos[i] - pos[j]) for i in range(n_ag) for j in range(i + 1, n_ag)]
         mean_dist[step] = np.mean(dists)
+        centroid_err[step] = float(np.linalg.norm(pos.mean(axis=0) - goal))
+        nearest = [
+            min(np.linalg.norm(pos[i] - pos[j]) for j in range(n_ag) if j != i)
+            for i in range(n_ag)
+        ]
+        spacing_err[step] = float(np.mean(np.abs(np.array(nearest) - d_des)))
 
     times = np.arange(n_steps) * dt
 
@@ -70,7 +89,14 @@ def main() -> None:
             positions=snap[step],
             mean_dist_to_goal=float(dist_to_goal[step].mean()),
             mean_neighbor_dist=mean_dist[step],
+            centroid_error=centroid_err[step],
+            spacing_error=spacing_err[step],
         )
+    # The swarm converges as a *lattice*: individual agents settle one
+    # spacing away from the goal by construction, so centroid error and
+    # nearest-neighbour spacing are the metrics that mean anything.
+    logger.log_summary("final_centroid_error_m", float(centroid_err[-1]))
+    logger.log_summary("final_spacing_error_m", float(spacing_err[-1]))
     logger.log_summary("final_mean_dist_to_goal_m", float(dist_to_goal[-1].mean()))
     logger.log_summary("final_mean_neighbor_dist_m", float(mean_dist[-1]))
     logger.save()
@@ -148,6 +174,8 @@ def main() -> None:
                     R,
                     size=2.5,
                     arm_colors=(c_rgb[i], c_rgb[i]),
+                    center_color=c_rgb[i],
+                    motor_color=c_rgb[i],
                 )
             )
 

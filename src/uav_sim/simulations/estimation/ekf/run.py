@@ -17,6 +17,7 @@ import numpy as np
 
 from uav_sim.environment import default_world
 from uav_sim.estimation.ekf import ExtendedKalmanFilter
+from uav_sim.estimation.process_noise import constant_velocity_q
 from uav_sim.logging import SimLogger
 from uav_sim.path_tracking.pid_controller import CascadedPIDController
 from uav_sim.sensors.gps import GPS
@@ -34,6 +35,11 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 BENCHMARK_MODE = True
+GPS_STD = 0.4
+GPS_RATE_HZ = 5.0
+# Power spectral density of the acceleration the constant-velocity model
+# cannot see. Tuned so the filter's reported 1σ brackets its actual error.
+ACCEL_PSD = 1.0
 
 
 def _truth_states(
@@ -87,7 +93,8 @@ def main() -> None:
         else SimulationStandard.estimation_benchmark().dt
     )
 
-    gps = GPS(noise_std=0.4, seed=42)
+    gps = GPS(noise_std=GPS_STD, rate_hz=GPS_RATE_HZ, seed=42)
+    gps_period = max(1, int(round(1.0 / (GPS_RATE_HZ * dt))))
 
     def _f(x, _u, dt_):
         return np.array(
@@ -108,31 +115,42 @@ def main() -> None:
         return H
 
     ekf = ExtendedKalmanFilter(state_dim=6, meas_dim=3, f=_f, h=_h, F_jac=_F, H_jac=_H)
-    ekf.Q = np.diag([0.02, 0.02, 0.02, 0.1, 0.1, 0.1])
-    ekf.R = np.diag([0.16, 0.16, 0.16])
+    # Q accumulates over one step and must scale with dt — a fixed diag()
+    # at 200 Hz overstates the process noise by orders of magnitude and
+    # collapses the filter onto the raw measurement.
+    ekf.Q = constant_velocity_q(dt, psd=ACCEL_PSD)
+    ekf.R = np.diag([GPS_STD**2] * 3)
     ekf.x = np.zeros(6)
     ekf.x[:3] = flight_states[0, :3]
+    ekf.x[3:] = flight_states[0, 6:9]
     ekf.P = np.eye(6) * 0.5
 
     true_xyz = np.zeros((n_steps, 3))
     est_xyz = np.zeros((n_steps, 3))
     meas_xyz = np.zeros((n_steps, 3))
+    gps_meas = flight_states[0, :3].copy()
     cov_history = np.zeros((n_steps, 3, 3))
 
+    raw_gps_err: list[float] = []
     for i in range(n_steps):
         s = flight_states[i]
         true_xyz[i] = s[:3]
 
-        gps_meas = gps.sense(s)
+        ekf.predict(np.zeros(3), dt)
+        if i % gps_period == 0:
+            gps_meas = gps.sense(s)
+            ekf.update(gps_meas)
+            raw_gps_err.append(float(np.linalg.norm(gps_meas - s[:3])))
         meas_xyz[i] = gps_meas
 
-        ekf.predict(np.zeros(3), dt)
-        ekf.update(gps_meas)
         est_xyz[i] = ekf.x[:3]
         cov_history[i] = ekf.P[:3, :3]
 
     err = np.sqrt(np.sum((true_xyz - est_xyz) ** 2, axis=1))
     cov_trace = np.array([np.trace(cov_history[i]) for i in range(n_steps)])
+    # Per-axis 1σ, so the covariance curve is in metres and can be read
+    # against the error curve instead of being an unrelated m² squiggle.
+    sigma_1 = np.sqrt(cov_trace / 3.0)
     completion = (
         mission.completion
         if mission is not None
@@ -166,6 +184,9 @@ def main() -> None:
     logger.log_completion(**completion.as_dict())
     logger.log_summary("mean_error_m", float(err.mean()))
     logger.log_summary("max_error_m", float(err.max()))
+    # The point of the filter: this must come out below the raw fix error.
+    logger.log_summary("mean_raw_gps_error_m", float(np.mean(raw_gps_err)))
+    logger.log_summary("mean_1sigma_m", float(sigma_1.mean()))
     logger.save()
 
     # ── 3-Panel viz ────────────────────────────────────────────────────
@@ -181,9 +202,8 @@ def main() -> None:
     trail_true = viz.create_trail_artists(color="black")
     trail_est = viz.create_trail_artists(color="dodgerblue")
 
-    # GPS scatter
-    skip_gps = max(1, n_steps // 300)
-    gps_show = meas_xyz[::skip_gps]
+    # GPS scatter: one dot per actual fix, not per simulation step.
+    gps_show = meas_xyz[::gps_period]
     viz.ax3d.scatter(
         gps_show[:, 0],
         gps_show[:, 1],
@@ -204,9 +224,9 @@ def main() -> None:
         title="EKF Error & Covariance",
     )
     ax_err.set_xlim(0, times[-1])
-    ax_err.set_ylim(0, max(1.0, err.max() * 1.2))
+    ax_err.set_ylim(0, max(1.0, max(err.max(), sigma_1.max()) * 1.2))
     (err_line,) = ax_err.plot([], [], "r-", lw=0.8, label="Pos err")
-    (cov_line,) = ax_err.plot([], [], "b--", lw=0.6, label="tr(P)")
+    (cov_line,) = ax_err.plot([], [], "b--", lw=0.6, label="1σ from tr(P)")
     ax_err.legend(fontsize=7)
 
     skip = max(1, n_steps // 200)
@@ -219,7 +239,7 @@ def main() -> None:
         viz.update_trail(trail_est, est_xyz, k)
         viz.update_vehicle(est_xyz[k], flight_states[k, 3:6], size=1.5)
         err_line.set_data(times[:k], err[:k])
-        cov_line.set_data(times[:k], cov_trace[:k])
+        cov_line.set_data(times[:k], sigma_1[:k])
 
     anim.animate(update, n_frames)
     anim.save()

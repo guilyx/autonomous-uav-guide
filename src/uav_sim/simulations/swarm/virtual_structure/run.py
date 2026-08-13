@@ -38,32 +38,64 @@ def main() -> None:
     pos = np.array([[50, 50, 50.0]] * n_ag) + rng.uniform(-5, 5, (n_ag, 3))
     vel = np.zeros((n_ag, 3))
     dt, n_steps = 0.1, 300
-    damping = 0.85
 
     snap = [pos.copy()]
     form_err = np.zeros((n_steps, n_ag))
     centroid_hist = np.zeros((n_steps, 3))
     mean_dist = np.zeros(n_steps)
 
+    orbit_rate = 0.06
+    climb_rate = 0.03
+    r = 25.0
     for step in range(n_steps):
         t = step * dt
-        r = 25.0
         body_pos = np.array(
             [
-                50 + r * np.sin(0.06 * t),
-                50 + r * np.cos(0.06 * t),
-                50 + 10 * np.sin(0.03 * t),
+                50 + r * np.sin(orbit_rate * t),
+                50 + r * np.cos(orbit_rate * t),
+                50 + 10 * np.sin(climb_rate * t),
             ]
         )
+        # Analytic derivative of the path above: without this feed-forward
+        # the whole formation trails the virtual body by kd·v_body/kp.
+        body_vel = np.array(
+            [
+                r * orbit_rate * np.cos(orbit_rate * t),
+                -r * orbit_rate * np.sin(orbit_rate * t),
+                10 * climb_rate * np.cos(climb_rate * t),
+            ]
+        )
+        body_acc = np.array(
+            [
+                -r * orbit_rate**2 * np.sin(orbit_rate * t),
+                -r * orbit_rate**2 * np.cos(orbit_rate * t),
+                -10 * climb_rate**2 * np.sin(climb_rate * t),
+            ]
+        )
+        # The structure is a rigid body: yaw it with the orbit so the
+        # formation banks into the turn instead of translating sideways.
+        body_yaw = -orbit_rate * t
         centroid_hist[step] = body_pos
-        forces = ctrl.compute_forces(pos, vel, body_pos, body_yaw=0.0)
-        vel = vel * damping + forces * dt
+        forces = ctrl.compute_forces(
+            pos,
+            vel,
+            body_pos,
+            body_yaw=body_yaw,
+            body_vel=body_vel,
+            body_yaw_rate=-orbit_rate,
+            body_acc=body_acc,
+        )
+        # Double integrator: the PD's own kd term is the damping. Adding a
+        # multiplicative velocity decay on top acts like unmodelled drag
+        # and leaves a standing formation error of kd·v_body/kp.
+        vel = vel + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > 8.0, vel / speed * 8.0, vel)
         pos = pos + vel * dt
         snap.append(pos.copy())
+        des = ctrl.desired_positions(body_pos, body_yaw)
         for i in range(n_ag):
-            form_err[step, i] = np.linalg.norm(pos[i] - body_pos - offsets[i])
+            form_err[step, i] = np.linalg.norm(pos[i] - des[i])
         dists = [np.linalg.norm(pos[i] - pos[j]) for i in range(n_ag) for j in range(i + 1, n_ag)]
         mean_dist[step] = np.mean(dists)
 
@@ -166,6 +198,8 @@ def main() -> None:
                     R,
                     size=3.0,
                     arm_colors=(c_rgb[i], c_rgb[i]),
+                    center_color=c_rgb[i],
+                    motor_color=c_rgb[i],
                 )
             )
 

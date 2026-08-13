@@ -39,20 +39,27 @@ def main() -> None:
     vel = rng.uniform(-1.0, 1.0, (n_agents, 3))
 
     flock = ReynoldsFlocking(
-        r_percept=28.0,
-        r_sep=10.0,
-        w_sep=2.6,
-        w_ali=1.0,
-        w_coh=0.45,
-        max_term_norm=1.4,
-        boundary_margin=10.0,
-        boundary_gain=0.5,
+        r_percept=45.0,
+        r_sep=12.0,
+        w_sep=2.8,
+        w_ali=1.2,
+        w_coh=1.0,
+        w_mig=1.5,
+        max_term_norm=1.6,
+        boundary_margin=12.0,
+        boundary_gain=0.6,
         world_size=WORLD_SIZE,
     )
     dt = 0.1
     n_steps = 600
     max_speed = 6.0
     damping = 0.92
+    # Reynolds' migratory urge: a slowly rotating cruise velocity every
+    # agent steers towards. The three classic rules all go to zero once
+    # the flock is in formation, so with damping and no urge the flock
+    # coasts to a standstill instead of flying anywhere.
+    cruise_speed = 4.0
+    turn_rate = 0.25
 
     positions_hist = [pos.copy()]
     velocities_hist = [vel.copy()]
@@ -60,7 +67,9 @@ def main() -> None:
     cohesion_hist = np.zeros(n_steps)
 
     for step in range(n_steps):
-        forces = flock.compute_forces(pos, vel)
+        heading = turn_rate * step * dt
+        migration = cruise_speed * np.array([np.cos(heading), np.sin(heading), 0.0])
+        forces = flock.compute_forces(pos, vel, migration_velocity=migration)
         vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         vel = np.where(speed > max_speed, vel / speed * max_speed, vel)
@@ -162,6 +171,8 @@ def main() -> None:
                     R,
                     size=2.5,
                     arm_colors=(c_rgb[i], c_rgb[i]),
+                    center_color=c_rgb[i],
+                    motor_color=c_rgb[i],
                 )
             )
 

@@ -20,27 +20,60 @@ def _vee(M: NDArray[np.floating]) -> NDArray[np.floating]:
     return np.array([M[2, 1], M[0, 2], M[1, 0]])
 
 
+def _hat(v: NDArray[np.floating]) -> NDArray[np.floating]:
+    """Skew-symmetric matrix from a vector (hat map)."""
+    return np.array([[0.0, -v[2], v[1]], [v[2], 0.0, -v[0]], [-v[1], v[0], 0.0]])
+
+
 @dataclass
 class GeometricControllerConfig:
     """Gains for the geometric SE(3) controller.
 
-    Attitude gains (kR, kw) are scaled for the Crazyflie-class inertia
-    (~1.66e-5 kg⋅m²).  Position output is clamped via ``max_acc`` to
-    prevent extreme attitude commands.
+    Attitude gains are **derived from the inertia**, not typed in: the
+    controller commands a torque, so a gain that suits one airframe is
+    wrong for another by the ratio of their inertias.  Fixed values also
+    hide the requirement that actually matters — the attitude loop has to
+    be several times faster than the position loop, or the two resonate
+    and the quadrotor overshoots every turn of the reference.
+
+    Given a target attitude bandwidth ``ω`` and damping ``ζ``:
+
+    ``kR = J ω²``,  ``kw = 2 ζ J ω``
+
+    Position gains follow the same idea, ``kx = ω_p²`` and
+    ``kv = 2 ζ_p ω_p``, so the separation between the loops is explicit.
     """
 
-    kx: float = 2.5
-    kv: float = 2.0
-    kR: float = 5.0
-    kw: float = 1.8
     mass: float = 1.5
     gravity: float = 9.81
     max_acc: float = 3.0
     inertia: NDArray[np.floating] | None = None
 
+    position_bandwidth: float = 2.2
+    """Position-loop natural frequency [rad/s]."""
+    position_damping: float = 0.9
+    attitude_bandwidth: float = 18.0
+    """Attitude-loop natural frequency [rad/s]. Eight times the position
+    loop, which is the separation successive loop closure needs."""
+    attitude_damping: float = 0.8
+
+    kx: float | None = None
+    kv: float | None = None
+    kR: float | None = None
+    kw: float | None = None
+
     def __post_init__(self):
         if self.inertia is None:
             self.inertia = np.diag([0.0082, 0.0082, 0.0148])
+        j = float(np.mean(np.diag(np.asarray(self.inertia))))
+        if self.kx is None:
+            self.kx = self.position_bandwidth**2
+        if self.kv is None:
+            self.kv = 2.0 * self.position_damping * self.position_bandwidth
+        if self.kR is None:
+            self.kR = j * self.attitude_bandwidth**2
+        if self.kw is None:
+            self.kw = 2.0 * self.attitude_damping * j * self.attitude_bandwidth
 
 
 class GeometricController:
@@ -52,10 +85,21 @@ class GeometricController:
     The position controller produces a desired force vector, from which
     the desired rotation ``R_d`` is computed. The attitude controller
     then computes torques using the rotation error on SO(3).
+
+    Both feed-forward terms of the paper are carried: the reference
+    acceleration enters the desired force, and the desired angular
+    velocity — obtained by differentiating ``R_d`` — enters the angular
+    velocity error.  Dropping them turns a tracking controller into a
+    set-point controller that is permanently chasing its own reference.
     """
 
     def __init__(self, config: GeometricControllerConfig | None = None) -> None:
         self.config = config or GeometricControllerConfig()
+        self._prev_Rd: NDArray[np.floating] | None = None
+
+    def reset(self) -> None:
+        """Forget the previous desired attitude used for differentiation."""
+        self._prev_Rd = None
 
     def compute(
         self,
@@ -64,6 +108,7 @@ class GeometricController:
         target_vel: NDArray[np.floating] | None = None,
         target_acc: NDArray[np.floating] | None = None,
         target_yaw: float = 0.0,
+        dt: float = 0.0,
     ) -> NDArray[np.floating]:
         """Compute control wrench using geometric control.
 
@@ -73,6 +118,9 @@ class GeometricController:
             target_vel: Desired ``[vx, vy, vz]`` (default zeros).
             target_acc: Desired ``[ax, ay, az]`` feedforward (default zeros).
             target_yaw: Desired yaw angle [rad].
+            dt: Time step [s].  When positive, the desired angular
+                velocity is recovered by differentiating ``R_d``; pass
+                ``0`` for pure set-point control.
 
         Returns:
             ``[T, τx, τy, τz]`` body-frame wrench.
@@ -116,11 +164,26 @@ class GeometricController:
         b1d = np.cross(b2d, b3d)
         Rd = np.column_stack([b1d, b2d, b3d])
 
+        # --- Desired angular velocity by differentiating Rd ---
+        # Ṙd = Rd Ω̂d, so Ω̂d ≈ Rd(k-1)ᵀ (Rd(k) - Rd(k-1)) / dt.
+        omega_d = np.zeros(3)
+        if dt > 0.0 and self._prev_Rd is not None:
+            dRd = (Rd - self._prev_Rd) / dt
+            omega_d = _vee(0.5 * (self._prev_Rd.T @ dRd - dRd.T @ self._prev_Rd))
+        if dt > 0.0:
+            self._prev_Rd = Rd.copy()
+
         # --- Attitude control on SO(3) ---
         eR_matrix = 0.5 * (Rd.T @ R - R.T @ Rd)
         eR = _vee(eR_matrix)
-        e_omega = omega  # desired omega is zero for set-point control
+        e_omega = omega - R.T @ Rd @ omega_d
 
-        tau = -c.kR * eR - c.kw * e_omega + np.cross(omega, c.inertia @ omega)
+        inertia = np.asarray(c.inertia)
+        tau = (
+            -c.kR * eR
+            - c.kw * e_omega
+            + np.cross(omega, inertia @ omega)
+            - inertia @ (_hat(omega) @ R.T @ Rd @ omega_d)
+        )
 
         return np.array([T, tau[0], tau[1], tau[2]])

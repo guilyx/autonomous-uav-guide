@@ -77,6 +77,7 @@ def draw_quadrotor_3d(
     size: float = 0.25,
     arm_colors: tuple[str, str] = ("red", "blue"),
     center_color: str = "k",
+    motor_color: str | None = None,
     motor_size: float = 25.0,
     arm_lw: float = 2.5,
     **_kw: Any,
@@ -96,6 +97,10 @@ def draw_quadrotor_3d(
     size : Half-arm length in world units.
     arm_colors : Colours for arm 1 and arm 2.
     center_color : Colour of the centre-of-mass marker.
+    motor_color : Colour of the four motor dots.  Defaults to
+        *center_color*; at swarm scale the arms are only a few pixels
+        long, so leaving the dots black makes every agent render black
+        whatever colour its arms were given.
     motor_size : Marker size for motor dots.
     arm_lw : Line width for arm segments.
 
@@ -139,7 +144,7 @@ def draw_quadrotor_3d(
         tips[0],
         tips[1],
         tips[2],
-        color="k",
+        color=center_color if motor_color is None else motor_color,
         s=motor_size,
         zorder=5,
         depthshade=False,

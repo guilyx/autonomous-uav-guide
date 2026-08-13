@@ -34,8 +34,16 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
 GPS_STD = 0.6
-N_PARTICLES = 200
+N_PARTICLES = 400
 BENCHMARK_MODE = True
+# Per-state process noise for [x, y, vx, vy]. A bootstrap particle filter
+# proposes from the prior, so the cloud has to stay wide enough to overlap
+# the likelihood: shrink these much below the GPS noise and every particle
+# scores the same, the weights go uniform and the estimate stops being
+# corrected at all. One scalar shared by position and velocity is the
+# other failure mode — it injects metres of position noise per step.
+POS_PROCESS_STD = 0.15
+VEL_PROCESS_STD = 0.4
 
 
 def _f_single(
@@ -112,21 +120,28 @@ def main() -> None:
         num_particles=N_PARTICLES,
         f=_f_single,
         likelihood=_likelihood,
-        process_noise_std=0.3,
+        process_noise_std=np.array(
+            [POS_PROCESS_STD, POS_PROCESS_STD, VEL_PROCESS_STD, VEL_PROCESS_STD]
+        ),
+        seed=7,
     )
-    init_state = np.array([pf_states[0, 0], pf_states[0, 1], 0.0, 0.0])
-    pf.reset(init_state, spread=1.5)
+    init_state = np.array(
+        [pf_states[0, 0], pf_states[0, 1], pf_states[0, 6], pf_states[0, 7]]
+    )
+    pf.reset(init_state, spread=np.array([1.5, 1.5, 0.5, 0.5]))
 
     true_xy = np.zeros((n_steps, 2))
     est_xy = np.zeros((n_steps, 2))
     part_hist: list[np.ndarray] = []
     weight_hist: list[np.ndarray] = []
     n_eff_hist = np.zeros(n_steps)
+    raw_gps_err = np.zeros(n_steps)
 
     for i in range(n_steps):
         s = pf_states[i]
         true_xy[i] = s[:2]
         gps_meas = s[:2] + rng.normal(0, GPS_STD, 2)
+        raw_gps_err[i] = float(np.linalg.norm(gps_meas - s[:2]))
 
         pf.predict(np.zeros(1), pf_dt)
         pf.update(gps_meas)
@@ -134,7 +149,7 @@ def main() -> None:
         est_xy[i] = pf.estimate[:2]
         part_hist.append(pf.particles[:, :2].copy())
         weight_hist.append(pf.weights.copy())
-        n_eff_hist[i] = 1.0 / np.sum(pf.weights**2)
+        n_eff_hist[i] = pf.effective_sample_size
 
     times = np.arange(n_steps) * pf_dt
     err = np.sqrt(np.sum((true_xy - est_xy) ** 2, axis=1))
@@ -169,6 +184,9 @@ def main() -> None:
     logger.log_completion(**completion.as_dict())
     logger.log_summary("mean_error_m", float(err.mean()))
     logger.log_summary("max_error_m", float(err.max()))
+    # The point of the filter: this must come out below the raw fix error.
+    logger.log_summary("mean_raw_gps_error_m", float(raw_gps_err.mean()))
+    logger.log_summary("mean_n_eff", float(n_eff_hist.mean()))
     logger.save()
 
     # ── Visualisation ────────────────────────────────────────────────

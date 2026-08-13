@@ -100,7 +100,8 @@ def main() -> None:
     for j, idx in enumerate(scan_indices):
         s = states[idx]
         ranges = lidar.sense(s, world)
-        mapper.update(s[:3], ranges, lidar.angles, max_range=lidar.max_range)
+        # Beam angles are body-referenced, so the heading has to go in too.
+        mapper.update(s[:3], ranges, lidar.angles, max_range=lidar.max_range, yaw=float(s[5]))
         base = occ_grid.grid.copy()
         inflated = infl_layer.apply(occ_grid)
         speed = float(np.linalg.norm(s[6:9])) if len(s) >= 9 else 0.0
@@ -146,8 +147,8 @@ def main() -> None:
     )
     logger.save()
 
-    anim = SimAnimator("costmap_navigation", out_dir=Path(__file__).parent, dpi=56)
-    fig = plt.figure(figsize=(14, 6))
+    anim = SimAnimator("costmap_navigation", out_dir=Path(__file__).parent, dpi=80)
+    fig = plt.figure(figsize=(16, 7))
     anim._fig = fig
     gs = fig.add_gridspec(1, 4, width_ratios=[1.25, 1, 1, 1], wspace=0.25)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")

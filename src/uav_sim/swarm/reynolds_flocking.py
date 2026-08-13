@@ -32,6 +32,7 @@ class ReynoldsFlocking:
         w_sep: float = 2.0,
         w_ali: float = 1.0,
         w_coh: float = 1.0,
+        w_mig: float = 0.0,
         max_term_norm: float = 1.5,
         boundary_margin: float = 6.0,
         boundary_gain: float = 0.25,
@@ -42,6 +43,7 @@ class ReynoldsFlocking:
         self.w_sep = w_sep
         self.w_ali = w_ali
         self.w_coh = w_coh
+        self.w_mig = w_mig
         self.max_term_norm = max_term_norm
         self.boundary_margin = boundary_margin
         self.boundary_gain = boundary_gain
@@ -58,18 +60,25 @@ class ReynoldsFlocking:
         self,
         positions: NDArray[np.floating],
         velocities: NDArray[np.floating],
+        migration_velocity: NDArray[np.floating] | None = None,
     ) -> NDArray[np.floating]:
         """Compute flocking forces for all agents.
 
         Args:
             positions: (N, 3) agent positions.
             velocities: (N, 3) agent velocities.
+            migration_velocity: (3,) cruise velocity every agent steers
+                towards — Reynolds' "migratory urge".  Separation,
+                alignment and cohesion all vanish once the flock settles
+                into a rigid formation, so without it a damped flock
+                simply coasts to a stop instead of flying anywhere.
 
         Returns:
             (N, 3) force vectors for each agent.
         """
         N = len(positions)
         forces = np.zeros_like(positions)
+        migrate = None if migration_velocity is None else np.asarray(migration_velocity, float)
 
         for i in range(N):
             neighbours = []
@@ -81,6 +90,10 @@ class ReynoldsFlocking:
                     neighbours.append(j)
 
             if not neighbours:
+                if migrate is not None and self.w_mig > 0.0:
+                    forces[i] = self._clip_norm(
+                        self.w_mig * (migrate - velocities[i]), self.max_term_norm * 2.0
+                    )
                 continue
 
             f_sep = np.zeros(3)
@@ -104,6 +117,10 @@ class ReynoldsFlocking:
             f_ali = self._clip_norm(f_ali, self.max_term_norm)
             f_coh = self._clip_norm(f_coh, self.max_term_norm)
             force = self.w_sep * f_sep + self.w_ali * f_ali + self.w_coh * f_coh
+            if migrate is not None and self.w_mig > 0.0:
+                force = force + self.w_mig * self._clip_norm(
+                    migrate - velocities[i], self.max_term_norm
+                )
 
             if self.world_size is not None:
                 repulse = np.zeros(3)

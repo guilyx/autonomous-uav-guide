@@ -93,14 +93,20 @@ class Gimbal:
         The optical axis direction in world is
         ``[cos(h)cos(t), sin(h)cos(t), sin(t)]`` where ``h = yaw + pan``
         and ``t = tilt`` (negative tilt → looking down).
+
+        The three columns are (right, down, forward) and form a
+        right-handed triad — ``right × down = forward`` — so the matrix
+        has determinant ``+1``.  Getting this wrong mirrors the image
+        horizontally, which silently flips the sign of every pan-axis
+        control law built on top of it.
         """
         heading = yaw + self.pan
         ch, sh = np.cos(heading), np.sin(heading)
         ct, st = np.cos(self.tilt), np.sin(self.tilt)
         return np.array(
             [
-                [-sh, ch * st, ch * ct],
-                [ch, sh * st, sh * ct],
+                [sh, ch * st, ch * ct],
+                [-ch, sh * st, sh * ct],
                 [0.0, -ct, st],
             ]
         )

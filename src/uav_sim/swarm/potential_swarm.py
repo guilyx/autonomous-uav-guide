@@ -25,6 +25,13 @@ class PotentialSwarm:
         goal_gain: Goal attraction gain.
         obs_gain: Obstacle repulsion gain.
         obs_range: Obstacle influence range [m].
+        goal_saturation: Distance beyond which goal attraction stops
+            growing [m].  Unsaturated linear attraction is thousands of
+            times stronger than the lattice forces at the start of a long
+            transit, so the swarm crosses the map as a disordered blob and
+            only forms up once it arrives.  ``0`` disables saturation.
+        max_force: Overall clamp on the per-agent force magnitude.
+            ``0`` disables it.
     """
 
     def __init__(
@@ -36,6 +43,8 @@ class PotentialSwarm:
         goal_gain: float = 1.0,
         obs_gain: float = 50.0,
         obs_range: float = 3.0,
+        goal_saturation: float = 0.0,
+        max_force: float = 0.0,
     ) -> None:
         self.d_des = d_des
         self.epsilon = epsilon
@@ -44,6 +53,8 @@ class PotentialSwarm:
         self.goal_gain = goal_gain
         self.obs_gain = obs_gain
         self.obs_range = obs_range
+        self.goal_saturation = goal_saturation
+        self.max_force = max_force
 
     def compute_forces(
         self,
@@ -84,10 +95,15 @@ class PotentialSwarm:
                 )
                 forces[i] += f_mag * diff / r
 
-        # Goal attraction.
+        # Goal attraction, optionally saturated so it does not swamp the
+        # lattice while the swarm is still far from the goal.
         if goal is not None:
             for i in range(N):
-                forces[i] += self.goal_gain * (goal - positions[i])
+                to_goal = goal - positions[i]
+                dist = float(np.linalg.norm(to_goal))
+                if self.goal_saturation > 0.0 and dist > self.goal_saturation:
+                    to_goal = to_goal * (self.goal_saturation / dist)
+                forces[i] += self.goal_gain * to_goal
 
         # Obstacle repulsion.
         if obstacles:
@@ -95,8 +111,19 @@ class PotentialSwarm:
                 for centre, radius in obstacles:
                     centre = np.asarray(centre, dtype=np.float64)
                     diff = positions[i] - centre
-                    dist = np.linalg.norm(diff) - radius
-                    if dist < self.obs_range and dist > 1e-6:
-                        forces[i] += self.obs_gain / dist**2 * diff / np.linalg.norm(diff)
+                    norm = float(np.linalg.norm(diff))
+                    if norm < 1e-9:
+                        continue
+                    # Floor the surface distance: 1/d² is unbounded, and an
+                    # agent that clips an obstacle would otherwise get an
+                    # infinite kick and leave the world.
+                    dist = max(norm - radius, 1e-2)
+                    if dist < self.obs_range:
+                        forces[i] += self.obs_gain / dist**2 * diff / norm
+
+        if self.max_force > 0.0:
+            mags = np.linalg.norm(forces, axis=1, keepdims=True)
+            scale = np.minimum(1.0, self.max_force / np.maximum(mags, 1e-12))
+            forces *= scale
 
         return forces

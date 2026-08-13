@@ -32,6 +32,24 @@ The asynchronous rate structure is critical: `f` runs at IMU rate, update only w
 - Keep GPS `R` realistic; over-trusting GPS causes noisy position estimates.
 - Include IMU bias states whenever drift is non-negligible.
 - Use timestamp-consistent interpolation/extrapolation for sensor alignment.
+- **Scale `Q` with the step size.** It is the covariance accumulated over
+  one step, so a fixed `diag([...])` means something different at every
+  rate. At 200 Hz a "reasonable looking" `0.1` on the velocity states says
+  the velocity random-walks by 0.32 m/s every 5 ms — the filter throws
+  away the IMU prediction it was built to use and simply follows GPS,
+  which is worse than either input alone.
+- Model the accelerometer's **turn-on bias**, not just its white noise.
+  Bias is what makes dead reckoning diverge quadratically; white noise
+  alone is a slow random walk that barely moves over half a minute, and a
+  demo without bias makes free-running integration look far better than
+  it is.
+
+## Reading the Result
+
+The three curves should separate the way the theory says: IMU-only
+diverging without bound, raw GPS bounded but noisy, and the fusion below
+both. If the fused estimate is not comfortably under the raw fix error,
+the filter is mistuned — no amount of extra sensor rate will fix it.
 
 ## Failure Modes and Diagnostics
 

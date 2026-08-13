@@ -60,6 +60,9 @@ class VirtualStructure:
         velocities: NDArray[np.floating],
         body_pos: NDArray[np.floating],
         body_yaw: float = 0.0,
+        body_vel: NDArray[np.floating] | None = None,
+        body_yaw_rate: float = 0.0,
+        body_acc: NDArray[np.floating] | None = None,
     ) -> NDArray[np.floating]:
         """Compute PD tracking forces towards desired formation positions.
 
@@ -68,9 +71,34 @@ class VirtualStructure:
             velocities: (N, 3) current agent velocities.
             body_pos: Virtual body position.
             body_yaw: Virtual body yaw.
+            body_vel: Virtual body velocity.  Damping against the world
+                frame instead of against the *slot* velocity leaves a
+                standing formation error proportional to how fast the
+                structure is moving; feeding the slot velocity in removes
+                it.
+            body_yaw_rate: Virtual body yaw rate [rad/s], used to add the
+                tangential ``ω × r`` component of each slot's velocity.
+            body_acc: Virtual body acceleration, added straight through as
+                feed-forward so the PD only has to correct the residual.
 
         Returns:
             (N, 3) control forces.
         """
         des = self.desired_positions(body_pos, body_yaw)
-        return self.kp * (des - positions) - self.kd * velocities
+        if body_vel is None:
+            return self.kp * (des - positions) - self.kd * velocities
+
+        arm = des - body_pos
+        des_vel = np.broadcast_to(np.asarray(body_vel, dtype=float), (self.N, 3)).copy()
+        omega = np.array([0.0, 0.0, body_yaw_rate])
+        if body_yaw_rate != 0.0:
+            des_vel += np.cross(omega, arm)
+
+        forces = self.kp * (des - positions) + self.kd * (des_vel - velocities)
+        if body_acc is not None:
+            des_acc = np.broadcast_to(np.asarray(body_acc, dtype=float), (self.N, 3)).copy()
+            if body_yaw_rate != 0.0:
+                # Centripetal term of a slot rotating with the structure.
+                des_acc += np.cross(omega, np.cross(omega, arm))
+            forces = forces + des_acc
+        return forces

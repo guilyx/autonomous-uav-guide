@@ -2,8 +2,14 @@
 """Gimbal Bounding Box Tracking: hovering drone tracks a moving target
 with gimbal-only control, keeping the target centred in the camera frame.
 
-The target follows a path that intentionally escapes the camera FOV at
-two points, demonstrating both steady tracking and re-acquisition.
+The gimbal starts deliberately off-boresight, so the clip opens with an
+acquisition transient before settling into steady tracking.
+
+The observer sits *beside* the target's ground track rather than above
+its centre. A pan-tilt gimbal has a singularity on its own zenith: with
+the target passing directly underneath, bearing sweeps through π faster
+than any finite slew rate can follow, and the resulting loss of lock is
+an artifact of the geometry rather than anything the controller did.
 
 Four-panel view: 3D scene (with frustum), top-down, camera view, and
 tracking error history.
@@ -33,7 +39,7 @@ from uav_sim.visualization.vehicle_artists import clear_vehicle_artists
 matplotlib.use("Agg")
 
 WORLD_SIZE = 30.0
-DRONE_POS = np.array([15.0, 15.0, 15.0])
+DRONE_POS = np.array([15.0, 27.0, 14.0])
 DT = 0.03
 SIM_TIME = 55.0
 ACQUIRE_TIME = 3.0
@@ -61,7 +67,15 @@ def main() -> None:
     detector = SimulatedDetector(target_radius=0.8, ndc_noise_std=0.03, seed=42)
     bbox_ctrl = BBoxTracker(
         gimbal,
-        BBoxTrackerConfig(kp_pan=2.0, kp_tilt=2.0, kd_pan=0.3, kd_tilt=0.3, ema_alpha=0.3),
+        BBoxTrackerConfig(
+            kp_pan=9.0,
+            kp_tilt=9.0,
+            kd_pan=0.5,
+            kd_tilt=0.5,
+            ema_alpha=0.3,
+            h_fov=H_FOV,
+            v_fov=V_FOV,
+        ),
     )
 
     n_steps = int(SIM_TIME / DT)

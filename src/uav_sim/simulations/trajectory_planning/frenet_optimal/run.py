@@ -169,6 +169,9 @@ def main() -> None:
         )
     logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
     logger.log_summary("n_local_plans", len(local_plans))
+    logger.log_summary(
+        "final_dist_to_goal_m", float(np.linalg.norm(flight_pos[-1] - ref_path[-1]))
+    )
     logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
@@ -195,6 +198,24 @@ def main() -> None:
     (best_3d,) = viz.ax3d.plot([], [], [], "lime", lw=2.5, alpha=0.0, label="Optimal")
     (best_top,) = viz.ax_top.plot([], [], "lime", lw=2.0, alpha=0.0)
     (best_side,) = viz.ax_side.plot([], [], "lime", lw=2.0, alpha=0.0)
+
+    # Cross-track error against the global reference — the quantity a
+    # Frenet planner exists to bound. The panel was left empty before.
+    ref_xy = ref_path[:, :2]
+    seg_a, seg_b = ref_xy[:-1], ref_xy[1:]
+    seg_vec = seg_b - seg_a
+    seg_len2 = np.maximum(np.sum(seg_vec**2, axis=1), 1e-12)
+    rel = flight_pos[:, None, :2] - seg_a[None, :, :]
+    tproj = np.clip(np.sum(rel * seg_vec[None, :, :], axis=2) / seg_len2[None, :], 0.0, 1.0)
+    closest = seg_a[None, :, :] + tproj[:, :, None] * seg_vec[None, :, :]
+    cross_track = np.min(np.linalg.norm(flight_pos[:, None, :2] - closest, axis=2), axis=1)
+
+    ax_d = viz.setup_data_axes(ylabel="[m] / [m/s]", title="Cross-Track Error & Speed")
+    ax_d.set_xlim(0, max(1.0, float(flight_times[-1])))
+    ax_d.set_ylim(0, max(1.0, float(max(cross_track.max(), flight_speed.max())) * 1.2))
+    (l_ct,) = ax_d.plot([], [], "r-", lw=0.9, label="Cross-track error")
+    (l_sp,) = ax_d.plot([], [], "b-", lw=0.7, alpha=0.7, label="Speed")
+    ax_d.legend(fontsize=6, loc="upper right")
 
     fly_trail = viz.create_trail_artists(color="orange")
     (lg_3d,) = viz.ax3d.plot([], [], [], "r*", ms=10, zorder=10, label="Local Goal")
@@ -250,6 +271,8 @@ def main() -> None:
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
+            l_ct.set_data(flight_times[:k], cross_track[:k])
+            l_sp.set_data(flight_times[:k], flight_speed[:k])
 
             lg_idx = min(k, len(local_goal_arr) - 1)
             lg = local_goal_arr[lg_idx]
