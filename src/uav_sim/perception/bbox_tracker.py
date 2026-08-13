@@ -85,6 +85,9 @@ class VisualServoConfig:
     max_velocity: float = 2.0
     desired_center_x: float = 0.0
     desired_center_y: float = 0.0
+    kp_pan: float = 1.5
+    kp_tilt: float = 3.0
+    desired_tilt: float = -0.5
 
 
 class VisualServoController:
@@ -101,6 +104,51 @@ class VisualServoController:
 
     def __init__(self, config: VisualServoConfig | None = None) -> None:
         self.cfg = config or VisualServoConfig()
+
+    def compute_from_gimbal(
+        self,
+        detection: Detection,
+        yaw: float,
+        pan: float,
+        tilt: float,
+    ) -> NDArray[np.floating]:
+        """Return desired world velocity when a gimbal owns the centring loop.
+
+        With an actively-pointed camera the bounding box sits at the image
+        centre whatever the drone does, so image-centre error carries no
+        information about where to fly.  The *gimbal angles* carry it
+        instead: a non-zero pan means the target has drifted off the nose,
+        and a tilt steeper than ``desired_tilt`` means the drone is too
+        high above it.  Range is still closed on apparent size.
+
+        Parameters
+        ----------
+        detection : current bounding box observation.
+        yaw : drone heading [rad].
+        pan : gimbal pan relative to the airframe [rad].
+        tilt : gimbal tilt, negative looking down [rad].
+
+        Returns
+        -------
+        (3,) velocity command in world frame.
+        """
+        if not detection.visible:
+            return np.zeros(3)
+
+        size_err = self.cfg.desired_size_ratio - detection.size_ratio
+
+        # Pan is measured counter-clockwise from the nose and body +y is
+        # left, so a positive pan asks for positive body-y motion.
+        vx_body = self.cfg.kp_forward * size_err
+        vy_body = self.cfg.kp_pan * pan
+        vz = self.cfg.kp_tilt * (tilt - self.cfg.desired_tilt)
+
+        cy, sy = np.cos(yaw), np.sin(yaw)
+        vel = np.array([vx_body * cy - vy_body * sy, vx_body * sy + vy_body * cy, vz])
+        speed = float(np.linalg.norm(vel))
+        if speed > self.cfg.max_velocity:
+            vel *= self.cfg.max_velocity / speed
+        return vel
 
     def compute(
         self,
@@ -122,12 +170,16 @@ class VisualServoController:
             return np.zeros(3)
 
         err_lateral = detection.center_ndc[0] - self.cfg.desired_center_x
-        err_vertical = -(detection.center_ndc[1] - self.cfg.desired_center_y)
+        err_vertical = detection.center_ndc[1] - self.cfg.desired_center_y
         size_err = self.cfg.desired_size_ratio - detection.size_ratio
 
+        # Image +x is right and +y is down; body +y is left and world +z
+        # is up (FLU / ENU), so both image errors flip sign on the way in.
+        # A target drifting right of centre has to be chased to the right,
+        # i.e. towards negative body-y.
         vx_body = self.cfg.kp_forward * size_err
-        vy_body = self.cfg.kp_lateral * err_lateral
-        vz = self.cfg.kp_lateral * err_vertical
+        vy_body = -self.cfg.kp_lateral * err_lateral
+        vz = -self.cfg.kp_lateral * err_vertical
 
         cy, sy = np.cos(yaw), np.sin(yaw)
         vx_world = vx_body * cy - vy_body * sy

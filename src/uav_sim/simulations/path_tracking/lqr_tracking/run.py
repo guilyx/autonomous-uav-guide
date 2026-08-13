@@ -23,9 +23,9 @@ from uav_sim.path_tracking.lqr_controller import LQRController
 from uav_sim.simulations.common import (
     STANDARD_DURATION,
     WORLD_SIZE,
-    figure_8_ref,
     frame_indices,
 )
+from uav_sim.simulations.standards import figure_8_reference
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
 from uav_sim.visualization.three_panel import ThreePanelViz
@@ -37,8 +37,8 @@ def main() -> None:
     world, buildings = default_world()
 
     quad = Quadrotor()
-    rp0, _ = figure_8_ref(0.0)
-    quad.reset(position=rp0.copy())
+    rp0, rv0, _ = figure_8_reference(0.0)
+    quad.reset(position=rp0.copy(), velocity=rv0.copy())
     init_hover(quad)
 
     ctrl = LQRController(
@@ -59,7 +59,7 @@ def main() -> None:
 
     for i in range(steps):
         t = i * dt
-        rp, rv = figure_8_ref(t)
+        rp, rv, ra = figure_8_reference(t)
         refs[i] = rp
         states[i] = quad.state
         times[i] = t
@@ -69,7 +69,7 @@ def main() -> None:
             target_state = np.zeros(12)
             target_state[:3] = rp
             target_state[6:9] = rv
-            wrench = ctrl.compute(quad.state, target_state)
+            wrench = ctrl.compute(quad.state, target_state, feedforward_acc=ra)
             ctrl_counter = 0.0
         quad.step(wrench, dt)
 

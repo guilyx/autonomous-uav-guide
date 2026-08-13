@@ -27,11 +27,42 @@ $$
 3. Solve nonlinear program under constraints.
 4. Apply first control action, then shift horizon.
 
+## What This Implementation Optimises Over
+
+Decision variables are **collective thrust and body rates**, not torques —
+the formulation used by most working quadrotor NMPC (Falanga et al., PAMPC).
+The reason is a timescale conflict: torque moves attitude in tens of
+milliseconds and position in seconds, so a horizon short enough to
+integrate torque stably cannot see position at all, and one long enough to
+see position integrates the rotational dynamics to infinity. Taking body
+rates as inputs removes the stiff dynamics from the prediction model and
+delegates them to a rate loop underneath, which is how a real flight stack
+is layered. The prediction model is still fully nonlinear:
+
+$$
+\dot p = v,\qquad
+\dot v = \frac{T}{m}R(\eta)e_3 - g e_3,\qquad
+\dot\eta = W(\eta)\,\omega
+$$
+
+The prediction step is decoupled from the control step — predict coarsely
+over ~1 s, re-plan at 20 Hz — and **move blocking** holds the input
+constant over blocks of prediction steps. `L-BFGS-B` builds its gradient by
+finite differences, so cost scales with the number of decision variables;
+blocking buys horizon length nearly for free.
+
+The reference is sampled forward over the horizon. Holding it at its
+present value asks the plan to come to rest where the trajectory used to
+be, which costs roughly half a horizon of lag no matter how well the
+solver converges.
+
 ## Tuning Guidance
 
 - Increase terminal weight `P` to improve horizon-end stability.
 - Use shorter horizons for strict realtime budgets.
 - Start with soft constraints before switching to hard constraints.
+- Lengthen the *prediction* step before shortening the horizon: what
+  matters is how far ahead the horizon reaches, not how many knots it has.
 
 ## Failure Modes and Diagnostics
 

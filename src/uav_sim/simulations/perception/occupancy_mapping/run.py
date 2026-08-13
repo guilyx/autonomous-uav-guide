@@ -167,7 +167,7 @@ def main() -> None:
     logger.save()
 
     # ── 2x2 gridspec layout ─────────────────────────────────────────────
-    fig = plt.figure(figsize=(14, 8))
+    fig = plt.figure(figsize=(16, 9))
     gs = fig.add_gridspec(2, 2, hspace=0.30, wspace=0.30)
     ax3d = fig.add_subplot(gs[0, 0], projection="3d")
     ax_top = fig.add_subplot(gs[0, 1])
@@ -235,7 +235,7 @@ def main() -> None:
     fov_arts: list = []
     veh_arts: list = []
 
-    anim = SimAnimator("occupancy_mapping", out_dir=Path(__file__).parent, dpi=60)
+    anim = SimAnimator("occupancy_mapping", out_dir=Path(__file__).parent, dpi=80)
     anim._fig = fig
 
     def update(f: int) -> None:

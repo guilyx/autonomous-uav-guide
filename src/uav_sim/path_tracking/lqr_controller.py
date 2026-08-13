@@ -94,20 +94,41 @@ class LQRController:
         self,
         state: NDArray[np.floating],
         target_state: NDArray[np.floating] | None = None,
+        feedforward_acc: NDArray[np.floating] | None = None,
     ) -> NDArray[np.floating]:
         """Compute LQR wrench from state error.
 
         Args:
             state: Current 12-element state.
             target_state: Desired 12-element state (defaults to origin hover).
+            feedforward_acc: Reference acceleration ``[ax, ay, az]``.  An
+                LQR is a *regulator*: it drives the error to zero only for
+                references the model can hold with the equilibrium input.
+                An accelerating reference is not one of those, so without
+                this term the loop must generate the acceleration from
+                error alone and settles at a standing lag.  From the hover
+                linearisation ``v̇x = g θ`` and ``v̇y = -g φ``, so the
+                required attitude and thrust follow in closed form — this
+                is the quadrotor's differential flatness written out.
 
         Returns:
             ``[T, τx, τy, τz]`` wrench.
         """
         if target_state is None:
             target_state = np.zeros(12)
+        else:
+            target_state = np.asarray(target_state, dtype=float).copy()
+
+        thrust_ff = 0.0
+        if feedforward_acc is not None:
+            acc = np.asarray(feedforward_acc, dtype=float)
+            target_state[4] = acc[0] / self.gravity
+            target_state[3] = -acc[1] / self.gravity
+            thrust_ff = self.mass * acc[2]
+
         error = state - target_state
         wrench = self.hover_wrench - self.K @ error
+        wrench[0] += thrust_ff
         wrench[0] = float(np.clip(wrench[0], 0.0, self.mass * self.gravity * 2.0))
         max_torque = 0.5
         wrench[1:] = np.clip(wrench[1:], -max_torque, max_torque)

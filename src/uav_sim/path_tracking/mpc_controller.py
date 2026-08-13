@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.linalg import solve_continuous_are
+from scipy.linalg import solve_discrete_are
 from scipy.optimize import minimize
 
 from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
@@ -60,15 +60,50 @@ class MPCController:
         self.Q = Q if Q is not None else np.diag([15, 15, 25, 3, 3, 1, 4, 4, 4, 0.5, 0.5, 0.2])
         self.R = R if R is not None else np.diag([0.05, 0.5, 0.5, 0.5])
 
-        # Terminal cost from DARE
-        P = solve_continuous_are(A_c, B_c, self.Q, self.R)
-        self.Qf = P
+        # Terminal cost from the *discrete* ARE. The running cost below is
+        # summed per step, not integrated, so a continuous-time Riccati
+        # solution under-weights the terminal state by a factor of 1/dt and
+        # the horizon effectively ends in mid-air.
+        self.Qf = solve_discrete_are(self.A_d, self.B_d, self.Q, self.R)
 
         self.hover_wrench = np.array([mass * gravity, 0.0, 0.0, 0.0])
         self._warm_start: NDArray[np.floating] | None = None
 
     def reset(self) -> None:
         self._warm_start = None
+
+    def _reference_horizon(
+        self,
+        target_pos: NDArray[np.floating],
+        target_vel: NDArray[np.floating] | None,
+    ) -> NDArray[np.floating]:
+        """One 12-state reference per horizon step.
+
+        Preview is the whole reason to run MPC instead of LQR. Holding a
+        single reference point across the horizon throws it away and asks
+        the plan to come to rest where the trajectory happens to be right
+        now, which shows up as a fixed lag on any moving reference.
+        """
+        pos = np.atleast_2d(np.asarray(target_pos, dtype=float))
+        if len(pos) == 1:
+            pos = np.repeat(pos, self.horizon + 1, axis=0)
+        vel = (
+            np.zeros_like(pos)
+            if target_vel is None
+            else np.atleast_2d(np.asarray(target_vel, dtype=float))
+        )
+        if len(vel) == 1:
+            vel = np.repeat(vel, self.horizon + 1, axis=0)
+
+        n = self.horizon + 1
+        ref = np.zeros((n, 12))
+        ref[: len(pos), :3] = pos[:n]
+        ref[: len(vel), 6:9] = vel[:n]
+        if len(pos) < n:
+            ref[len(pos) :, :3] = pos[-1]
+        if len(vel) < n:
+            ref[len(vel) :, 6:9] = vel[-1]
+        return ref
 
     def compute(
         self,
@@ -81,19 +116,22 @@ class MPCController:
         Parameters
         ----------
         state : 12-element quadrotor state.
-        target_pos : desired ``[x, y, z]``.
-        target_vel : desired ``[vx, vy, vz]`` (default zeros).
+        target_pos : desired ``[x, y, z]``, or ``(horizon + 1, 3)`` to give
+            the controller preview of a moving reference.
+        target_vel : desired ``[vx, vy, vz]``, same shapes (default zeros).
 
         Returns
         -------
         ``[T, τx, τy, τz]`` wrench.
         """
-        ref = np.zeros(12)
-        ref[:3] = target_pos
-        if target_vel is not None:
-            ref[6:9] = target_vel
+        ref_traj = self._reference_horizon(target_pos, target_vel)
 
-        x0 = state - ref
+        # The hover linearisation is affine in the absolute state — A only
+        # couples position to velocity and attitude to rates, and gravity is
+        # already carried by the hover thrust — so the horizon is rolled out
+        # in absolute coordinates and each step scored against its own
+        # reference.
+        x0 = np.asarray(state, dtype=float).copy()
         H = self.horizon
         u_dim = 4
 
@@ -111,7 +149,7 @@ class MPCController:
         result = minimize(
             self._cost,
             u0,
-            args=(x0,),
+            args=(x0, ref_traj),
             method="L-BFGS-B",
             bounds=bounds,
             options={"maxiter": 15, "ftol": 1e-5},
@@ -172,15 +210,22 @@ class MPCController:
         wrench = self.compute(state, target, target_vel=vel)
         return wrench, path_index
 
-    def _cost(self, u_flat: NDArray[np.floating], x0: NDArray[np.floating]) -> float:
+    def _cost(
+        self,
+        u_flat: NDArray[np.floating],
+        x0: NDArray[np.floating],
+        ref_traj: NDArray[np.floating],
+    ) -> float:
         H = self.horizon
         u = u_flat.reshape(H, 4)
         x = x0.copy()
         cost = 0.0
         for k in range(H):
-            cost += float(x @ self.Q @ x + u[k] @ self.R @ u[k])
+            e = x - ref_traj[k]
+            cost += float(e @ self.Q @ e + u[k] @ self.R @ u[k])
             x = self.A_d @ x + self.B_d @ u[k]
-        cost += float(x @ self.Qf @ x)
+        e = x - ref_traj[H]
+        cost += float(e @ self.Qf @ e)
         return cost
 
     @staticmethod

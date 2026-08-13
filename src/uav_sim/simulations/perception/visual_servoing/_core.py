@@ -30,6 +30,16 @@ matplotlib.use("Agg")
 WORLD_SIZE = 30.0
 H_FOV = 0.8
 V_FOV = 0.6
+# Seconds of velocity command folded into the position setpoint. Chosen so
+# the cascaded PID settles at roughly the commanded speed (kp/kd ≈ 0.86 1/s).
+SERVO_LOOKAHEAD_S = 1.2
+# Airframe yaw slew rate [rad/s]. Slow relative to the gimbal, which is the
+# whole point: the gimbal owns the fast pointing loop.
+MAX_YAW_RATE = 0.6
+
+
+def _wrap(angle: float) -> float:
+    return float((angle + np.pi) % (2 * np.pi) - np.pi)
 
 
 def _arch_target(t: float, duration: float) -> np.ndarray:
@@ -64,17 +74,19 @@ def run_visual_servoing(
     detector = SimulatedDetector(target_radius=0.55, ndc_noise_std=0.01, seed=42)
     servo_cfg = (
         VisualServoConfig(
-            kp_lateral=2.2,
-            kp_forward=3.2,
-            desired_size_ratio=0.10,
+            kp_forward=6.0,
+            kp_pan=3.0,
+            kp_tilt=4.0,
+            desired_tilt=float(init_tilt),
+            desired_size_ratio=0.16,
             max_velocity=3.0,
         )
         if gimbal_tracking
         else VisualServoConfig(
-            kp_lateral=1.7,
-            kp_forward=2.1,
-            desired_size_ratio=0.09,
-            max_velocity=2.3,
+            kp_lateral=2.5,
+            kp_forward=5.0,
+            desired_size_ratio=0.16,
+            max_velocity=2.5,
         )
     )
     servo = VisualServoController(servo_cfg)
@@ -82,7 +94,7 @@ def run_visual_servoing(
     quad = Quadrotor()
     quad.reset(position=init_pos.copy())
     ctrl = CascadedPIDController()
-    follow_setpoint = init_pos.copy()
+    yaw_ref = float(np.arctan2(init_target[1] - init_pos[1], init_target[0] - init_pos[0]))
 
     drone_pos = np.zeros((n_steps, 3))
     drone_att = np.zeros((n_steps, 3))
@@ -103,19 +115,37 @@ def run_visual_servoing(
         state = quad.state.copy()
         pos = state[:3]
         yaw = state[5]
-        desired_yaw = 0.0
+        bearing = float(np.arctan2(target[1] - pos[1], target[0] - pos[0]))
         if tracker is not None:
             tracker.step(pos, target, yaw, standard.dt)
+            # Slew the airframe towards the target bearing at a bounded
+            # rate. Commanding yaw = yaw + pan instead closes a second loop
+            # through the gimbal's own pointing loop: the two chase each
+            # other, the heading winds up, and the position controller —
+            # which resolves tilt through yaw — goes with it.
+            step = np.clip(
+                _wrap(bearing - yaw_ref), -MAX_YAW_RATE * standard.dt, MAX_YAW_RATE * standard.dt
+            )
+            yaw_ref = _wrap(yaw_ref + float(step))
+            desired_yaw = yaw_ref
         else:
-            to_target = target - pos
-            desired_yaw = float(np.arctan2(to_target[1], to_target[0]))
+            desired_yaw = bearing
 
         det = detector.detect(target, pos, gimbal, H_FOV, V_FOV, yaw)
-        vel_cmd = servo.compute(det, yaw)
-        if not gimbal_tracking and not det.visible:
-            # If target exits frame, rotate to reacquire and move gently toward target.
+        if gimbal_tracking:
+            vel_cmd = servo.compute_from_gimbal(det, yaw, gimbal.pan, gimbal.tilt)
+        else:
+            vel_cmd = servo.compute(det, yaw)
+        if not det.visible:
+            # Target left the frame: creep toward its last known bearing
+            # while the heading loop swings the camera back onto it.
             vel_cmd = 0.35 * np.array([np.cos(desired_yaw), np.sin(desired_yaw), -0.10])
-        follow_setpoint = follow_setpoint + vel_cmd * standard.dt
+
+        # Turn the velocity command into a position setpoint anchored to the
+        # *current* position rather than integrating it: an integrated
+        # setpoint keeps running once the position loop starts lagging,
+        # and there is nothing in the image to pull it back.
+        follow_setpoint = pos + vel_cmd * SERVO_LOOKAHEAD_S
         follow_setpoint[0] = np.clip(follow_setpoint[0], 1.0, WORLD_SIZE - 1.0)
         follow_setpoint[1] = np.clip(follow_setpoint[1], 1.0, WORLD_SIZE - 1.0)
         follow_setpoint[2] = np.clip(follow_setpoint[2], 3.0, 18.0)

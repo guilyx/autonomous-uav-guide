@@ -145,6 +145,11 @@ def run_standard_mission(
         lookahead=standard.lookahead,
         waypoint_threshold=standard.waypoint_threshold,
         adaptive=standard.adaptive,
+        # Stop tracking on the goal tolerance, not the (looser) waypoint
+        # threshold. Cutting over at 1.5 m when completion is scored at
+        # 1.0 m guarantees the mission is reported as never having reached
+        # its goal, however well the vehicle actually flew.
+        goal_threshold=standard.goal_xy_tol,
     )
     safe_path = planned_path
     tracking_fallback = False

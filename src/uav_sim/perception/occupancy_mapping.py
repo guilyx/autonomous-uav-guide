@@ -40,9 +40,26 @@ class OccupancyMapper:
         ranges: NDArray[np.floating],
         angles: NDArray[np.floating],
         max_range: float = 30.0,
+        yaw: float = 0.0,
+        max_range_margin: float = 0.5,
     ) -> None:
-        """Integrate one lidar scan into the occupancy grid."""
-        yaw = 0.0
+        """Integrate one lidar scan into the occupancy grid.
+
+        Parameters
+        ----------
+        position : world-frame sensor position.
+        ranges : measured range per beam [m].
+        angles : beam angles **in the body frame** [rad].
+        max_range : sensor maximum range [m].
+        yaw : vehicle heading [rad].  Beam angles are body-referenced, so
+            leaving this at zero integrates every scan as though the
+            vehicle were pointing east and smears the map as it turns.
+        max_range_margin : ranges within this margin of *max_range* are
+            treated as no-return and mark free space only.  Range noise
+            pushes a genuine miss just under the limit, which would
+            otherwise paint a phantom obstacle at the edge of every scan.
+        """
+        hit_limit = max_range - max_range_margin
         for r, a in zip(ranges, angles, strict=True):
             direction = np.array([np.cos(yaw + a), np.sin(yaw + a)])
             num_steps = int(min(r, max_range) / self.grid.resolution) + 1
@@ -53,7 +70,7 @@ class OccupancyMapper:
                 if all(0 <= c < s for c, s in zip(cell, self._log_odds.shape[:2], strict=True)):
                     if d < r - self.grid.resolution:
                         self._log_odds[cell] += self.l_free - self.l0
-                    elif abs(d - r) < self.grid.resolution and r < max_range:
+                    elif abs(d - r) < self.grid.resolution and r < hit_limit:
                         self._log_odds[cell] += self.l_occ - self.l0
 
         # Keep log-odds bounded to avoid overflow in exp() during sigmoid conversion.

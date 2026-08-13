@@ -23,6 +23,24 @@ where `S_k` is rollout cost and `\epsilon_{k,t}` is sampled perturbation at time
 3. Compute importance-weighted control correction.
 4. Shift horizon and repeat at each control cycle.
 
+## What Gets Scored, and What Gets Flown
+
+Two details decide whether this tracks or merely follows at a distance.
+
+**Each horizon step is scored against the reference at that step.** Scoring
+the whole rollout against the reference's *present* value asks the plan to
+stop where the trajectory currently is, which costs roughly half a horizon
+of lag however many samples you draw.
+
+**The nominal rollout is the plan.** MPPI's output is the weighted control
+sequence; rolling it forward gives the trajectory the controller has
+actually committed to. The unweighted mean of the sampled rollouts is a
+different object — an average over mostly-rejected candidates that drifts
+towards wherever the sampling distribution is centred. In this demo the
+nominal rollout is the green line, and its first state (position and
+velocity) plus the chosen acceleration are what the tracking controller
+receives.
+
 ## Tuning Guidance
 
 - Increase sample count `K` for better solution quality.

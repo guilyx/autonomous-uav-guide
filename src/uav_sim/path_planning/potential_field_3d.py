@@ -24,6 +24,10 @@ class PotentialField3D:
         step_size: Gradient descent step size.
         max_iter: Maximum descent iterations.
         goal_tol: Goal reached tolerance [m].
+        seed: Seed for the random kick used to escape local minima.
+            Fixed by default so a plan is reproducible — the escape draws
+            from the RNG on any run that gets trapped, and an unseeded
+            generator makes the whole path irreproducible from there on.
     """
 
     def __init__(
@@ -34,6 +38,7 @@ class PotentialField3D:
         step_size: float = 0.1,
         max_iter: int = 5000,
         goal_tol: float = 0.2,
+        seed: int | None = 0,
     ) -> None:
         self.zeta = zeta
         self.eta = eta
@@ -41,6 +46,7 @@ class PotentialField3D:
         self.step_size = step_size
         self.max_iter = max_iter
         self.goal_tol = goal_tol
+        self._rng = np.random.default_rng(seed)
 
     def plan(
         self,
@@ -70,7 +76,7 @@ class PotentialField3D:
             norm = np.linalg.norm(force)
             if norm < 1e-8:
                 # Local minimum escape: random perturbation.
-                force = np.random.default_rng().normal(size=3)
+                force = self._rng.normal(size=3)
                 norm = np.linalg.norm(force)
             pos = pos + self.step_size * force / (norm + 1e-12)
             path.append(pos.copy())

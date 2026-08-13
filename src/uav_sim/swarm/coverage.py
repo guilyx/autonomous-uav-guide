@@ -30,6 +30,17 @@ class CoverageController:
         gain: float = 0.5,
     ) -> None:
         self.bounds = np.asarray(bounds, dtype=np.float64)
+        if self.bounds.shape != (2, 2):
+            raise ValueError("bounds must be [[x_min, y_min], [x_max, y_max]]")
+        if np.any(self.bounds[1] <= self.bounds[0]):
+            # Transposing the corners produces an empty integration grid,
+            # which makes every centroid equal its own agent and every
+            # coverage force exactly zero — a silent no-op rather than a
+            # crash. Refuse it instead.
+            raise ValueError(
+                "bounds must be [[x_min, y_min], [x_max, y_max]] with max > min; "
+                f"got {self.bounds.tolist()}"
+            )
         self.resolution = resolution
         self.gain = gain
 
@@ -82,3 +93,19 @@ class CoverageController:
         """
         centroids = self.compute_centroids(positions_2d)
         return self.gain * (centroids - positions_2d)
+
+    def coverage_cost(
+        self,
+        positions_2d: NDArray[np.floating],
+    ) -> float:
+        """Locational optimisation cost ``∫ min_i ‖q - p_i‖² dq``.
+
+        This is the quantity Lloyd's algorithm descends, so it is the
+        honest way to show convergence — unlike the norm of the residual
+        force, which says nothing about how good the configuration is.
+        """
+        if len(positions_2d) == 0 or len(self.grid) == 0:
+            return 0.0
+        d2 = np.sum((self.grid[:, None, :] - positions_2d[None, :, :]) ** 2, axis=2)
+        cell_area = self.resolution**2
+        return float(np.sum(np.min(d2, axis=1)) * cell_area)

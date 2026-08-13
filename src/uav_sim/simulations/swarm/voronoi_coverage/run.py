@@ -41,7 +41,9 @@ def _clip_voronoi_region(vertices: np.ndarray, ws: float) -> np.ndarray:
 def main() -> None:
     n_ag = 6
     rng = np.random.default_rng(4)
-    bounds = np.array([[0.0, WORLD_SIZE], [0.0, WORLD_SIZE]])
+    # [[x_min, y_min], [x_max, y_max]] — transposing these corners yields an
+    # empty integration grid and silently zeroes every coverage force.
+    bounds = np.array([[0.0, 0.0], [WORLD_SIZE, WORLD_SIZE]])
     pos_2d = rng.uniform(2, WORLD_SIZE - 2, (n_ag, 2))
     vel_2d = np.zeros((n_ag, 2))
     ctrl = CoverageController(bounds=bounds, resolution=2.0, gain=0.5)
@@ -63,7 +65,7 @@ def main() -> None:
         pos_2d = pos_2d + vel_2d * dt
         pos_2d = np.clip(pos_2d, 1.0, WORLD_SIZE - 1.0)
         snap.append(pos_2d.copy())
-        coverage_cost[step] = np.sum(np.linalg.norm(forces, axis=1))
+        coverage_cost[step] = ctrl.coverage_cost(pos_2d)
         dists = [
             np.linalg.norm(pos_2d[i] - pos_2d[j]) for i in range(n_ag) for j in range(i + 1, n_ag)
         ]
@@ -118,7 +120,7 @@ def main() -> None:
     ax_cost.set_xlim(0, n_steps * dt)
     ax_cost.set_ylim(0, max(1.0, coverage_cost.max() * 1.1))
     ax_cost.set_xlabel("Time [s]", fontsize=8)
-    ax_cost.set_ylabel("Coverage Force", fontsize=8)
+    ax_cost.set_ylabel("Coverage Cost [m⁴]", fontsize=8)
     ax_cost.set_title("Coverage Cost", fontsize=9)
     ax_cost.grid(True, alpha=0.3)
     (lcost,) = ax_cost.plot([], [], "m-", lw=0.8)
@@ -197,6 +199,8 @@ def main() -> None:
                     R,
                     size=3.0,
                     arm_colors=(colors[i][:3], colors[i][:3]),
+                    center_color=colors[i][:3],
+                    motor_color=colors[i][:3],
                 )
             )
 

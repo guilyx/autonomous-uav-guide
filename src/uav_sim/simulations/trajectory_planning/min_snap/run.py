@@ -100,6 +100,8 @@ def main() -> None:
     logger.log_summary(
         "traj_length_m", float(np.sum(np.linalg.norm(np.diff(traj_pts_dense, axis=0), axis=1)))
     )
+    goal_xy_err = float(np.linalg.norm(flight_pos[-1, :2] - GOAL[:2]))
+    logger.log_summary("final_dist_to_goal_xy_m", goal_xy_err)
     logger.save()
 
     # ── Animation ─────────────────────────────────────────────────────
@@ -127,6 +129,18 @@ def main() -> None:
     (traj_top,) = viz.ax_top.plot([], [], "b-", lw=1.5, alpha=0.7)
     (traj_side,) = viz.ax_side.plot([], [], "b-", lw=1.5, alpha=0.7)
 
+    # Tracking error of the flown path against the planned trajectory, plus
+    # the flight speed. The data panel was left empty before.
+    to_traj = flight_pos[:, None, :] - traj_pts_dense[None, :, :]
+    track_err = np.min(np.linalg.norm(to_traj, axis=2), axis=1)
+
+    ax_d = viz.setup_data_axes(ylabel="[m] / [m/s]", title="Tracking Error & Speed")
+    ax_d.set_xlim(0, max(1.0, float(flight_times[-1])))
+    ax_d.set_ylim(0, max(1.0, float(max(track_err.max(), flight_speed.max())) * 1.2))
+    (l_err,) = ax_d.plot([], [], "r-", lw=0.9, label="Distance to trajectory")
+    (l_spd,) = ax_d.plot([], [], "b-", lw=0.7, alpha=0.7, label="Speed")
+    ax_d.legend(fontsize=6, loc="upper right")
+
     fly_trail = viz.create_trail_artists()
     viz.ax3d.legend(fontsize=7, loc="upper left")
     title = viz.ax3d.set_title("Phase 1: Trajectory Generation")
@@ -152,6 +166,8 @@ def main() -> None:
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
             viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
+            l_err.set_data(flight_times[:k], track_err[:k])
+            l_spd.set_data(flight_times[:k], flight_speed[:k])
             title.set_text("Phase 2: Quadrotor Flying Min-Snap Trajectory")
 
     anim.animate(update, total)
