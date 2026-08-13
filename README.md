@@ -5,7 +5,7 @@
 **Flight algorithms, from scratch.**
 
 Multirotor, fixed-wing and VTOL flight models with the physics written out
-in full — plus 40 runnable simulations and a gym for teaching a drone to
+in full — plus 42 runnable simulations and a gym for teaching a drone to
 fly itself.
 
 [**Documentation**](https://guilyx.github.io/autonomous-uav-guide/) ·
@@ -28,7 +28,7 @@ fly itself.
   <img src="docs/public/media/promo-poster.png" alt="Autonomous UAV — flight algorithms, from scratch" width="820"/>
 </a>
 
-<sub>Fifty seconds of quadrotor, fixed-wing, VTOL, planning, swarms and reinforcement learning — <a href="https://guilyx.github.io/autonomous-uav-guide/#see-it-fly">watch it</a>. Every frame is simulated at render time by <a href="scripts/make_promo.py"><code>scripts/make_promo.py</code></a>.</sub>
+<sub>Seventy-eight seconds of quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning, closing on all 42 simulations — <a href="https://guilyx.github.io/autonomous-uav-guide/#see-it-fly">watch it</a>. Every frame is simulated at render time by <a href="scripts/make_promo.py"><code>scripts/make_promo.py</code></a>.</sub>
 
 ---
 
@@ -40,7 +40,7 @@ pip install uav-sim
 
 ```bash
 uav-sim doctor            # verify the install, run the physics self-checks
-uav-sim list              # browse 40+ simulations
+uav-sim list              # browse 42 simulations
 uav-sim run pid_hover     # render one to a GIF
 uav-sim train hover       # teach a quadrotor to hold position
 ```

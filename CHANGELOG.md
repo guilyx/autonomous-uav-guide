@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+**Documentation**
+- Pages for the five algorithms that had none: geometric SO(3) control,
+  LQR path tracking, MPC path tracking, pure pursuit 3D and path
+  smoothing. The atlas index previously listed them under "implemented,
+  without a dedicated article yet".
+- Each new page and every page for an algorithm changed in this release
+  carries the *specific* failure mode that was found in it — what the
+  symptom looks like, why it happens, and what the corrected numbers are.
+  A page that only restates the textbook equation cannot help someone
+  debugging a controller that overshoots.
+
+**Promo video**
+- Three new scenes covering the families the reel skipped: trajectory
+  planning, estimation and perception — nine families in all.
+- A closing atlas scene that pages through every simulation in the
+  library, six at a time, each tile playing that simulation's own GIF.
+  Driven by the catalogue the CLI walks, so it cannot fall behind it.
+  The reel is now 78 s.
+- The single-plot scenes filled a square region in the middle of a 16:9
+  frame; they now fill the frame. The swarm scene follows the flock
+  instead of framing a box it crosses in the first two seconds.
+- The poster frame is now rendered by `scripts/make_promo.py` alongside
+  the video. It used to be a hand-extracted still, which is exactly the
+  kind of artefact that keeps showing last year's behaviour after the code
+  moves on — as it had.
+
 **Reinforcement learning** (`uav_sim.gym`)
 - Six environments following the Gymnasium API without requiring
   Gymnasium: `hover`, `waypoint`, `trajectory`, `landing`, `fw-cruise`

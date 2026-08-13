@@ -13,8 +13,8 @@ uav-sim run astar_3d         # render it
 Or as a module: `python -m uav_sim.simulations.<category>.<name>`.
 
 <StatBand :items="[
-  { value: '40+', label: 'simulations' },
-  { value: '9', label: 'domains' },
+  { value: '42', label: 'simulations' },
+  { value: '10', label: 'domains' },
   { value: '100%', label: 'with references' },
 ]" />
 
@@ -50,10 +50,12 @@ See also the model documentation: [quadrotor](/vehicles/quadrotor),
 |---|---|---|
 | PID hover | [Open](/simulations/path-tracking/pid-hover) | ![pid](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif) |
 | LQR hover | [Open](/simulations/path-tracking/lqr-hover) | ![lqr](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/lqr_hover/lqr_hover.gif) |
+| LQR path tracking | [Open](/simulations/path-tracking/lqr-tracking) | ![lqr tracking](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/lqr_tracking/lqr_tracking.gif) |
+| MPC tracking | [Open](/simulations/path-tracking/mpc-tracking) | ![mpc](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/mpc_tracking/mpc_tracking.gif) |
+| Geometric SO(3) | [Open](/simulations/path-tracking/geometric-control) | ![geometric](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/geometric_control/geometric_control.gif) |
+| Pure pursuit 3D | [Open](/simulations/path-tracking/pure-pursuit) | ![pure pursuit](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif) |
+| Path smoothing | [Open](/simulations/path-tracking/path-smoothing) | ![path smoothing](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/path_smoothing_demo/path_smoothing_demo.gif) |
 | Flight operations sequence | [Open](/simulations/path-tracking/flight-ops-demo) | ![flight ops](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/flight_ops_demo/flight_ops_demo.gif) |
-
-Also implemented, without a dedicated article yet: pure pursuit 3D,
-geometric SO(3), LQR path tracking, MPC tracking, path smoothing.
 
 ## Path planning
 
