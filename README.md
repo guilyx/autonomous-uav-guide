@@ -28,7 +28,7 @@ fly itself.
   <img src="docs/public/media/promo-poster.png" alt="Autonomous UAV — flight algorithms, from scratch" width="820"/>
 </a>
 
-<sub>Seventy seconds of quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning — <a href="https://guilyx.github.io/autonomous-uav-guide/#see-it-fly">watch it</a>. Every frame is simulated at render time by <a href="scripts/make_promo.py"><code>scripts/make_promo.py</code></a>.</sub>
+<sub>Seventy-eight seconds of quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning, closing on all 42 simulations — <a href="https://guilyx.github.io/autonomous-uav-guide/#see-it-fly">watch it</a>. Every frame is simulated at render time by <a href="scripts/make_promo.py"><code>scripts/make_promo.py</code></a>.</sub>
 
 ---
 

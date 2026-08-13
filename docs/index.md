@@ -83,8 +83,8 @@ features:
 
 <video class="uav-promo" controls playsinline preload="none" poster="/media/promo-poster.png" src="/media/promo.mp4"></video>
 
-Seventy seconds across nine algorithm families, and every frame of it is
-simulated by
+Seventy-eight seconds: nine algorithm families in depth, then every one
+of the 42 simulations in the library. Every frame is simulated by
 [`scripts/make_promo.py`](https://github.com/guilyx/autonomous-uav-guide/blob/main/scripts/make_promo.py)
 at render time — the same models this library ships, integrated live. No
 stock footage, and nothing that can drift out of sync with the code.

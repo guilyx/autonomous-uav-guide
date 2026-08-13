@@ -22,7 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 **Promo video**
 - Three new scenes covering the families the reel skipped: trajectory
-  planning, estimation and perception. Nine algorithm families, 70 s.
+  planning, estimation and perception — nine families in all.
+- A closing atlas scene that pages through every simulation in the
+  library, six at a time, each tile playing that simulation's own GIF.
+  Driven by the catalogue the CLI walks, so it cannot fall behind it.
+  The reel is now 78 s.
+- The single-plot scenes filled a square region in the middle of a 16:9
+  frame; they now fill the frame. The swarm scene follows the flock
+  instead of framing a box it crosses in the first two seconds.
 - The poster frame is now rendered by `scripts/make_promo.py` alongside
   the video. It used to be a hand-extracted still, which is exactly the
   kind of artefact that keeps showing last year's behaviour after the code

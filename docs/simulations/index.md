@@ -14,7 +14,7 @@ Or as a module: `python -m uav_sim.simulations.<category>.<name>`.
 
 <StatBand :items="[
   { value: '42', label: 'simulations' },
-  { value: '9', label: 'domains' },
+  { value: '10', label: 'domains' },
   { value: '100%', label: 'with references' },
 ]" />
 
