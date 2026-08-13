@@ -55,6 +55,12 @@ POSTER_SCENE = 1
 WIDTH, HEIGHT = 1920, 1080
 DPI = 120
 
+# Framing shared by the scenes that are one 3D plot and nothing else. The
+# zoom is as large as it goes before the projected cube's tick labels reach
+# the caption line.
+FULL_3D_RECT = [0.08, 0.19, 0.84, 0.64]
+FULL_3D_ZOOM = 1.3
+
 
 @dataclass
 class Scene:
@@ -74,12 +80,21 @@ class Scene:
 # ══════════════════════════════════════════════════════════════════════════
 
 
-def _style_3d(axes, limits, *, elev=22, azim=-60):
+def _style_3d(axes, limits, *, elev=22, azim=-60, zoom=1.0):
+    """Style a 3D axes and fit the projected cube to its rectangle.
+
+    ``zoom`` scales the cube inside the axes. A 3D projection is drawn
+    into a square region regardless of how wide its rectangle is, so a
+    full-width scene otherwise leaves a third of the frame empty on each
+    side. Panelled scenes keep the default.
+    """
     axes.set_facecolor(INK)
     axes.set_xlim(limits[0])
     axes.set_ylim(limits[1])
     axes.set_zlim(limits[2])
     axes.view_init(elev=elev, azim=azim)
+    if zoom != 1.0:
+        axes.set_box_aspect(axes.get_box_aspect(), zoom=zoom)
     for axis in (axes.xaxis, axes.yaxis, axes.zaxis):
         axis.set_pane_color((0.03, 0.05, 0.09, 1.0))
         axis._axinfo["grid"]["color"] = GRID
@@ -606,9 +621,11 @@ def make_title_scene():
         axes.text(
             0.5,
             0.175,
-            "multirotor   ·   fixed-wing   ·   VTOL   ·   swarms   ·   reinforcement learning",
+            "multirotor   ·   fixed-wing   ·   VTOL   ·   planning   ·   trajectories\n"
+            "estimation   ·   perception   ·   swarms   ·   reinforcement learning",
             color=MUTED,
             fontsize=14,
+            linespacing=1.8,
             ha="center",
             va="center",
             family="DejaVu Sans",
@@ -619,8 +636,13 @@ def make_title_scene():
 
 def make_quadrotor_scene(states, reference):
     def draw(figure, progress):
-        axes = figure.add_axes([0.08, 0.16, 0.84, 0.66], projection="3d")
-        _style_3d(axes, [(-6.5, 6.5), (-5.5, 5.5), (0, 6)], azim=-60 + 28 * progress)
+        axes = figure.add_axes(FULL_3D_RECT, projection="3d")
+        _style_3d(
+            axes,
+            [(-6.5, 6.5), (-5.5, 5.5), (0, 6)],
+            azim=-60 + 28 * progress,
+            zoom=FULL_3D_ZOOM,
+        )
 
         cursor = max(2, int(progress * len(states)))
         trail = states[:cursor, :3]
@@ -760,16 +782,35 @@ def make_vtol_scene(states, telemetry):
 
 def make_swarm_scene(history):
     def draw(figure, progress):
-        axes = figure.add_axes([0.08, 0.16, 0.84, 0.66], projection="3d")
-        _style_3d(axes, [(-25, 25), (-25, 25), (0, 16)], elev=26, azim=-55 + 40 * progress)
         cursor = max(2, int(progress * len(history)))
-        tail = max(0, cursor - 90)
+        tail = max(0, cursor - 220)
+
+        # The migratory urge carries the flock tens of metres, while the
+        # flock itself is a couple of metres across. A box big enough for
+        # the whole journey renders the agents as specks, so the view
+        # tracks the centroid instead and the trails carry the travel.
+        centre = history[cursor - 1].mean(axis=0)
+        half = 11.0
+        axes = figure.add_axes(FULL_3D_RECT, projection="3d")
+        _style_3d(
+            axes,
+            [
+                (centre[0] - half, centre[0] + half),
+                (centre[1] - half, centre[1] + half),
+                (0, 16),
+            ],
+            elev=26,
+            azim=-55 + 40 * progress,
+            zoom=FULL_3D_ZOOM,
+        )
         for agent in range(history.shape[1]):
             colour = TRACE_COLOURS[agent % len(TRACE_COLOURS)]
             trail = history[tail:cursor, agent]
             axes.plot(trail[:, 0], trail[:, 1], trail[:, 2], color=colour, lw=1.3, alpha=0.75)
-            axes.scatter(*trail[-1], color=colour, s=34, depthshade=False)
-        scene.stats = [(str(history.shape[1]), "agents"), ("3", "rules")]
+            axes.scatter(*trail[-1], color=colour, s=44, depthshade=False)
+
+        travelled = np.linalg.norm(history[cursor - 1].mean(axis=0) - history[0].mean(axis=0))
+        scene.stats = [(str(history.shape[1]), "agents"), (f"{travelled:.0f} m", "travelled")]
 
     scene = Scene(
         "Swarms",
@@ -784,24 +825,31 @@ def make_swarm_scene(history):
 
 def make_planner_scene(obstacles, path):
     def draw(figure, progress):
-        axes = figure.add_axes([0.08, 0.16, 0.84, 0.66], projection="3d")
-        _style_3d(axes, [(0, 30), (0, 30), (0, 16)], elev=32, azim=-58 + 30 * progress)
+        axes = figure.add_axes(FULL_3D_RECT, projection="3d")
+        _style_3d(
+            axes,
+            [(0, 30), (0, 30), (0, 16)],
+            elev=32,
+            azim=-58 + 30 * progress,
+            zoom=FULL_3D_ZOOM,
+        )
 
         for obstacle in obstacles:
             low = np.asarray(obstacle.min_corner, dtype=float)
             high = np.asarray(obstacle.max_corner, dtype=float)
             xs = np.array([low[0], high[0], high[0], low[0], low[0]])
             ys = np.array([low[1], low[1], high[1], high[1], low[1]])
+            # Wireframes in the grid colour disappear against the grid.
             for level in (low[2], high[2]):
-                axes.plot(xs, ys, level, color=GRID, lw=1.1, alpha=0.9)
+                axes.plot(xs, ys, level, color=MUTED, lw=1.1, alpha=0.55)
             for corner in range(4):
                 axes.plot(
                     [xs[corner]] * 2,
                     [ys[corner]] * 2,
                     [low[2], high[2]],
-                    color=GRID,
+                    color=MUTED,
                     lw=1.1,
-                    alpha=0.9,
+                    alpha=0.55,
                 )
 
         if len(path):
@@ -1060,6 +1108,154 @@ def make_learning_scene(curve, trajectories):
     return scene
 
 
+ATLAS_COLUMNS = 3
+ATLAS_ROWS = 2
+ATLAS_TILE = (550, 275)
+ATLAS_GAP = 28
+ATLAS_LABEL_HEIGHT = 46
+ATLAS_FRAMES_PER_TILE = 10
+ATLAS_SECONDS_PER_PAGE = 1.5
+
+
+def load_atlas_tiles():
+    """One looping thumbnail per simulation, read from its rendered GIF.
+
+    The scene this feeds is the only place in the video that claims to show
+    *every* algorithm, so it is driven by the same catalogue the CLI walks
+    rather than by a list maintained here — a simulation added tomorrow
+    appears in the montage without anyone remembering to add it.
+    """
+    from PIL import Image, ImageSequence
+
+    from uav_sim.cli.catalogue import discover
+
+    width, height = ATLAS_TILE
+    tiles = []
+    for entry in discover():
+        gif = entry.gif
+        if gif is None:
+            continue
+        with Image.open(gif) as source:
+            total = getattr(source, "n_frames", 1)
+            # Start a fifth of the way in. A simulation's opening frames are
+            # an empty axis and a trace that has not been drawn yet, which
+            # is the one thing a thumbnail must not show.
+            first = int(0.2 * (total - 1))
+            span = max(1, total - 1 - first)
+            wanted = {
+                first + int(round(index * span / max(1, ATLAS_FRAMES_PER_TILE - 1)))
+                for index in range(ATLAS_FRAMES_PER_TILE)
+            }
+            picked = {}
+            # One forward pass: GIF frames decode sequentially anyway, so
+            # seeking back and forth would re-decode from the start.
+            for index, frame in enumerate(ImageSequence.Iterator(source)):
+                if index in wanted:
+                    picked[index] = np.asarray(
+                        frame.convert("RGB").resize((width, height), Image.BILINEAR),
+                        dtype=np.uint8,
+                    )
+                if len(picked) == len(wanted):
+                    break
+        if not picked:
+            continue
+        tiles.append(
+            (
+                entry.name.replace("_", " "),
+                entry.category.replace("_", " "),
+                np.stack([picked[key] for key in sorted(picked)]),
+            )
+        )
+    return tiles
+
+
+def make_atlas_scene(tiles):
+    """Every simulation in the library, six at a time.
+
+    Forty-two tiles on screen at once is a contact sheet nobody can read.
+    Paging through them keeps each one large enough to recognise what the
+    algorithm is doing, which is the only reason to show it at all.
+    """
+    width, height = ATLAS_TILE
+    per_page = ATLAS_COLUMNS * ATLAS_ROWS
+    pages = int(np.ceil(len(tiles) / per_page))
+    cell_h = height + ATLAS_LABEL_HEIGHT
+    grid_w = ATLAS_COLUMNS * width + (ATLAS_COLUMNS - 1) * ATLAS_GAP
+    grid_h = ATLAS_ROWS * cell_h + (ATLAS_ROWS - 1) * ATLAS_GAP
+    origin_x = (WIDTH - grid_w) // 2
+    origin_y = 205
+
+    ink = np.array([int(INK[index : index + 2], 16) for index in (1, 3, 5)], dtype=np.uint8)
+
+    def draw(figure, progress):
+        position = min(progress, 0.9999) * pages
+        page = int(position)
+        # Dip to the background between pages: a hard cut at this size
+        # reads as a glitch, a dissolve as a smear.
+        within = position - page
+        alpha = float(np.clip(min(within, 1.0 - within) / 0.16, 0.0, 1.0))
+
+        montage = np.repeat(
+            np.repeat(ink.reshape(1, 1, 3), grid_h, axis=0), grid_w, axis=1
+        ).astype(np.float32)
+
+        shown = tiles[page * per_page : (page + 1) * per_page]
+        for index, (_, _, frames) in enumerate(shown):
+            row, column = divmod(index, ATLAS_COLUMNS)
+            phase = int(progress * 12.0 * len(frames) + index * 3) % len(frames)
+            top = row * (cell_h + ATLAS_GAP)
+            left = column * (width + ATLAS_GAP)
+            patch = montage[top : top + height, left : left + width]
+            patch *= 1.0 - alpha
+            patch += alpha * frames[phase]
+
+        figure.figimage(
+            np.clip(montage, 0, 255).astype(np.uint8),
+            xo=origin_x,
+            yo=HEIGHT - (origin_y + grid_h),
+            zorder=0,
+        )
+
+        for index, (label, category, _) in enumerate(shown):
+            row, column = divmod(index, ATLAS_COLUMNS)
+            centre_x = origin_x + column * (width + ATLAS_GAP) + width / 2
+            baseline = origin_y + row * (cell_h + ATLAS_GAP) + height + 14
+            figure.text(
+                centre_x / WIDTH,
+                1.0 - baseline / HEIGHT,
+                label,
+                color=TEXT,
+                fontsize=14,
+                alpha=alpha,
+                ha="center",
+                va="top",
+                family="DejaVu Sans",
+            )
+            figure.text(
+                centre_x / WIDTH,
+                1.0 - (baseline + 24) / HEIGHT,
+                category,
+                color=MUTED,
+                fontsize=10,
+                alpha=alpha,
+                ha="center",
+                va="top",
+                family="DejaVu Sans Mono",
+            )
+
+        scene.stats = [(str(len(tiles)), "simulations"), ("9", "domains")]
+
+    scene = Scene(
+        "The whole atlas",
+        "every simulation in the library, as it renders",
+        pages * ATLAS_SECONDS_PER_PAGE,
+        draw,
+        caption="Each tile is that simulation's own animation — the GIF the "
+        "repository ships, not a mock-up of one.",
+    )
+    return scene
+
+
 def make_outro_scene():
     def draw(figure, progress):
         axes = figure.add_axes([0.0, 0.0, 1.0, 1.0])
@@ -1084,7 +1280,7 @@ def make_outro_scene():
         )
 
         commands = [
-            ("uav-sim list", "browse 40+ simulations"),
+            ("uav-sim list", "browse 42 simulations"),
             ("uav-sim run pid_hover", "render one to a GIF"),
             ("uav-sim train hover", "teach a drone to fly"),
         ]
@@ -1295,7 +1491,10 @@ def build_scenes(reuse_policy: bool = True) -> list[Scene]:
 
     curve, trajectories = _learning_material(reuse_policy)
 
-    return [
+    print("loading the simulation atlas...", flush=True)
+    tiles = load_atlas_tiles()
+
+    scenes = [
         make_title_scene(),
         make_quadrotor_scene(quad_states, quad_reference),
         make_fixed_wing_scene(fw_states, fw_telemetry),
@@ -1306,8 +1505,16 @@ def build_scenes(reuse_policy: bool = True) -> list[Scene]:
         make_perception_scene(map_track, grids, scan_at, map_obstacles),
         make_swarm_scene(swarm_history),
         make_learning_scene(curve, trajectories),
-        make_outro_scene(),
     ]
+    if tiles:
+        scenes.append(make_atlas_scene(tiles))
+    else:
+        # A clone without the LFS payload has the GIF pointers but not the
+        # frames. Rendering 42 empty rectangles is worse than not claiming
+        # to show the atlas at all.
+        print("no simulation GIFs found — skipping the atlas scene", flush=True)
+    scenes.append(make_outro_scene())
+    return scenes
 
 
 def _learning_material(reuse_policy: bool):
