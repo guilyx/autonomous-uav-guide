@@ -35,6 +35,23 @@ $$
 
 ## Tuning Guidance
 
+- **Scale `Q`-equivalent noise per state, not with one scalar.** Position
+  and velocity have different units and different sensitivities; a single
+  `process_noise_std` applied to all four states injects metres of position
+  noise per step and swamps the filter.
+- **But do not shrink it below the measurement noise either.** A bootstrap
+  filter proposes from the prior, so the particle cloud must overlap the
+  likelihood. Make the cloud much tighter than the sensor and every
+  particle scores the same, the weights go uniform, and the estimate stops
+  being corrected at all — it coasts on its own dynamics and diverges. This
+  is the failure that looks most like "the filter is broken" and is really
+  "the proposal has no support where the data is".
+- Resample on **effective sample size**, not every step. Unconditional
+  resampling throws away information and injects avoidable jitter. The
+  atlas demo holds `N_eff ≈ 327/400`.
+- Seed the generator. Drawing from a fresh unseeded RNG on every call makes
+  runs irreproducible even when everything around them is seeded.
+
 - Increase particle count for higher-dimensional states.
 - Match proposal noise to platform maneuver envelope.
 - Use stratified/systematic resampling to reduce variance.

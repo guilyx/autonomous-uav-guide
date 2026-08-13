@@ -18,6 +18,19 @@ with `\sigma` scheduled by airspeed, pitch, and altitude envelopes.
 
 ## Practical Notes
 
+- **A partial tilt is not a transition.** Ramping the rotors to 30° never
+  leaves rotor-borne flight: the wing is along for the ride and the demo is
+  a slow quadrotor. The interesting regime is the handover itself, which
+  only happens when the rotors go the full 90° and lift authority actually
+  migrates to the wing. In cruise here the wing carries 95 % of the weight.
+- **Let the mode machine own the schedule.** `VTOLController` switches on
+  measured airspeed against the wing's stall margin, so the tilt ramp is a
+  consequence of the aircraft being ready rather than an open-loop timer
+  that happens to work at one set of conditions.
+- Watch altitude through the transition, not just at the ends. That is
+  where a single altitude law has to degrade gracefully from pure rotor
+  lift to pure wing lift; the atlas demo holds it to 4.8 m peak deviation.
+
 - Transition corridors need explicit safety constraints.
 - Inadequate gain scheduling causes pitch excursions and altitude loss.
 - Propulsion and control-surface limits must be jointly managed.

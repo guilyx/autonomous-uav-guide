@@ -29,6 +29,17 @@ $$
 
 ## Tuning and Failure Modes
 
+- **Beam angles are body-referenced; the vehicle heading has to go in
+  too.** Integrating every scan as though the vehicle pointed along `+x`
+  produces a map that is correct only while it flies straight and smears
+  progressively as it turns.
+- **Treat a range near the sensor maximum as a no-return.** Range noise
+  pushes a genuine miss just under the limit, and marking that cell
+  occupied paints a phantom obstacle at the edge of every scan — a ring of
+  false wall around the vehicle. Gate the occupied update with a margin.
+- Log-odds must be clipped, or the sigmoid overflows once a cell has been
+  seen enough times.
+
 - Incorrect sensor model causes inflated false positives/negatives.
 - Dynamic obstacles can leave ghost occupancy without decay logic.
 - Grid resolution too coarse obscures narrow passages.

@@ -19,6 +19,17 @@ Lloyd update moves each agent to its cell centroid.
 
 ## Practical Notes
 
+- The integration grid is the algorithm. `CoverageController` takes bounds
+  as `[[x_min, y_min], [x_max, y_max]]`; transposing those corners builds
+  an **empty** grid, so every Voronoi cell is empty, every centroid equals
+  its own agent, and every force is exactly zero. The agents sit still and
+  the cost plot is flat — a silent no-op that looks like convergence. The
+  constructor now rejects the transposed form rather than accepting it.
+- Measure convergence with the **locational cost** `H(P)`, the quantity
+  Lloyd actually descends, not the norm of the residual force. Residual
+  force says how far the last step moved; it says nothing about whether the
+  configuration is any good.
+
 - Convergence depends on bounded domain and update damping.
 - Density `\phi(q)` can bias coverage toward high-priority regions.
 - Voronoi recomputation cost grows with agent count.

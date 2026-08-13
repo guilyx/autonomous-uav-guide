@@ -37,6 +37,16 @@ subject to waypoint and continuity constraints for position, velocity, accelerat
 
 ## Failure Modes and Diagnostics
 
+- A min-snap trajectory through sparse waypoints can loop back close to
+  itself. That is fine for the trajectory and hostile to a naive tracker:
+  the look-ahead sphere keeps intersecting an earlier segment and the
+  vehicle circles behind its own carrot forever. See
+  [pure pursuit](/simulations/path-tracking/pure-pursuit) for the
+  arc-length progress window that fixes it.
+- Segment times that are too short for the distance demand accelerations
+  the vehicle cannot produce; the polynomial is still optimal, just
+  infeasible.
+
 - Unrealistic segment times create numerically stiff trajectories.
 - Sparse waypoints can violate obstacle-clearance assumptions.
 - Overly smooth trajectories may become too conservative for time-critical tasks.
