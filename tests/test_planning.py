@@ -2,6 +2,7 @@
 """Tests for 3D path planning algorithms."""
 
 import numpy as np
+import pytest
 
 from uav_sim.path_planning.astar_3d import AStar3D
 from uav_sim.path_planning.potential_field_3d import PotentialField3D
@@ -124,6 +125,58 @@ class TestRRTStar3D:
                 for i in range(len(path_star) - 1)
             )
             assert cost_star <= cost_rrt * 1.1  # allow 10% margin
+
+    def test_recorded_costs_match_the_tree_they_describe(self):
+        """``costs[i]`` must equal the actual path length back to the root.
+
+        Rewiring gives a node a cheaper parent, but everything hanging off
+        that node reaches the root through it and so gets cheaper too.
+        Without propagating the saving, the subtree keeps its old numbers:
+        on this seed six nodes end up overstating their cost by up to
+        1.4 m, which is what choose-parent and the goal comparison then
+        make their decisions on.
+        """
+        rrt_star = RRTStar3D(
+            bounds_min=np.zeros(3),
+            bounds_max=np.full(3, 10.0),
+            step_size=1.0,
+            goal_radius=0.5,
+            max_iter=300,
+            goal_bias=0.05,
+            gamma=6.0,
+        )
+        rrt_star.plan(np.zeros(3), np.full(3, 9.0), seed=3)
+
+        for i, parent in enumerate(rrt_star.parents):
+            if parent == -1:
+                continue
+            along_tree = rrt_star.costs[parent] + float(
+                np.linalg.norm(rrt_star.nodes[i] - rrt_star.nodes[parent])
+            )
+            assert rrt_star.costs[i] == pytest.approx(along_tree, abs=1e-9)
+
+    def test_returned_path_length_matches_its_recorded_cost(self):
+        """The goal is chosen by cost, so that cost has to be the real one.
+
+        On this seed the winning node claimed 17.31 m for a route that is
+        actually 17.02 m long — a 0.28 m error in the number the planner
+        compares candidate goals with.
+        """
+        rrt_star = RRTStar3D(
+            bounds_min=np.zeros(3),
+            bounds_max=np.full(3, 10.0),
+            step_size=1.0,
+            goal_radius=0.8,
+            max_iter=600,
+            goal_bias=0.1,
+            gamma=6.0,
+        )
+        path = rrt_star.plan(np.zeros(3), np.full(3, 9.0), seed=10)
+        assert path is not None
+
+        walked = sum(float(np.linalg.norm(path[i + 1] - path[i])) for i in range(len(path) - 1))
+        goal_idx = next(i for i, node in enumerate(rrt_star.nodes) if np.allclose(node, path[-1]))
+        assert rrt_star.costs[goal_idx] == pytest.approx(walked, abs=1e-9)
 
 
 # ---------------------------------------------------------------------------

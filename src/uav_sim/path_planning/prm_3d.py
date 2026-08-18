@@ -28,6 +28,9 @@ class PRM3D:
     k_neighbours : maximum edges per node (connect to *k* nearest).
     """
 
+    _EDGE_STEP = 0.5
+    """Spacing between collision samples along an edge [m]."""
+
     def __init__(
         self,
         bounds_min: NDArray[np.floating],
@@ -126,7 +129,11 @@ class PRM3D:
         length = np.linalg.norm(d)
         if length < 1e-12:
             return True
-        n_checks = max(2, int(length / 0.5))
+        # linspace lays out ``n_checks`` samples across ``n_checks - 1``
+        # intervals, so the count has to be one more than the number of
+        # steps. Off by that one, a 1.4 m edge is sampled at its endpoints
+        # only and walks straight through anything in between.
+        n_checks = max(2, int(np.ceil(length / self._EDGE_STEP)) + 1)
         for t in np.linspace(0.0, 1.0, n_checks):
             if not self._point_free(q1 + t * d):
                 return False
