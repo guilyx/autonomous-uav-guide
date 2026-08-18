@@ -22,6 +22,7 @@ import subprocess  # nosec B404
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import NoReturn
 
 import matplotlib
 
@@ -1396,7 +1397,10 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # Kept rather than discarded: if the encode fails, this is the only
+        # explanation of why, and a silent failure here writes a file that
+        # looks plausible and will not play.
+        stderr=subprocess.PIPE,
     )
 
     fade_frames = int(0.35 * fps)
@@ -1424,7 +1428,13 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
             canvas = FigureCanvasAgg(figure)
             canvas.draw()
             buffer = np.asarray(canvas.buffer_rgba())[:, :, :3]
-            process.stdin.write(buffer.tobytes())
+            try:
+                process.stdin.write(buffer.tobytes())
+            except BrokenPipeError:
+                # ffmpeg is gone. Its own stderr says why -- an unusable
+                # output path, an unsupported pixel format, or the OOM
+                # killer -- and a bare traceback here says none of that.
+                _fail(process, output, f"closed the pipe after {written} frames")
             written += 1
 
             if written % 30 == 0:
@@ -1436,7 +1446,28 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     print()
     process.stdin.close()
     process.wait()
+
+    # ffmpeg can consume every frame and still fail at the end -- `+faststart`
+    # remuxes the whole file once the stream is closed, and a kill during that
+    # pass leaves a truncated file with no index. Unchecked, the caller goes on
+    # to report the byte count of a video that will not open.
+    if process.returncode != 0:
+        _fail(process, output, f"exited {process.returncode}")
+
     return output
+
+
+def _fail(process: subprocess.Popen, output: Path, what: str) -> NoReturn:
+    """Report why ffmpeg failed and stop, rather than leaving a broken file."""
+    errors = process.stderr.read() if process.stderr else b""
+    process.stderr.close() if process.stderr else None
+    detail = errors.decode("utf-8", "replace").strip().splitlines()
+    tail = "\n  ".join(detail[-5:]) if detail else "no output captured"
+    print(
+        f"\nffmpeg {what}; {output} is not a usable video.\n  {tail}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 
 
 def write_poster(scenes: list[Scene], output: Path, *, scene_index: int, progress: float) -> Path:
