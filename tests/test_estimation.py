@@ -153,6 +153,44 @@ class TestUKF:
 
         assert abs(ukf.state[0] - true_state[0]) < 2.0
 
+    def test_sigma_points_reproduce_a_correlated_covariance(self):
+        """Propagating an identity model must return ``P`` unchanged.
+
+        The sigma set has to span ``P`` itself. Building it from the rows
+        of the lower-triangular Cholesky factor spans ``LᵀL`` instead,
+        which for this ``P`` reports a variance of 2.5 on the first state
+        where the truth is 2.0, and a correlation of 0.87 where it is 1.0.
+        """
+        ukf = UnscentedKalmanFilter(2, 1, lambda x, _u, _dt: x.copy(), _linear_h)
+        cov = np.array([[2.0, 1.0], [1.0, 2.0]])
+        ukf.reset(np.zeros(2), cov)
+        ukf.Q = np.zeros((2, 2))
+
+        ukf.predict(np.zeros(1), dt=0.1)
+
+        np.testing.assert_allclose(ukf.covariance, cov, atol=1e-9)
+
+    def test_predicted_covariance_matches_the_linear_propagation(self):
+        """For a linear model the UKF prediction is ``F P Fᵀ + Q``, exactly.
+
+        This is what pins the matrix square root down. Building the sigma
+        set from the rows of the Cholesky factor spans ``LᵀL``, and after
+        propagation through ``F`` that reports a velocity variance of 0.71
+        where the truth is 0.95 — a filter a quarter overconfident about a
+        state nothing has measured yet.
+        """
+        dt = 0.5
+        F = np.array([[1.0, dt], [0.0, 1.0]])
+        cov = np.array([[1.5, 0.6], [0.6, 0.9]])
+        q = np.diag([0.02, 0.05])
+
+        ukf = UnscentedKalmanFilter(2, 1, _linear_f, _linear_h)
+        ukf.reset(np.zeros(2), cov)
+        ukf.Q = q
+        ukf.predict(np.zeros(1), dt=dt)
+
+        np.testing.assert_allclose(ukf.covariance, F @ cov @ F.T + q, atol=1e-9)
+
 
 # ---------------------------------------------------------------------------
 # Particle filter tests

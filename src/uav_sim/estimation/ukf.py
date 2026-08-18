@@ -65,13 +65,19 @@ class UnscentedKalmanFilter:
         self.P = np.array(P0, dtype=np.float64) if P0 is not None else np.eye(self.n)
 
     def _sigma_points(self) -> NDArray[np.floating]:
-        """Generate 2n+1 sigma points around current mean and covariance."""
-        S = np.linalg.cholesky((self.n + self.lam) * self.P)
+        """Generate 2n+1 sigma points around current mean and covariance.
+
+        The offsets are the **columns** of the lower-triangular Cholesky
+        factor ``L``, because ``Σᵢ Lᵢ Lᵢᵀ`` over columns is ``L Lᵀ = P``.
+        Taking rows instead reconstructs ``Lᵀ L``, which for a correlated
+        ``P`` is a different matrix entirely.
+        """
+        L = np.linalg.cholesky((self.n + self.lam) * self.P)
         sigmas = np.zeros((self.num_sigma, self.n))
         sigmas[0] = self.x
         for i in range(self.n):
-            sigmas[i + 1] = self.x + S[i]
-            sigmas[self.n + i + 1] = self.x - S[i]
+            sigmas[i + 1] = self.x + L[:, i]
+            sigmas[self.n + i + 1] = self.x - L[:, i]
         return sigmas
 
     def predict(self, u: NDArray[np.floating], dt: float) -> NDArray[np.floating]:

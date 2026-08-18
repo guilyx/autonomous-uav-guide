@@ -111,6 +111,65 @@ class TestLidar3D:
         assert len(pc) > 0
         assert pc.shape[1] == 3
 
+    def test_beams_follow_the_flu_pitch_convention(self):
+        """A nose-down aircraft has to scan downward.
+
+        ``theta`` is positive nose-down in the library's Forward-Left-Up
+        body frame, the opposite of the aerospace sign.  Adding it to the
+        beam elevation instead of subtracting it aims the whole scan into
+        the sky: this wall, 4 m below and 10 m ahead, went unseen at every
+        one of the 1152 beams and the sensor reported clear air.
+        """
+        from uav_sim.environment.obstacles import BoxObstacle
+        from uav_sim.environment.world import World
+
+        world = World(
+            bounds_min=np.full(3, -50.0),
+            bounds_max=np.full(3, 50.0),
+            obstacles=[BoxObstacle(np.array([9.0, -6.0, -1.0]), np.array([11.0, 6.0, 2.0]))],
+        )
+        state = np.zeros(12)
+        state[:3] = [0.0, 0.0, 5.0]
+        state[4] = 0.5  # nose-down 29 deg
+
+        ranges = Lidar3D(
+            num_beams_h=72, num_beams_v=16, max_range=40.0, noise_std=0.0, seed=0
+        ).sense(state, world)
+
+        assert ranges.min() < 12.0
+
+    def test_beam_directions_match_the_vehicle_rotation_matrix(self):
+        """A beam has to hit what its body-frame ray, rotated by R, points at.
+
+        Targets are placed by rotating the body ray with
+        ``euler_to_rotation`` — the function that *defines* the library's
+        frame convention — rather than by re-deriving the trigonometry the
+        sensor uses, so the two are forced to agree.
+        """
+        from uav_sim.environment.obstacles import SphereObstacle
+        from uav_sim.environment.world import World
+        from uav_sim.frames.transforms import euler_to_rotation
+
+        state = np.zeros(12)
+        state[:3] = [2.0, -1.0, 12.0]
+        state[3:6] = [0.0, 0.35, 0.8]  # nose-down, yawed
+        R = euler_to_rotation(*state[3:6])
+
+        lidar = Lidar3D(
+            num_beams_h=72, num_beams_v=5, v_fov=np.radians(40.0), noise_std=0.0, seed=0
+        )
+        forward = 36  # h_angles[36] == 0, i.e. straight ahead in body x
+
+        for vi, va in enumerate(lidar.v_angles):
+            direction = R @ np.array([np.cos(va), 0.0, np.sin(va)])
+            world = World(
+                bounds_min=np.full(3, -50.0),
+                bounds_max=np.full(3, 50.0),
+                obstacles=[SphereObstacle(centre=state[:3] + 8.0 * direction, radius=0.5)],
+            )
+            ranges = lidar.sense(state, world)
+            assert ranges[vi, forward] == pytest.approx(7.5, abs=0.3)
+
 
 class TestCamera:
     def test_intrinsics(self):
