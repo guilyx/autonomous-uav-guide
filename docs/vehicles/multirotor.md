@@ -14,8 +14,8 @@ dynamics, controllers and estimators unchanged.
 > Automatica 49(5):1087-1103, 2013.
 > [doi:10.1016/j.automatica.2013.01.035](https://doi.org/10.1016/j.automatica.2013.01.035)
 
-Source: [`uav_sim/vehicles/multirotor/`](https://github.com/guilyx/autonomous-uav-guide/tree/main/src/uav_sim/vehicles/multirotor)
-and [`components/allocation.py`](https://github.com/guilyx/autonomous-uav-guide/blob/main/src/uav_sim/vehicles/components/allocation.py)
+Source: [`uav_sim/vehicles/multirotor/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/multirotor)
+and [`components/allocation.py`](https://github.com/guilyx/flybots/blob/main/src/uav_sim/vehicles/components/allocation.py)
 
 ## Quick start
 

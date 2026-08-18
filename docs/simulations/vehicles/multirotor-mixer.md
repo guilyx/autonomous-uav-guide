@@ -45,7 +45,7 @@ rate error, which reproduces the library's default quadrotor gains exactly.
 
 ## Evidence
 
-![Multirotor Mixer](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/vehicles/multirotor_mixer/multirotor_mixer.gif)
+![Multirotor Mixer](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/vehicles/multirotor_mixer/multirotor_mixer.gif)
 
 The lower panel plots each of the hexacopter's six rotor thrusts against
 the instantaneous collective. Hover is a flat line. The translation legs
