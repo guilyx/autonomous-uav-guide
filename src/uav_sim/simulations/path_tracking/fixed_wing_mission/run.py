@@ -102,7 +102,8 @@ def leg_polyline(
     """
     if isinstance(leg, LineLeg):
         return np.linspace(leg.line.origin, leg.target, samples)
-    assert isinstance(leg, OrbitLeg)
+    if not isinstance(leg, OrbitLeg):
+        raise TypeError(f"no polyline is defined for a {type(leg).__name__}")
     orbit = leg.orbit
     sweep = leg.sweep if leg.sweep is not None else 2.0 * np.pi
     start = orbit.angle_at(previous.target) if isinstance(previous, LineLeg) else 0.0
