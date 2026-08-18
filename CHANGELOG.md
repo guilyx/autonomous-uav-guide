@@ -157,6 +157,21 @@ rejected, and the goal was selected by comparing costs that did not match
 the paths they labelled — on one seed the winning node claimed 17.31 m
 for a 17.02 m route. The saving is now pushed down the subtree.
 
+**`DJI_MINI` quadrotor preset could not hover** — `k_thrust = 1.0e-7` at
+`omega_max = 1800` gave the four rotors 1.296 N against 2.443 N of weight,
+a thrust-to-weight of 0.53. Hovering needed 2471 rad/s from motors capped
+at 1800, so the airframe sank at full throttle and any simulation built on
+the preset flew into the ground. `k_thrust` is now `4.6e-7`, sized so
+hover sits at 64 % of `omega_max` — the same margin the other three
+presets carry — which momentum theory independently agrees with: for the
+4.7-inch propeller this airframe flies, that value implies `C_T = 0.073`.
+`k_torque` moves with it to hold the torque-to-thrust ratio at 0.032 m, so
+yaw authority relative to thrust is unchanged. Mass, arm length and
+`omega_max` are untouched. Thrust-to-weight is now 2.44, against 2.41 for
+the Crazyflie and 2.81 for the racing quad. Every preset is now covered by
+a test that it can lift itself, reach hover speed inside its motor
+envelope, and hold altitude open-loop on its own hover wrench.
+
 **3-D lidar pitch convention** — `Lidar3D` added the pitch angle to each
 beam's elevation, which is the aerospace (nose-up-positive) sign. The
 library's body frame is Forward-Left-Up, where positive `theta` is

@@ -41,8 +41,12 @@ _PRESETS: dict[VehiclePreset, QuadrotorParams] = {
         mass=0.249,
         arm_length=0.11,
         inertia=np.diag([6.5e-4, 6.5e-4, 1.2e-3]),
-        k_thrust=1.0e-7,
-        k_torque=3.2e-9,
+        # k_thrust sized so hover sits at 64 % of omega_max, the same margin
+        # the other three presets carry. Momentum theory agrees: for the
+        # 4.7-inch propeller this airframe flies, k = C_T rho D^4 / 4 pi^2
+        # puts C_T at 0.073, which is where a propeller that size lives.
+        k_thrust=4.6e-7,
+        k_torque=1.47e-8,  # holds the airframe's torque-to-thrust ratio at 0.032 m
         motor_tau=0.025,
         omega_max=1800.0,
         drag_coeff=0.03,
