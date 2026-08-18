@@ -61,7 +61,7 @@ python -m uav_sim.simulations.path_tracking.path_smoothing_demo
 
 ## Evidence
 
-![Path Smoothing](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/path_smoothing_demo/path_smoothing_demo.gif)
+![Path Smoothing](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/path_smoothing_demo/path_smoothing_demo.gif)
 
 ## References
 

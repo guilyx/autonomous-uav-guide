@@ -1,11 +1,11 @@
 // Erwin Lejeune — 2026-02-23
 import { defineConfig } from 'vitepress'
 
-const REPO = 'https://github.com/guilyx/autonomous-uav-guide'
+const REPO = 'https://github.com/guilyx/flybots'
 
 export default defineConfig({
-  title: 'Autonomous UAV',
-  titleTemplate: ':title — Autonomous UAV',
+  title: 'flybots',
+  titleTemplate: ':title — flybots',
   description:
     'From-scratch Python implementations of autonomous UAV algorithms. ' +
     'Multirotor, fixed-wing and VTOL flight models, 40+ runnable simulations, ' +
@@ -14,7 +14,7 @@ export default defineConfig({
   // GitHub Pages serves this as a project site, so assets live under the
   // repository name. Vercel (used for per-PR previews) serves at the domain
   // root instead, and would 404 on every asset with that prefix.
-  base: process.env.VERCEL ? '/' : '/autonomous-uav-guide/',
+  base: process.env.VERCEL ? '/' : '/flybots/',
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: [/^https?:\/\/localhost/],
@@ -23,7 +23,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#38bdf8' }],
     ['meta', { name: 'color-scheme', content: 'dark light' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'Autonomous UAV Algorithms' }],
+    ['meta', { property: 'og:title', content: 'flybots — autonomous UAV algorithms' }],
     [
       'meta',
       {
@@ -57,11 +57,11 @@ export default defineConfig({
     theme: { light: 'github-light', dark: 'github-dark-default' },
   },
 
-  sitemap: { hostname: 'https://guilyx.github.io/autonomous-uav-guide/' },
+  sitemap: { hostname: 'https://guilyx.github.io/flybots/' },
 
   themeConfig: {
     logo: '/logo.svg',
-    siteTitle: 'Autonomous UAV',
+    siteTitle: 'flybots',
 
     nav: [
       { text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },

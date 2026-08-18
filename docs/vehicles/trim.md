@@ -59,7 +59,7 @@ enough to strand a solver seeded badly.
 ## Reading the envelope
 
 ```bash
-uav-sim trim aerosonde
+flybots trim aerosonde
 ```
 
 ```text

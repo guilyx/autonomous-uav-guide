@@ -37,7 +37,7 @@ python -m uav_sim.simulations.environment.costmap_navigation
 
 ## Evidence
 
-![Costmap Navigation](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif)
+![Costmap Navigation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif)
 
 ## References
 

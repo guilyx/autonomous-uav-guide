@@ -4,7 +4,7 @@
 Derivative-free policy search, pure NumPy. Training a drone to fly should
 not require a deep-learning stack — these tasks are low-dimensional enough
 that a linear policy driven by random search solves them, and being able to
-run ``uav-sim train hover`` on a bare ``pip install`` matters more here than
+run ``flybots train hover`` on a bare ``pip install`` matters more here than
 the last few percent of return.
 
 The optimiser is pluggable; see :mod:`uav_sim.gym.optimizers`. The default

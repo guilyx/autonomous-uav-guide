@@ -27,7 +27,7 @@ python -m uav_sim.simulations.path_planning.prm_3d
 
 ## Evidence
 
-![PRM 3D](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_planning/prm_3d/prm_3d.gif)
+![PRM 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/prm_3d/prm_3d.gif)
 
 ## References
 

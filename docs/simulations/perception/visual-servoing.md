@@ -58,7 +58,7 @@ python -m uav_sim.simulations.perception.visual_servoing
 
 ## Evidence
 
-![Visual Servoing](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif)
+![Visual Servoing](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif)
 
 ## References
 

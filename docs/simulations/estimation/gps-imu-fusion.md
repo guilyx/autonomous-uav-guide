@@ -65,7 +65,7 @@ python -m uav_sim.simulations.estimation.gps_imu_fusion
 
 ## Evidence
 
-![GPS IMU Fusion](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/estimation/gps_imu_fusion/gps_imu_fusion.gif)
+![GPS IMU Fusion](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/gps_imu_fusion/gps_imu_fusion.gif)
 
 ## References
 

@@ -49,7 +49,7 @@ python -m uav_sim.simulations.trajectory_planning.quintic_polynomial_demo
 
 ## Evidence
 
-![Quintic Polynomial](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/trajectory_planning/quintic_polynomial_demo/quintic_polynomial_demo.gif)
+![Quintic Polynomial](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/quintic_polynomial_demo/quintic_polynomial_demo.gif)
 
 ## References
 

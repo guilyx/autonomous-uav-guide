@@ -84,7 +84,7 @@ python -m uav_sim.simulations.path_tracking.geometric_control
 
 Mean tracking error on the standard figure-8: **0.023 m**, peak 0.034 m, with the flown amplitude matching the reference to within 0.3 %.
 
-![Geometric SO(3)](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/geometric_control/geometric_control.gif)
+![Geometric SO(3)](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/geometric_control/geometric_control.gif)
 
 ## References
 

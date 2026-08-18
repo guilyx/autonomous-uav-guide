@@ -73,7 +73,7 @@ python -m uav_sim.simulations.estimation.ekf
 
 ## Evidence
 
-![EKF](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/estimation/ekf/ekf.gif)
+![EKF](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/ekf/ekf.gif)
 
 ## References
 

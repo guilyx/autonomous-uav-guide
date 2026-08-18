@@ -37,7 +37,7 @@ python -m uav_sim.simulations.perception.ekf_slam
 
 ## Evidence
 
-![EKF SLAM](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif)
+![EKF SLAM](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif)
 
 ## References
 

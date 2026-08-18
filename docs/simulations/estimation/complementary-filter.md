@@ -44,7 +44,7 @@ python -m uav_sim.simulations.estimation.complementary_filter
 
 ## Evidence
 
-![Complementary Filter](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/estimation/complementary_filter/complementary_filter.gif)
+![Complementary Filter](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/complementary_filter/complementary_filter.gif)
 
 ## References
 

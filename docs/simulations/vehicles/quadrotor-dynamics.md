@@ -29,7 +29,7 @@ with thrust `T` and body torque vector `\tau`.
 
 ## Evidence
 
-![Quadrotor Dynamics](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif)
+![Quadrotor Dynamics](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif)
 
 ## References
 

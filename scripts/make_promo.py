@@ -20,8 +20,10 @@ import argparse
 # Only ever used to pipe raw frames into the ffmpeg that imageio-ffmpeg bundles.
 import subprocess  # nosec B404
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import IO, NoReturn
 
 import matplotlib
 
@@ -604,7 +606,7 @@ def make_title_scene():
         title = axes.text(
             0.5,
             0.335,
-            "AUTONOMOUS UAV",
+            "FLYBOTS",
             color=TEXT,
             fontsize=62,
             fontweight="bold",
@@ -1274,7 +1276,7 @@ def make_outro_scene():
         axes.text(
             0.5,
             0.635,
-            "pip install uav-sim",
+            "pip install flybots",
             color=TEXT,
             fontsize=52,
             fontweight="bold",
@@ -1284,9 +1286,9 @@ def make_outro_scene():
         )
 
         commands = [
-            ("uav-sim list", "browse 42 simulations"),
-            ("uav-sim run pid_hover", "render one to a GIF"),
-            ("uav-sim train hover", "teach a drone to fly"),
+            ("flybots list", "browse 42 simulations"),
+            ("flybots run pid_hover", "render one to a GIF"),
+            ("flybots train hover", "teach a drone to fly"),
         ]
         reveal = int(np.clip(progress * 4.0, 0, len(commands)))
         for index, (command, description) in enumerate(commands[:reveal]):
@@ -1315,7 +1317,7 @@ def make_outro_scene():
         axes.text(
             0.5,
             0.175,
-            "github.com/guilyx/autonomous-uav-guide",
+            "github.com/guilyx/flybots",
             color=MUTED,
             fontsize=17,
             ha="center",
@@ -1359,6 +1361,9 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     total_frames = sum(int(scene.seconds * fps) for scene in scenes)
 
+    # ffmpeg's own diagnosis of a failed encode, kept somewhere unbounded.
+    log = tempfile.TemporaryFile()
+
     # Argument list, no shell: the binary comes from imageio-ffmpeg, fps is
     # bounds-checked above, and the output path is exactly the file this
     # function's caller asked to be written -- the same trust boundary as
@@ -1396,7 +1401,16 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # Kept rather than discarded: if the encode fails, this is the only
+        # explanation of why, and a silent failure here writes a file that
+        # looks plausible and will not play.
+        #
+        # A file, not a pipe. ffmpeg narrates every frame to stderr, which is
+        # far more than a pipe buffer holds, and nothing here drains it while
+        # the frame loop runs -- so a pipe deadlocks: ffmpeg blocks writing
+        # stderr, stops reading frames, and both sides wait forever. A file
+        # has no such limit.
+        stderr=log,
     )
 
     fade_frames = int(0.35 * fps)
@@ -1424,7 +1438,13 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
             canvas = FigureCanvasAgg(figure)
             canvas.draw()
             buffer = np.asarray(canvas.buffer_rgba())[:, :, :3]
-            process.stdin.write(buffer.tobytes())
+            try:
+                process.stdin.write(buffer.tobytes())
+            except BrokenPipeError:
+                # ffmpeg is gone. Its own stderr says why -- an unusable
+                # output path, an unsupported pixel format, or the OOM
+                # killer -- and a bare traceback here says none of that.
+                _fail(process, log, output, f"closed the pipe after {written} frames")
             written += 1
 
             if written % 30 == 0:
@@ -1436,7 +1456,31 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     print()
     process.stdin.close()
     process.wait()
+
+    # ffmpeg can consume every frame and still fail at the end -- `+faststart`
+    # remuxes the whole file once the stream is closed, and a kill during that
+    # pass leaves a truncated file with no index. Unchecked, the caller goes on
+    # to report the byte count of a video that will not open.
+    if process.returncode != 0:
+        _fail(process, log, output, f"exited {process.returncode}")
+
+    log.close()
     return output
+
+
+def _fail(process: subprocess.Popen[bytes], log: IO[bytes], output: Path, what: str) -> NoReturn:
+    """Report why ffmpeg failed and stop, rather than leaving a broken file."""
+    process.kill()
+    with log:
+        log.seek(0)
+        errors = log.read()
+    detail = errors.decode("utf-8", "replace").strip().splitlines()
+    tail = "\n  ".join(detail[-5:]) if detail else "no output captured"
+    print(
+        f"\nffmpeg {what}; {output} is not a usable video.\n  {tail}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 
 
 def write_poster(scenes: list[Scene], output: Path, *, scene_index: int, progress: float) -> Path:

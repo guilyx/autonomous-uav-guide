@@ -47,7 +47,7 @@ python -m uav_sim.simulations.path_tracking.flight_ops_demo
 
 ## Evidence
 
-![Flight Ops Demo](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/flight_ops_demo/flight_ops_demo.gif)
+![Flight Ops Demo](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/flight_ops_demo/flight_ops_demo.gif)
 
 ## References
 

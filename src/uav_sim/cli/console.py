@@ -3,7 +3,7 @@
 
 Deliberately tiny and dependency-free. Colour is disabled automatically
 when the output is not a TTY, when ``NO_COLOR`` is set (see
-https://no-color.org), or when ``TERM=dumb`` — so piping ``uav-sim list``
+https://no-color.org), or when ``TERM=dumb`` — so piping ``flybots list``
 into a file gives clean text.
 """
 

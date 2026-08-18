@@ -70,7 +70,7 @@ python -m uav_sim.simulations.path_tracking.mpc_tracking
 
 ## Evidence
 
-![MPC Tracking](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/mpc_tracking/mpc_tracking.gif)
+![MPC Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/mpc_tracking/mpc_tracking.gif)
 
 ## References
 

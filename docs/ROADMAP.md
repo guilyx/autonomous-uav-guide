@@ -6,9 +6,9 @@ Planned improvements, grouped by domain and roughly prioritised within each
 section. Items marked **done** have shipped; the rest are open, and most are
 a reasonable first contribution.
 
-See [CONTRIBUTING](https://github.com/guilyx/autonomous-uav-guide/blob/main/CONTRIBUTING.md)
+See [CONTRIBUTING](https://github.com/guilyx/flybots/blob/main/CONTRIBUTING.md)
 for the bar a new algorithm has to clear, and
-[CHANGELOG](https://github.com/guilyx/autonomous-uav-guide/blob/main/CHANGELOG.md)
+[CHANGELOG](https://github.com/guilyx/flybots/blob/main/CHANGELOG.md)
 for what has already landed.
 
 ## Recently shipped
@@ -21,7 +21,7 @@ for what has already landed.
   handover.
 - **Reinforcement-learning gym** — six environments and a dependency-free
   trainer.
-- **`uav-sim` CLI** with catalogue discovery and a physics self-check.
+- **`flybots` CLI** with catalogue discovery and a physics self-check.
 
 ---
 
@@ -234,7 +234,7 @@ for what has already landed.
 - YAML/TOML-based simulation configs (vehicle params, controller
   gains, world definition, viz settings) instead of hard-coded
   constants in each `run.py`.
-- CLI runner: `uav-sim run --config my_scenario.yaml`.
+- CLI runner: `flybots run --config my_scenario.yaml`.
 
 ### 9.2 Benchmarking
 - Standardised metrics: RMSE, settling time, overshoot, energy
