@@ -1579,15 +1579,34 @@ def write_gif(
     # per-frame, or the flat background shifts hue from scene to scene.
     with tempfile.TemporaryDirectory() as workspace:
         palette = Path(workspace) / "palette.png"
-        for stage in (
+
+        # Argument lists, no shell, spelled out at each call rather than
+        # assembled from a variable -- the same trust boundary, and the same
+        # shape, as the encoder in `render`.
+        _run_ffmpeg(
             [
+                ffmpeg,
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(video),
                 "-filter_complex",
                 f"{montage};[cut]{scaled},palettegen=stats_mode=diff:max_colors={colours}[out]",
                 "-map",
                 "[out]",
                 str(palette),
             ],
+            palette,
+        )
+        _run_ffmpeg(
             [
+                ffmpeg,
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(video),
                 "-i",
                 str(palette),
                 "-filter_complex",
@@ -1599,23 +1618,35 @@ def write_gif(
                 "0",
                 str(output),
             ],
-        ):
-            # Same trust boundary as `render`: no shell, no external input.
-            result = subprocess.run(  # noqa: S603  # nosec B603  # nosemgrep
-                [ffmpeg, "-y", "-v", "error", "-i", str(video), *stage],
-                capture_output=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                detail = result.stderr.decode("utf-8", "replace").strip().splitlines()
-                tail = "\n  ".join(detail[-5:]) if detail else "no output captured"
-                print(
-                    f"\nffmpeg exited {result.returncode}; {output} was not written.\n  {tail}",
-                    file=sys.stderr,
-                )
-                raise SystemExit(1)
+            output,
+        )
 
     return output
+
+
+def _run_ffmpeg(argv: list[str], output: Path) -> None:
+    """Run one ffmpeg pass, reporting its own error if it fails.
+
+    Stderr goes to a file rather than a pipe for the reason `render`
+    documents: nothing drains a pipe while ffmpeg is working, and a full
+    pipe buffer deadlocks the pair.
+    """
+    with tempfile.TemporaryFile() as log:
+        process = subprocess.Popen(  # noqa: S603  # nosec B603  # nosemgrep
+            argv,
+            stdout=subprocess.DEVNULL,
+            stderr=log,
+        )
+        process.wait()
+        if process.returncode != 0:
+            log.seek(0)
+            detail = log.read().decode("utf-8", "replace").strip().splitlines()
+            tail = "\n  ".join(detail[-5:]) if detail else "no output captured"
+            print(
+                f"\nffmpeg exited {process.returncode}; {output} was not written.\n  {tail}",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
 
 
 def build_scenes(reuse_policy: bool = True) -> list[Scene]:
