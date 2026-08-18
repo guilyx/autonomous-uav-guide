@@ -205,8 +205,9 @@ class TestLayouts:
         side = 2 * ARM / np.sqrt(2.0)
 
         def sorted_columns(rotors):
-            order = sorted(range(len(rotors)), key=lambda i: (round(rotors[i].x, 9),
-                                                              round(rotors[i].y, 9)))
+            order = sorted(
+                range(len(rotors)), key=lambda i: (round(rotors[i].x, 9), round(rotors[i].y, 9))
+            )
             return allocation_matrix(rotors, KAPPA)[:, order]
 
         np.testing.assert_allclose(
@@ -334,9 +335,7 @@ class TestRedundantAllocation:
         for direction in null_space:
             for scale in (-0.5, 0.5):
                 alternative = forces + scale * direction
-                np.testing.assert_allclose(
-                    hexa.forces_to_wrench(alternative), wrench, atol=1e-10
-                )
+                np.testing.assert_allclose(hexa.forces_to_wrench(alternative), wrench, atol=1e-10)
                 assert np.linalg.norm(alternative) > np.linalg.norm(forces)
 
     def test_hover_splits_evenly_across_a_symmetric_ring(self, hexa: ControlAllocation):

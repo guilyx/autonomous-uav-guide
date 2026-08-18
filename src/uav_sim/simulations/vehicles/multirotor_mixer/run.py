@@ -199,7 +199,9 @@ def main() -> None:
             f"{preset.value}_thrust_headroom",
             float(aircraft.params.max_rotor_thrust / flight["thrusts"].max()),
         )
-        logger.log_summary(f"{preset.value}_final_yaw_deg", float(np.degrees(flight["eulers"][-1, 2])))
+        logger.log_summary(
+            f"{preset.value}_final_yaw_deg", float(np.degrees(flight["eulers"][-1, 2]))
+        )
 
     for i in range(steps):
         logger.log_step(

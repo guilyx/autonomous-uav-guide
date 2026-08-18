@@ -114,7 +114,9 @@ class Rotor:
         self.position = np.array(self.position, dtype=np.float64).reshape(3)
         self.position.setflags(write=False)
         if self.direction not in (1, -1):
-            raise ValueError(f"Rotor direction must be +1 (CCW) or -1 (CW), got {self.direction!r}")
+            raise ValueError(
+                f"Rotor direction must be +1 (CCW) or -1 (CW), got {self.direction!r}"
+            )
         if self.thrust_scale <= 0.0:
             raise ValueError(f"Rotor thrust_scale must be positive, got {self.thrust_scale!r}")
 
@@ -391,8 +393,7 @@ class ControlAllocation:
     ) -> None:
         if saturation not in ("clip", "prioritise_torque"):
             raise ValueError(
-                f"Unknown saturation strategy {saturation!r}. "
-                "Use 'clip' or 'prioritise_torque'."
+                f"Unknown saturation strategy {saturation!r}. Use 'clip' or 'prioritise_torque'."
             )
         if k_thrust <= 0.0:
             raise ValueError(f"k_thrust must be positive, got {k_thrust}")
