@@ -26,10 +26,10 @@ fly itself.
 </div>
 
 <a href="https://guilyx.github.io/flybots/#see-it-fly">
-  <img src="https://raw.githubusercontent.com/guilyx/flybots/main/docs/public/media/promo-poster.png" alt="flybots — flight algorithms, from scratch" width="820"/>
+  <img src="https://raw.githubusercontent.com/guilyx/flybots/main/docs/public/media/promo.gif" alt="flybots — quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning" width="820"/>
 </a>
 
-<sub>Seventy-eight seconds of quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning, closing on all 42 simulations — <a href="https://guilyx.github.io/flybots/#see-it-fly">watch it</a>. Every frame is simulated at render time by <a href="https://github.com/guilyx/flybots/blob/main/scripts/make_promo.py"><code>scripts/make_promo.py</code></a>.</sub>
+<sub>Quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning, closing on all 42 simulations. Every frame is simulated at render time by <a href="https://github.com/guilyx/flybots/blob/main/scripts/make_promo.py"><code>scripts/make_promo.py</code></a> — no stock footage, and nothing that can drift out of sync with the code. Above is a sample of each scene; the full seventy-eight seconds, at full resolution, is <a href="https://guilyx.github.io/flybots/#see-it-fly">on the docs site</a>.</sub>
 
 ---
 

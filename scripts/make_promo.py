@@ -1343,11 +1343,8 @@ def make_outro_scene():
 # ══════════════════════════════════════════════════════════════════════════
 
 
-def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
-    """Render every scene and encode to MP4."""
-    if not 1 <= fps <= 240:
-        raise ValueError(f"fps must be in [1, 240], got {fps}")
-
+def _ffmpeg_exe() -> str:
+    """Path to the ffmpeg the ``video`` extra bundles."""
     try:
         import imageio_ffmpeg
     except ImportError:  # pragma: no cover - depends on the optional extra
@@ -1356,9 +1353,16 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
             file=sys.stderr,
         )
         raise SystemExit(1) from None
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
+    """Render every scene and encode to MP4."""
+    if not 1 <= fps <= 240:
+        raise ValueError(f"fps must be in [1, 240], got {fps}")
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg = _ffmpeg_exe()
     total_frames = sum(int(scene.seconds * fps) for scene in scenes)
 
     # ffmpeg's own diagnosis of a failed encode, kept somewhere unbounded.
@@ -1512,6 +1516,139 @@ def write_poster(scenes: list[Scene], output: Path, *, scene_index: int, progres
     return output
 
 
+# GIF sampling. GitHub's README cannot play an mp4, so the reel is also
+# published as a GIF -- but a GIF of all 78 s is 13 MB at any watchable size,
+# well past the repository's large-file guard. Sampling one window from every
+# scene keeps every subject in frame at a third of the length.
+GIF_SAMPLE_SECONDS = 2.4
+GIF_WIDTH = 720
+GIF_FPS = 10
+GIF_COLOURS = 128
+
+
+def gif_windows(
+    scenes: list[Scene], sample: float = GIF_SAMPLE_SECONDS
+) -> list[tuple[float, float]]:
+    """One ``(start, end)`` window per scene, in seconds into the video.
+
+    Centred in the scene and clear of the cross-fades at either seam, so no
+    window opens or closes on a frame that is half scrim. Derived from the
+    scene list rather than written down, so re-timing a scene re-times its
+    sample with it.
+    """
+    fade = 0.35
+    windows: list[tuple[float, float]] = []
+    clock = 0.0
+    for scene in scenes:
+        usable = max(scene.seconds - 2.0 * fade, 0.0)
+        span = min(sample, usable)
+        start = clock + fade + (usable - span) / 2.0
+        windows.append((start, start + span))
+        clock += scene.seconds
+    return windows
+
+
+def write_gif(
+    scenes: list[Scene],
+    video: Path,
+    output: Path,
+    *,
+    width: int = GIF_WIDTH,
+    fps: int = GIF_FPS,
+    colours: int = GIF_COLOURS,
+) -> Path:
+    """Sample every scene of the rendered video into one looping GIF.
+
+    Cut from the finished mp4 rather than re-simulated: the frames are
+    already correct, and re-rendering them would be a second chance to
+    disagree with the video.
+    """
+    windows = gif_windows(scenes)
+    trims = "".join(
+        f"[0:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS[s{i}];"
+        for i, (start, end) in enumerate(windows)
+    )
+    joined = "".join(f"[s{i}]" for i in range(len(windows)))
+    montage = f"{trims}{joined}concat=n={len(windows)}:v=1:a=0[cut]"
+    scaled = f"fps={fps},scale={width}:-1:flags=lanczos"
+
+    ffmpeg = _ffmpeg_exe()
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    # Two passes. One shared palette across the whole montage, rather than
+    # per-frame, or the flat background shifts hue from scene to scene.
+    with tempfile.TemporaryDirectory() as workspace:
+        palette = Path(workspace) / "palette.png"
+
+        # Argument lists, no shell, spelled out at each call rather than
+        # assembled from a variable -- the same trust boundary, and the same
+        # shape, as the encoder in `render`.
+        _run_ffmpeg(
+            [
+                ffmpeg,
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(video),
+                "-filter_complex",
+                f"{montage};[cut]{scaled},palettegen=stats_mode=diff:max_colors={colours}[out]",
+                "-map",
+                "[out]",
+                str(palette),
+            ],
+            palette,
+        )
+        _run_ffmpeg(
+            [
+                ffmpeg,
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(video),
+                "-i",
+                str(palette),
+                "-filter_complex",
+                f"{montage};[cut]{scaled}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:"
+                "diff_mode=rectangle[out]",
+                "-map",
+                "[out]",
+                "-loop",
+                "0",
+                str(output),
+            ],
+            output,
+        )
+
+    return output
+
+
+def _run_ffmpeg(argv: list[str], output: Path) -> None:
+    """Run one ffmpeg pass, reporting its own error if it fails.
+
+    Stderr goes to a file rather than a pipe for the reason `render`
+    documents: nothing drains a pipe while ffmpeg is working, and a full
+    pipe buffer deadlocks the pair.
+    """
+    with tempfile.TemporaryFile() as log:
+        process = subprocess.Popen(  # noqa: S603  # nosec B603  # nosemgrep
+            argv,
+            stdout=subprocess.DEVNULL,
+            stderr=log,
+        )
+        process.wait()
+        if process.returncode != 0:
+            log.seek(0)
+            detail = log.read().decode("utf-8", "replace").strip().splitlines()
+            tail = "\n  ".join(detail[-5:]) if detail else "no output captured"
+            print(
+                f"\nffmpeg exited {process.returncode}; {output} was not written.\n  {tail}",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
+
+
 def build_scenes(reuse_policy: bool = True) -> list[Scene]:
     print("simulating quadrotor...", flush=True)
     quad_states, quad_reference = simulate_quadrotor()
@@ -1639,6 +1776,15 @@ def main() -> None:
         default=None,
         help="also write a poster frame here (defaults to <output>-poster.png)",
     )
+    parser.add_argument(
+        "--gif",
+        type=Path,
+        default=None,
+        help=(
+            "also write a looping GIF here, sampling every scene "
+            "(defaults to <output>.gif). The README cannot play an mp4."
+        ),
+    )
     parser.add_argument("--fps", type=int, default=FPS)
     parser.add_argument(
         "--retrain",
@@ -1662,6 +1808,13 @@ def main() -> None:
     # and the airframe is mid-turn.
     written = write_poster(scenes, poster, scene_index=POSTER_SCENE, progress=0.66)
     print(f"wrote {written}")
+
+    gif = args.gif or path.with_suffix(".gif")
+    sampled = sum(end - start for start, end in gif_windows(scenes))
+    print(f"sampling {len(scenes)} scenes into {sampled:.0f}s of GIF...", flush=True)
+    written = write_gif(scenes, path, gif)
+    size_mb = written.stat().st_size / 1e6
+    print(f"wrote {written} ({size_mb:.1f} MB, {sampled:.0f}s)")
 
 
 if __name__ == "__main__":
