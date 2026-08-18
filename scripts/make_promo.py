@@ -1457,10 +1457,12 @@ def render(scenes: list[Scene], output: Path, fps: int = FPS) -> Path:
     return output
 
 
-def _fail(process: subprocess.Popen, output: Path, what: str) -> NoReturn:
+def _fail(process: subprocess.Popen[bytes], output: Path, what: str) -> NoReturn:
     """Report why ffmpeg failed and stop, rather than leaving a broken file."""
-    errors = process.stderr.read() if process.stderr else b""
-    process.stderr.close() if process.stderr else None
+    errors = b""
+    if process.stderr is not None:
+        with process.stderr:
+            errors = process.stderr.read()
     detail = errors.decode("utf-8", "replace").strip().splitlines()
     tail = "\n  ".join(detail[-5:]) if detail else "no output captured"
     print(
