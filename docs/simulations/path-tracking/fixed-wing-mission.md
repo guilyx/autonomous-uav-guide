@@ -109,6 +109,10 @@ flybots run fixed_wing_mission
 python -m uav_sim.simulations.path_tracking.fixed_wing_mission
 ```
 
+## Result
+
+![Fixed-Wing Mission](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/fixed_wing_mission/fixed_wing_mission.gif)
+
 ## Reference
 
 R. W. Beard, T. W. McLain, *Small Unmanned Aircraft: Theory and Practice*,

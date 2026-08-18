@@ -41,9 +41,10 @@ python -m uav_sim.simulations.path_tracking.fixed_wing_mission
 
 ## Result
 
-Running the simulation writes `fixed_wing_mission.gif` and
-`fixed_wing_mission_log.json` into this directory. Measured on the mini
-trainer, once each phase has settled:
+![fixed_wing_mission](fixed_wing_mission.gif)
+
+Running the simulation rewrites that GIF and a `fixed_wing_mission_log.json`
+alongside it. Measured on the mini trainer, once each phase has settled:
 
 | Phase | Capture peak | Settled mean | Settled max |
 |---|---|---|---|

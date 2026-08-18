@@ -303,11 +303,14 @@ def main() -> None:
     ax_err.legend(fontsize=5, loc="upper left")
     ax_alt.legend(fontsize=5, loc="lower right")
 
-    anim = SimAnimator("fixed_wing_mission", out_dir=Path(__file__).parent)
+    # This mission runs four times longer than a typical demo, so the
+    # frame budget and resolution are trimmed to keep the rendered GIF in
+    # line with the rest of the catalogue rather than four times their size.
+    anim = SimAnimator("fixed_wing_mission", out_dir=Path(__file__).parent, dpi=64)
     anim._fig = viz.fig
 
     trail = viz.create_trail_artists(color="black", lw=1.0)
-    skip = max(1, used // 180)
+    skip = max(1, used // 130)
     frames = list(range(0, used, skip))
     vehicle_3d: list = []
     title = viz.ax3d.set_title("Fixed-Wing Mission")

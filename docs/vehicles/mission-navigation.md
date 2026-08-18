@@ -12,7 +12,7 @@ patterns and return-to-launch.
 > Chapter 11 (path management).
 
 Source:
-[`uav_sim/guidance/`](https://github.com/guilyx/autonomous-uav-guide/tree/main/src/uav_sim/guidance)
+[`uav_sim/guidance/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/guidance)
 
 ## Quick start
 

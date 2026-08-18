@@ -56,7 +56,7 @@ See also the model documentation: [quadrotor](/vehicles/quadrotor),
 | Pure pursuit 3D | [Open](/simulations/path-tracking/pure-pursuit) | ![pure pursuit](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif) |
 | Path smoothing | [Open](/simulations/path-tracking/path-smoothing) | ![path smoothing](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/path_smoothing_demo/path_smoothing_demo.gif) |
 | Flight operations sequence | [Open](/simulations/path-tracking/flight-ops-demo) | ![flight ops](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/flight_ops_demo/flight_ops_demo.gif) |
-| Fixed-wing mission navigation | [Open](/simulations/path-tracking/fixed-wing-mission) | _render locally with `flybots run fixed_wing_mission`_ |
+| Fixed-wing mission navigation | [Open](/simulations/path-tracking/fixed-wing-mission) | ![fixed wing mission](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/fixed_wing_mission/fixed_wing_mission.gif) |
 
 ## Path planning
 
