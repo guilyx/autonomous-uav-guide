@@ -4,9 +4,9 @@ Six control tasks built on the same physics as the rest of the library,
 plus a trainer that needs nothing but NumPy.
 
 ```bash
-uav-sim envs                # list the tasks
-uav-sim train hover         # learn to hold position from scratch
-uav-sim play hover --policy policies/hover.npz --gif hover.gif
+flybots envs                # list the tasks
+flybots train hover         # learn to hold position from scratch
+flybots play hover --policy policies/hover.npz --gif hover.gif
 ```
 
 <CardGrid :items="[
@@ -66,7 +66,7 @@ env = gym.make("uav_sim/Hover-v0")
 ```
 
 ```bash
-pip install "uav-sim[gym]"
+pip install "flybots[gym]"
 ```
 
 ## Training

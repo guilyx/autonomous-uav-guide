@@ -45,9 +45,14 @@ htmlcov/
 # Generated simulation artifacts
 src/uav_sim/simulations/**/*_log.json
 
-# Trained policies, other than the checked-in reference ones
+# Trained policies, other than the checked-in reference ones.
+# The learning curve belongs with the policy: `scripts/make_promo.py` only
+# takes its reuse path when *both* files are present, so ignoring the curve
+# made every promo render retrain from scratch -- an hour of CPU to change a
+# line of on-screen copy.
 policies/*
 !policies/hover.npz
+!policies/hover_curve.npy
 
 # Docs build output
 docs/.vitepress/dist/

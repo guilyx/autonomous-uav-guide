@@ -1,12 +1,12 @@
 # Erwin Lejeune - 2026-02-18
-"""Tests for the ``uav-sim`` command-line interface."""
+"""Tests for the ``flybots`` command-line interface."""
 
 import numpy as np
 import pytest
 
 from uav_sim.cli import catalogue
 from uav_sim.cli.console import PALETTE, heading, style, supports_colour, table
-from uav_sim.cli.main import build_parser, main
+from uav_sim.cli.main import build_parser, main, main_deprecated_alias
 
 
 class TestCatalogue:
@@ -107,7 +107,20 @@ class TestParser:
 
     def test_bare_invocation_prints_help(self, capsys):
         assert main([]) == 0
-        assert "uav-sim" in capsys.readouterr().out
+        assert "flybots" in capsys.readouterr().out
+
+    def test_deprecated_alias_warns_and_forwards(self, capsys):
+        """`uav-sim` keeps working, but says so on stderr rather than stdout.
+
+        The channel matters: `uav-sim list | grep ekf` has to keep producing
+        the same stdout it always did.
+        """
+        assert main_deprecated_alias(["list"]) == 0
+        captured = capsys.readouterr()
+        assert "deprecated" in captured.err
+        assert "flybots" in captured.err
+        assert "deprecated" not in captured.out
+        assert "simulations" in captured.out
 
     def test_train_defaults(self):
         args = build_parser().parse_args(["train", "hover"])

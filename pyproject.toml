@@ -3,17 +3,57 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "uav-sim"
+name = "flybots"
 version = "0.2.0"
+description = "From-scratch autonomous UAV algorithms: multirotor, fixed-wing and VTOL flight models, 42 runnable simulations and reinforcement-learning environments."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Erwin Lejeune", email = "erwin.lejeune15@gmail.com" }]
 requires-python = ">=3.12"
+keywords = [
+    "uav",
+    "drone",
+    "quadrotor",
+    "fixed-wing",
+    "vtol",
+    "robotics",
+    "simulation",
+    "control",
+    "path-planning",
+    "state-estimation",
+    "reinforcement-learning",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Education",
+    "Typing :: Typed",
+]
 dependencies = [
     "numpy>=2.0",
     "scipy>=1.14",
     "matplotlib>=3.9",
 ]
 
+[project.urls]
+Homepage = "https://guilyx.github.io/autonomous-uav-guide/"
+Documentation = "https://guilyx.github.io/autonomous-uav-guide/"
+Repository = "https://github.com/guilyx/autonomous-uav-guide"
+Changelog = "https://github.com/guilyx/autonomous-uav-guide/blob/main/CHANGELOG.md"
+Issues = "https://github.com/guilyx/autonomous-uav-guide/issues"
+
 [project.scripts]
-uav-sim = "uav_sim.cli.main:main"
+flybots = "uav_sim.cli.main:main"
+# Kept while the import package is still `uav_sim`; see the deprecation
+# notice in `uav_sim.cli.main`. Removed when the package itself is renamed.
+uav-sim = "uav_sim.cli.main:main_deprecated_alias"
 
 [project.optional-dependencies]
 gym = ["gymnasium>=1.0"]

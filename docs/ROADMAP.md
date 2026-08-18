@@ -21,7 +21,7 @@ for what has already landed.
   handover.
 - **Reinforcement-learning gym** — six environments and a dependency-free
   trainer.
-- **`uav-sim` CLI** with catalogue discovery and a physics self-check.
+- **`flybots` CLI** with catalogue discovery and a physics self-check.
 
 ---
 
@@ -234,7 +234,7 @@ for what has already landed.
 - YAML/TOML-based simulation configs (vehicle params, controller
   gains, world definition, viz settings) instead of hard-coded
   constants in each `run.py`.
-- CLI runner: `uav-sim run --config my_scenario.yaml`.
+- CLI runner: `flybots run --config my_scenario.yaml`.
 
 ### 9.2 Benchmarking
 - Standardised metrics: RMSE, settling time, overshoot, energy

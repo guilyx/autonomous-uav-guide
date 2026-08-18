@@ -1,0 +1,97 @@
+# Erwin Lejeune - 2026-08-18
+#
+# Builds the distribution and publishes it to PyPI as `flybots`.
+#
+# Publishing uses PyPI Trusted Publishing (OIDC), so there is no API token
+# in the repository secrets. It needs a one-time setup on PyPI: on the
+# project's "Publishing" page, add a GitHub publisher for
+# guilyx/autonomous-uav-guide, workflow `release.yml`, environment `pypi`.
+# Until that exists the publish step fails with an OIDC error rather than
+# silently uploading nothing.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Build and check only, do not upload"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # The sdist bundles the README, not the media it links to, so the
+          # 6 MB promo video is dead weight for this job.
+          lfs: false
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          version: latest
+          enable-cache: true
+      - run: uv python install 3.12
+
+      # A tag that disagrees with pyproject uploads a version nobody can
+      # reproduce from the tag. Caught here, before anything is built.
+      - name: Tag matches the packaged version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          packaged=$(uv version --short)
+          tagged="${GITHUB_REF_NAME#v}"
+          echo "pyproject: $packaged, tag: $tagged"
+          test "$packaged" = "$tagged"
+
+      - run: uv build
+
+      # twine's check is what PyPI itself runs on the long description. A
+      # README it cannot render is rejected at upload time, which is a bad
+      # place to find out.
+      - name: Metadata is valid
+        run: uvx twine check dist/*
+
+      # Proves the wheel installs and that both console scripts resolve --
+      # `flybots` and the `uav-sim` alias kept for the rename.
+      - name: Wheel installs and the commands work
+        run: |
+          uv venv /tmp/release-check
+          VIRTUAL_ENV=/tmp/release-check uv pip install dist/*.whl
+          /tmp/release-check/bin/flybots --version
+          /tmp/release-check/bin/uav-sim --version
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry-run
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/flybots/
+    permissions:
+      # Mints the OIDC token Trusted Publishing exchanges for an upload
+      # token. Nothing else in this workflow needs it.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          version: latest
+      - name: Upload
+        run: uv publish --trusted-publishing always

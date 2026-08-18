@@ -2,7 +2,7 @@
 
 ## Scope
 
-`uav-sim` is a simulation and educational library. It does not process
+`flybots` is a simulation and educational library. It does not process
 untrusted network input, handle credentials, or run privileged operations.
 The realistic security surface is small, but two categories matter:
 

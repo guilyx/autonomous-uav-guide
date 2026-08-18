@@ -1274,7 +1274,7 @@ def make_outro_scene():
         axes.text(
             0.5,
             0.635,
-            "pip install uav-sim",
+            "pip install flybots",
             color=TEXT,
             fontsize=52,
             fontweight="bold",
@@ -1284,9 +1284,9 @@ def make_outro_scene():
         )
 
         commands = [
-            ("uav-sim list", "browse 42 simulations"),
-            ("uav-sim run pid_hover", "render one to a GIF"),
-            ("uav-sim train hover", "teach a drone to fly"),
+            ("flybots list", "browse 42 simulations"),
+            ("flybots run pid_hover", "render one to a GIF"),
+            ("flybots train hover", "teach a drone to fly"),
         ]
         reveal = int(np.clip(progress * 4.0, 0, len(commands)))
         for index, (command, description) in enumerate(commands[:reveal]):

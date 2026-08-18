@@ -10,7 +10,7 @@ algorithm is *correct*, *readable*, and *runnable*, in that order.
 git clone https://github.com/guilyx/autonomous-uav-guide.git
 cd autonomous-uav-guide
 uv sync --all-groups
-uv run uav-sim doctor      # verify the install and physics self-checks
+uv run flybots doctor      # verify the install and physics self-checks
 uv run pytest
 ```
 
@@ -34,7 +34,7 @@ Concretely, a pull request adding one needs:
    the parameters come from a published set, say which one.
 3. **A runnable simulation** at
    `src/uav_sim/simulations/<area>/<name>/run.py` exposing `main()`, so
-   `uav-sim run <name>` works.
+   `flybots run <name>` works.
 4. **Tests** that pin the behaviour, not just the shape of the output.
 5. **A docs page** under `docs/` and a sidebar entry in
    `docs/.vitepress/config.ts`.

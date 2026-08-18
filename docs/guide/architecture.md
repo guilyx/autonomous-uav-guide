@@ -25,7 +25,7 @@ uav_sim/
 ├── frames/              ENU/FLU transforms, FLU↔FRD bridge
 ├── gym/                 Reinforcement-learning environments and trainer
 ├── visualization/       Three-panel view, data panels, vehicle artists
-├── cli/                 The `uav-sim` command
+├── cli/                 The `flybots` command
 └── simulations/         40+ runnable demos
 ```
 

@@ -99,12 +99,12 @@ stock footage, and nothing that can drift out of sync with the code.
 ## Sixty seconds to first flight
 
 ```bash
-pip install uav-sim
+pip install flybots
 
-uav-sim doctor            # verify the install, run the physics self-checks
-uav-sim list              # browse 42 simulations
-uav-sim run pid_hover     # render one to a GIF
-uav-sim train hover       # teach a quadrotor to hold position
+flybots doctor            # verify the install, run the physics self-checks
+flybots list              # browse 42 simulations
+flybots run pid_hover     # render one to a GIF
+flybots train hover       # teach a quadrotor to hold position
 ```
 
 Or drive it from Python:

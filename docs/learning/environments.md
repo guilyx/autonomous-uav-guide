@@ -5,7 +5,7 @@ Six tasks. All follow the Gymnasium contract — `reset()` returns
 `(obs, reward, terminated, truncated, info)`.
 
 ```bash
-uav-sim envs
+flybots envs
 ```
 
 | id | vehicle | level | obs | act |

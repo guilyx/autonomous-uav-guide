@@ -1,14 +1,14 @@
 # Erwin Lejeune - 2026-02-18
-"""``uav-sim`` command-line interface.
+"""``flybots`` command-line interface.
 
-    uav-sim list                     browse the simulation catalogue
-    uav-sim run pid_hover            run a simulation and render its GIF
-    uav-sim info ekf                 show references and usage for one
-    uav-sim envs                     list the reinforcement-learning tasks
-    uav-sim train hover              train a flight policy from scratch
-    uav-sim play hover --policy p    roll a trained policy out
-    uav-sim trim aerosonde           print a fixed-wing trim table
-    uav-sim doctor                   check the local install
+    flybots list                     browse the simulation catalogue
+    flybots run pid_hover            run a simulation and render its GIF
+    flybots info ekf                 show references and usage for one
+    flybots envs                     list the reinforcement-learning tasks
+    flybots train hover              train a flight policy from scratch
+    flybots play hover --policy p    roll a trained policy out
+    flybots trim aerosonde           print a fixed-wing trim table
+    flybots doctor                   check the local install
 
 Built on argparse so the package stays dependency-free.
 """
@@ -23,7 +23,7 @@ from uav_sim import __version__
 from uav_sim.cli import catalogue
 from uav_sim.cli.console import heading, style, table
 
-__all__ = ["main", "build_parser"]
+__all__ = ["main", "main_deprecated_alias", "build_parser"]
 
 # (module name, required). Checked by `doctor` -- fixed at import time, never
 # built from a command-line argument or any other external input.
@@ -36,16 +36,18 @@ _DEPENDENCY_CHECKS = (
 )
 
 _BANNER = r"""
-   __  _____ _   __  ______
-  / / / /   | | / / / ___/ /__ _
- / /_/ / /| | |/ /  \__ \  _  ' \
- \____/_/ |_|___/  /____/_/_/_/_/   autonomous uav toolkit
+    ______      __          __
+   / __/ /_  __/ /_  ____  / /______
+  / /_/ / / / / __ \/ __ \/ __/ ___/
+ / __/ / /_/ / /_/ / /_/ / /_(__  )
+/_/ /_/\__, /_.___/\____/\__/____/
+      /____/        autonomous uav toolkit
 """
 
 
 def _print_banner() -> None:
     print(style(_BANNER, "sky"))
-    print(f"  {style('uav-sim', 'bold')} {style(__version__, 'dim')}")
+    print(f"  {style('flybots', 'bold')} {style(__version__, 'dim')}")
 
 
 # ── list ──────────────────────────────────────────────────────────────────
@@ -74,7 +76,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
 
     print(
         f"\n{style(str(total), 'bold')} simulations. Run one with "
-        f"{style('uav-sim run <name>', 'amber')}."
+        f"{style('flybots run <name>', 'amber')}."
     )
     return 0
 
@@ -162,7 +164,7 @@ def _cmd_envs(args: argparse.Namespace) -> int:
         )
         env.close()
     print(table(rows, headers=("id", "vehicle", "level", "obs", "act", "description")))
-    print(f"\nTrain one with {style('uav-sim train <id>', 'amber')}.")
+    print(f"\nTrain one with {style('flybots train <id>', 'amber')}.")
     return 0
 
 
@@ -239,7 +241,7 @@ def _cmd_train(args: argparse.Namespace) -> int:
     destination = Path(args.output or f"policies/{args.env}.npz")
     result.policy.save(destination)
     print(f"\n  {style('saved', 'green')} {destination}")
-    print(f"  Replay it with {style(f'uav-sim play {args.env} --policy {destination}', 'amber')}")
+    print(f"  Replay it with {style(f'flybots play {args.env} --policy {destination}', 'amber')}")
     return 0
 
 
@@ -350,7 +352,7 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     import platform
 
     print(heading("Environment"))
-    print(f"  {style('uav-sim', 'slate')}   {__version__}")
+    print(f"  {style('flybots', 'slate')}   {__version__}")
     print(f"  {style('python', 'slate')}    {platform.python_version()}")
     print(f"  {style('platform', 'slate')}  {platform.platform()}")
 
@@ -447,18 +449,18 @@ def _selfcheck() -> bool:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="uav-sim",
+        prog="flybots",
         description="Autonomous UAV algorithms: simulations, flight models and RL tasks.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
-            "  uav-sim list --category planning\n"
-            "  uav-sim run astar_3d\n"
-            "  uav-sim train hover --generations 60\n"
-            "  uav-sim trim skywalker_x8\n"
+            "  flybots list --category planning\n"
+            "  flybots run astar_3d\n"
+            "  flybots train hover --generations 60\n"
+            "  flybots trim skywalker_x8\n"
         ),
     )
-    parser.add_argument("--version", action="version", version=f"uav-sim {__version__}")
+    parser.add_argument("--version", action="version", version=f"flybots {__version__}")
     sub = parser.add_subparsers(dest="command")
 
     p_list = sub.add_parser("list", help="list available simulations")
@@ -479,7 +481,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_envs.set_defaults(func=_cmd_envs)
 
     p_train = sub.add_parser("train", help="train a flight policy")
-    p_train.add_argument("env", help="environment id, see 'uav-sim envs'")
+    p_train.add_argument("env", help="environment id, see 'flybots envs'")
     p_train.add_argument("-i", "--iterations", type=int, default=120)
     p_train.add_argument(
         "-d",
@@ -542,6 +544,21 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print(style("\ninterrupted", "amber"), file=sys.stderr)
         return 130
+
+
+def main_deprecated_alias(argv: list[str] | None = None) -> int:
+    """Entry point for the old ``uav-sim`` command.
+
+    The distribution is published to PyPI as ``flybots`` and the command is
+    ``flybots``. This alias keeps existing scripts and muscle memory working
+    for one release: it warns on stderr, so a piped ``uav-sim list`` still
+    produces exactly the output it used to, and then defers to ``main``.
+    """
+    print(
+        style("uav-sim is deprecated; the command is now 'flybots'.", "amber"),
+        file=sys.stderr,
+    )
+    return main(argv)
 
 
 if __name__ == "__main__":

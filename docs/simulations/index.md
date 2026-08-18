@@ -5,9 +5,9 @@ Every algorithm in the library has a runnable simulation that renders a
 three-panel animation, writes a JSON log, and cites its source.
 
 ```bash
-uav-sim list                 # browse the catalogue
-uav-sim info astar_3d        # references and usage for one
-uav-sim run astar_3d         # render it
+flybots list                 # browse the catalogue
+flybots info astar_3d        # references and usage for one
+flybots run astar_3d         # render it
 ```
 
 Or as a module: `python -m uav_sim.simulations.<category>.<name>`.
@@ -126,4 +126,4 @@ Not simulations but environments — see
 
 Preview GIFs are stored in Git LFS and served through
 `media.githubusercontent.com`. Regenerate any of them locally with
-`uav-sim run <name>`; they are written next to the simulation's `run.py`.
+`flybots run <name>`; they are written next to the simulation's `run.py`.

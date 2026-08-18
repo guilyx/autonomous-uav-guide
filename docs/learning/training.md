@@ -1,7 +1,7 @@
 # Training a policy
 
 ```bash
-uav-sim train hover
+flybots train hover
 ```
 
 ```text
@@ -85,7 +85,7 @@ repeat. The variance floor is the standard "CEM with noise" fix
 decent solution it finds.
 
 ```bash
-uav-sim train hover --optimizer cem --population 40
+flybots train hover --optimizer cem --population 40
 ```
 
 CEM has to model a distribution over *every* parameter, so its sample cost
@@ -117,7 +117,7 @@ the difference between a search with signal and one without.
 For a deeper policy:
 
 ```bash
-uav-sim train trajectory --hidden 64 64
+flybots train trajectory --hidden 64 64
 ```
 
 Expect to need more iterations. Hidden layers are worth it when the task is
@@ -183,7 +183,7 @@ reward signal.
 
 ::: tip Reproduce it
 ```bash
-uav-sim train hover --iterations 60 --directions 8 --episodes 8 --seed 0
+flybots train hover --iterations 60 --directions 8 --episodes 8 --seed 0
 ```
 Every number above came from that command. It takes tens of minutes on one
 core, and gets *slower* as it improves — a policy that keeps flying runs
@@ -193,7 +193,7 @@ the full 500-step episode instead of crashing at step 30.
 ## Watching a policy fly
 
 ```bash
-uav-sim play hover --policy policies/hover.npz --episodes 5 --gif hover.gif
+flybots play hover --policy policies/hover.npz --episodes 5 --gif hover.gif
 ```
 
 ```python
@@ -223,7 +223,7 @@ render_learning_curve(result.history, "curve.png")
 ## Using an external RL library
 
 ```bash
-pip install "uav-sim[gym]" stable-baselines3
+pip install "flybots[gym]" stable-baselines3
 ```
 
 ```python

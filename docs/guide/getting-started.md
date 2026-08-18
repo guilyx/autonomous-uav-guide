@@ -111,9 +111,9 @@ UAV. See [Autopilots](/vehicles/autopilots).
 Forty-odd simulations render an animated three-panel view:
 
 ```bash
-uav-sim list                       # browse them
-uav-sim info astar_3d              # references, module path, command
-uav-sim run astar_3d               # render the GIF
+flybots list                       # browse them
+flybots info astar_3d              # references, module path, command
+flybots run astar_3d               # render the GIF
 ```
 
 Or as a module:
@@ -127,9 +127,9 @@ Each writes its GIF next to its `run.py`, plus a JSON log of the run.
 ## 6. Teach one to fly itself
 
 ```bash
-uav-sim envs                       # the six RL tasks
-uav-sim train hover                # train a policy from scratch
-uav-sim play hover --policy policies/hover.npz --gif hover.gif
+flybots envs                       # the six RL tasks
+flybots train hover                # train a policy from scratch
+flybots play hover --policy policies/hover.npz --gif hover.gif
 ```
 
 The trainer is pure NumPy — no deep-learning stack required. See
