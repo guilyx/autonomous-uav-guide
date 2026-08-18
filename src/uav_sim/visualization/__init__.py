@@ -39,6 +39,7 @@ from .vehicle_artists import (
     clear_vehicle_artists,
     draw_fixed_wing_3d,
     draw_hexarotor_3d,
+    draw_multirotor_3d,
     draw_quadrotor_2d,
     draw_quadrotor_3d,
 )
@@ -61,6 +62,7 @@ __all__ = [
     "draw_lidar2d_rays_top",
     "draw_lidar3d_fov_3d",
     "draw_lidar3d_points_3d",
+    "draw_multirotor_3d",
     "draw_occupancy_overlay",
     "draw_quadrotor_2d",
     "draw_quadrotor_3d",

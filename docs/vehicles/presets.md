@@ -91,13 +91,25 @@ from uav_sim.vehicles.fixed_wing import compute_trim
 print(compute_trim(aircraft.fw_params, airspeed=16.0).residual)   # want < 1e-3
 ```
 
-## Quadrotor and VTOL presets
+## Multirotor and VTOL presets
 
-Quadrotors have their own catalogue — see [Quadrotor](/vehicles/quadrotor).
+Multirotors have their own catalogue in `VehiclePreset`: four quadrotors
+from a 27 g Crazyflie to a 3.6 kg Matrice, plus a `HEX_S550` hexacopter and
+a coaxial `OCTO_X8`. See [Quadrotor](/vehicles/quadrotor) for the
+four-rotor platforms and [Multirotor](/vehicles/multirotor) for the rest.
+
+```python
+from uav_sim.vehicles import VehiclePreset, create_multirotor
+
+craft = create_multirotor(VehiclePreset.HEX_S550)
+craft = create_multirotor(VehiclePreset.OCTO_X8, mass=5.2)   # override
+```
+
 The tilt-rotor currently ships a single default configuration; construct
 `TiltrotorParams` directly to vary it.
 
 ## See also
 
 - [Fixed-wing model](/vehicles/fixed-wing)
+- [Multirotor model](/vehicles/multirotor)
 - [Trim and equilibrium](/vehicles/trim)
