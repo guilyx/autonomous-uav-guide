@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The README shows the promo reel as an animated GIF instead of a still
+  poster, so the algorithms are visibly moving on the landing page rather
+  than described. `scripts/make_promo.py` gained a `--gif` flag that writes
+  it, sampling one window from the middle of every scene: a GIF of all 78 s
+  is 13 MB at any watchable size, well past the repository's large-file
+  guard, while a sample of each scene is 4.9 MB at 720 px and still shows
+  every subject. The windows are derived from the scene list and centred
+  clear of the cross-fades, so re-timing a scene re-times its sample.
+
 **Multirotor with any rotor count** (`uav_sim.vehicles.multirotor`)
 - `Multirotor(MultirotorParams)` generalises the quadrotor to N rotors with
   a configurable layout. `Quadrotor` is now a preset over it — same class
