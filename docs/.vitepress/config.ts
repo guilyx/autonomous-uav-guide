@@ -128,6 +128,7 @@ export default defineConfig({
             { text: 'Trim and equilibrium', link: '/vehicles/trim' },
             { text: 'Airframe presets', link: '/vehicles/presets' },
             { text: 'Autopilots', link: '/vehicles/autopilots' },
+            { text: 'Mission navigation', link: '/vehicles/mission-navigation' },
           ],
         },
       ],
@@ -183,6 +184,10 @@ export default defineConfig({
             { text: 'MPC tracking', link: '/simulations/path-tracking/mpc-tracking' },
             { text: 'Geometric SO(3)', link: '/simulations/path-tracking/geometric-control' },
             { text: 'Pure pursuit 3D', link: '/simulations/path-tracking/pure-pursuit' },
+            {
+              text: 'Fixed-wing mission',
+              link: '/simulations/path-tracking/fixed-wing-mission',
+            },
             { text: 'Path smoothing', link: '/simulations/path-tracking/path-smoothing' },
             { text: 'Flight ops demo', link: '/simulations/path-tracking/flight-ops-demo' },
           ],

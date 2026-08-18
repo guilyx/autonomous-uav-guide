@@ -61,8 +61,9 @@ for what has already landed.
 ### 1.4 Fixed-Wing Autonomy
 - **done** — altitude, airspeed and course hold, with gains derived from
   each airframe's control authority.
-- Mission waypoint navigation: orbit, racetrack and return-to-launch
-  patterns.
+- **done** — mission waypoint navigation: straight-line and orbit
+  vector-field following, half-plane waypoint acceptance, racetrack
+  patterns and return-to-launch.
 - L1 adaptive guidance law for path following.
 - Wind-aware Dubins path planner.
 - Wind and gust models. The aerodynamics already work from an

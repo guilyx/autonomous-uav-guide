@@ -83,6 +83,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   rotor layout.
 - Docs page at `/vehicles/multirotor`.
 
+**Fixed-wing mission navigation** (`uav_sim.guidance`)
+- Straight-line and orbit vector-field path following, ported from Beard &
+  McLain chapter 10 with the NED→ENU conversion done at the boundary and
+  both sign conventions pinned by tests.
+- Waypoint acceptance on a capture radius **or** a half-plane crossing.
+  The half-plane is what stops an aircraft that overshoots a waypoint —
+  in wind, or on a corner tighter than it can turn — circling it forever
+  hunting for a capture radius it can no longer enter. The radius comes
+  from the fillet geometry of section 11.2, so corners are cut rather than
+  overflown.
+- `racetrack_plan`, `orbit_plan`, `waypoint_plan` and
+  `return_to_launch_plan`, executed by `FixedWingMission`. Racetrack
+  straights are constructed tangent to their half-orbits, so the pattern
+  closes and can be looped indefinitely without a discontinuity at the
+  seam.
+- Convergence gains **derived** from the autopilot's own course-loop
+  bandwidth and a stated loop separation, not tuned: 52 m of transition
+  distance on a foam trainer and 444 m on an Aerosonde, from one design
+  number. Settled cross-track error is 0.43-0.59 % of the airframe's turn
+  radius on all four presets, with no overshoot.
+- Orbits tighter than the bank-limited turn radius raise `GuidanceError`
+  naming the bank they would need, rather than being flown as a larger
+  circle.
+- Runnable simulation `path_tracking/fixed_wing_mission`, flying waypoints,
+  a racetrack and a return-to-launch in one flight.
+
+**Fixed-wing autopilot**
+- `AutopilotCommand.roll_feedforward`: an optional coordinated-turn bank a
+  guidance layer can hand down, leaving the course PI to regulate only the
+  error around it. Defaults to zero, where the cascade is bit-for-bit the
+  pure feedback design it was. Without it a circuit of alternating
+  straights and turns never leaves the transient, because the course PI
+  re-charges its integrator at every hand-over — on a 2.5-turn-radius
+  racetrack that is the difference between 18.3 m and 6.3 m of worst-case
+  path error.
+
 **Documentation**
 - Pages for the five algorithms that had none: geometric SO(3) control,
   LQR path tracking, MPC path tracking, pure pursuit 3D and path
