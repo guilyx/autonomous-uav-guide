@@ -28,11 +28,17 @@ for what has already landed.
 ## 1. Vehicle Models
 
 ### 1.1 Hexacopter / Octocopter Support
-- Extend `Quadrotor` to `Multirotor(n_rotors)` with configurable arm
-  geometry (X, H, coaxial layouts).
-- Derive mixer matrices automatically from rotor positions and spin
-  directions instead of the hard-coded 4×4 mixer.
-- Add a `VehiclePreset.HEX_S550` and `VehiclePreset.OCTO_X8`.
+- **done** — `Multirotor(MultirotorParams)` with configurable arm geometry
+  (X, +, H and coaxial layouts). `Quadrotor` is a preset over it.
+- **done** — mixer matrices derived from rotor positions and spin
+  directions; the two hard-coded 4×4 matrices are reproduced to machine
+  precision by the derivation.
+- **done** — `VehiclePreset.HEX_S550` and `VehiclePreset.OCTO_X8`.
+- Per-rotor failure injection, so a rotor-out on a hexacopter can be flown
+  rather than only reasoned about. The allocation already reports the rank
+  loss; what is missing is a way to kill a motor mid-flight.
+- Tricopters, which need a tilting tail servo rather than an extra column
+  in the allocation matrix — an odd rotor ring cannot cancel its own yaw.
 
 ### 1.2 Improved Aerodynamic Models
 - Add blade-element-theory (BET) rotor model for more realistic thrust

@@ -42,6 +42,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+**Multirotor with any rotor count** (`uav_sim.vehicles.multirotor`)
+- `Multirotor(MultirotorParams)` generalises the quadrotor to N rotors with
+  a configurable layout. `Quadrotor` is now a preset over it — same class
+  name, same constructor, same behaviour — and the four-rotor case falls
+  out of the general model rather than being special.
+- **The mixing matrix is derived from rotor positions and spin
+  directions** instead of hard-coded per frame type. The two 4x4 matrices
+  the library shipped for `x` and `+` frames are reproduced by the
+  derivation to machine precision, which is pinned by a test that keeps
+  the historical matrices as literals.
+- Recovering the layout from those matrices settled a mislabelled comment:
+  the X-frame column order is rear-left, rear-right, front-right,
+  front-left, not front-left first as the source claimed. The matrix was
+  right; only the comment was wrong.
+- Layout builders `x_layout`, `plus_layout`, `h_layout` and
+  `coaxial_layout`, plus `Rotor` for anything they do not cover.
+- `ControlAllocation` reports what an airframe can actually do: `rank`,
+  `fully_actuated`, `unreachable_axes` and `yaw_authority`. A layout whose
+  rotors all spin the same way loses yaw *and* thrust as independent axes;
+  one whose rotors are collinear loses pitch. Both are rank-deficient, and
+  the pseudo-inverse returns the closest reachable wrench where a plain
+  inverse would raise.
+- A `saturation="prioritise_torque"` strategy for the over-determined
+  case: shifting the whole thrust vector by a constant keeps all three
+  torques exactly and lets the collective absorb the error, because the
+  torque rows of a balanced layout each sum to zero. The default stays
+  `"clip"`, which is what the library has always done.
+- `VehiclePreset.HEX_S550` (1.8 kg flat hexacopter) and
+  `VehiclePreset.OCTO_X8` (4.5 kg coaxial octocopter), built with
+  `create_multirotor()`. Their inertias come from a lumped model — point
+  masses at the rotor hubs plus a central disc — rather than being
+  entered by hand. The X8's lower rotors carry a wake-efficiency factor,
+  so it is not credited with eight clean-air rotors.
+- `spin_up_to_hover()`, `hover_forces()` and `get_rotor_thrusts()`, so a
+  simulation no longer has to divide the hover thrust by four itself.
+- `multirotor_mixer` simulation flying a quadrotor, a hexacopter and a
+  coaxial octocopter through the same box under the same controller, and
+  a `draw_multirotor_3d` artist that renders an aircraft from its actual
+  rotor layout.
+- Docs page at `/vehicles/multirotor`.
+
 **Documentation**
 - Pages for the five algorithms that had none: geometric SO(3) control,
   LQR path tracking, MPC path tracking, pure pursuit 3D and path

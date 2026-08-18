@@ -13,6 +13,7 @@ This chapter includes multirotor, fixed-wing, and hybrid VTOL operating regimes.
 ## Algorithms
 
 - [Quadrotor Dynamics](/simulations/vehicles/quadrotor-dynamics)
+- [Multirotor Mixer](/simulations/vehicles/multirotor-mixer)
 - [Fixed-Wing Flight](/simulations/vehicles/fixed-wing-flight)
 - [VTOL Transition](/simulations/vehicles/vtol-transition)
 

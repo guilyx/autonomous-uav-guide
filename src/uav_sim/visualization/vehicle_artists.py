@@ -228,6 +228,102 @@ def draw_hexarotor_3d(
 
 
 # ---------------------------------------------------------------------------
+# Arbitrary rotor layout
+# ---------------------------------------------------------------------------
+
+
+def draw_multirotor_3d(
+    ax: Axes3D,
+    position: NDArray[np.floating],
+    R: NDArray[np.floating],
+    rotor_positions: NDArray[np.floating],
+    spin_directions: NDArray[np.floating] | None = None,
+    scale: float = 1.0,
+    arm_color: str = "0.35",
+    ccw_color: str = "tab:red",
+    cw_color: str = "tab:blue",
+    center_color: str = "k",
+    motor_size: float = 22.0,
+    arm_lw: float = 1.8,
+) -> list[Artist]:
+    """Draw a multirotor from its actual rotor layout.
+
+    Unlike :func:`draw_quadrotor_3d` and :func:`draw_hexarotor_3d`, which
+    assume a symmetric ring, this one takes the rotor positions the model
+    is flying with — so an H frame draws as an H and a coaxial pair draws
+    as a coaxial pair. Motor dots are coloured by spin direction, which
+    makes the pattern that yaw authority comes from visible in the frame.
+
+    Parameters
+    ----------
+    ax : Axes3D
+    position : (3,) world-frame position of the centre of mass.
+    R : (3, 3) body-to-world rotation matrix.
+    rotor_positions : (n, 3) rotor hubs in body FLU coordinates [m].
+    spin_directions : (n,) of +1 (CCW) / -1 (CW), or ``None`` for one colour.
+    scale : Multiplier on the body geometry, for legibility at world scale.
+    arm_color : Colour of the arm segments.
+    ccw_color, cw_color : Motor dot colours per spin direction.
+    center_color : Colour of the centre-of-mass marker.
+    motor_size : Marker size for motor dots.
+    arm_lw : Line width for arm segments.
+
+    Returns
+    -------
+    List of matplotlib artists.
+    """
+    hubs = np.asarray(rotor_positions, dtype=np.float64).reshape(-1, 3) * scale
+    world = (R @ hubs.T).T + np.asarray(position, dtype=np.float64)
+
+    arts: list[Artist] = []
+    for hub in world:
+        (arm,) = ax.plot(
+            [position[0], hub[0]],
+            [position[1], hub[1]],
+            [position[2], hub[2]],
+            color=arm_color,
+            linewidth=arm_lw,
+        )
+        arts.append(arm)
+
+    if spin_directions is None:
+        groups = [(world, center_color)]
+    else:
+        spins = np.asarray(spin_directions)
+        groups = [
+            (world[spins > 0], ccw_color),
+            (world[spins < 0], cw_color),
+        ]
+
+    for points, color in groups:
+        if len(points) == 0:
+            continue
+        arts.append(
+            ax.scatter(
+                points[:, 0],
+                points[:, 1],
+                points[:, 2],
+                color=color,
+                s=motor_size,
+                zorder=5,
+                depthshade=False,
+            )
+        )
+
+    arts.append(
+        ax.scatter(
+            *position,
+            color=center_color,
+            s=motor_size * 0.7,
+            marker="o",
+            zorder=6,
+            depthshade=False,
+        )
+    )
+    return arts
+
+
+# ---------------------------------------------------------------------------
 # Fixed-wing
 # ---------------------------------------------------------------------------
 
