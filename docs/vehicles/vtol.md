@@ -5,7 +5,7 @@ horizontal (cruise). The interesting part is not either end — it is the
 **transition**, where lift authority migrates from the rotors to the wing
 while the aircraft has to keep flying.
 
-Source: [`uav_sim/vehicles/vtol/`](https://github.com/guilyx/autonomous-uav-guide/tree/main/src/uav_sim/vehicles/vtol)
+Source: [`uav_sim/vehicles/vtol/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/vtol)
 
 ## Quick start
 

@@ -7,7 +7,7 @@ response.
 > Estimation and Control of Quadrotor", IEEE RAM, 2012.
 > [doi:10.1109/MRA.2012.2206474](https://doi.org/10.1109/MRA.2012.2206474)
 
-Source: [`uav_sim/vehicles/multirotor/`](https://github.com/guilyx/autonomous-uav-guide/tree/main/src/uav_sim/vehicles/multirotor)
+Source: [`uav_sim/vehicles/multirotor/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/multirotor)
 
 ## Quick start
 

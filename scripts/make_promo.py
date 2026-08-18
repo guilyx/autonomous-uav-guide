@@ -604,7 +604,7 @@ def make_title_scene():
         title = axes.text(
             0.5,
             0.335,
-            "AUTONOMOUS UAV",
+            "FLYBOTS",
             color=TEXT,
             fontsize=62,
             fontweight="bold",
@@ -1315,7 +1315,7 @@ def make_outro_scene():
         axes.text(
             0.5,
             0.175,
-            "github.com/guilyx/autonomous-uav-guide",
+            "github.com/guilyx/flybots",
             color=MUTED,
             fontsize=17,
             ha="center",

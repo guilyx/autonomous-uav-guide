@@ -30,7 +30,7 @@ python -m uav_sim.simulations.path_planning.rrt_star_3d
 
 ## Evidence
 
-![RRT Star 3D](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_planning/rrt_star_3d/rrt_star_3d.gif)
+![RRT Star 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/rrt_star_3d/rrt_star_3d.gif)
 
 ## References
 

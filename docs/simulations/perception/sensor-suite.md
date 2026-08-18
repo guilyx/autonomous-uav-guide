@@ -38,7 +38,7 @@ python -m uav_sim.simulations.perception.sensor_suite_demo
 
 ## Evidence
 
-![Sensor Suite](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif)
+![Sensor Suite](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif)
 
 ## References
 

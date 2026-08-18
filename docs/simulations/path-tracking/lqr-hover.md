@@ -55,7 +55,7 @@ python -m uav_sim.simulations.path_tracking.lqr_hover
 
 ## Evidence
 
-![LQR Hover](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/lqr_hover/lqr_hover.gif)
+![LQR Hover](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/lqr_hover/lqr_hover.gif)
 
 ## References
 

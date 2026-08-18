@@ -135,4 +135,4 @@ way. This one does not.
 
 - [Frames and conventions](/guide/conventions)
 - [Flight models](/vehicles/)
-- [CONTRIBUTING](https://github.com/guilyx/autonomous-uav-guide/blob/main/CONTRIBUTING.md)
+- [CONTRIBUTING](https://github.com/guilyx/flybots/blob/main/CONTRIBUTING.md)

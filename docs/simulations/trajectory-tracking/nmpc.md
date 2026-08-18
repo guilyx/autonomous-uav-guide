@@ -78,7 +78,7 @@ python -m uav_sim.simulations.trajectory_tracking.nmpc
 
 ## Evidence
 
-![NMPC](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/trajectory_tracking/nmpc/nmpc.gif)
+![NMPC](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_tracking/nmpc/nmpc.gif)
 
 ## References
 

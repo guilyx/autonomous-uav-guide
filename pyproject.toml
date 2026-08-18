@@ -43,11 +43,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://guilyx.github.io/autonomous-uav-guide/"
-Documentation = "https://guilyx.github.io/autonomous-uav-guide/"
-Repository = "https://github.com/guilyx/autonomous-uav-guide"
-Changelog = "https://github.com/guilyx/autonomous-uav-guide/blob/main/CHANGELOG.md"
-Issues = "https://github.com/guilyx/autonomous-uav-guide/issues"
+Homepage = "https://guilyx.github.io/flybots/"
+Documentation = "https://guilyx.github.io/flybots/"
+Repository = "https://github.com/guilyx/flybots"
+Changelog = "https://github.com/guilyx/flybots/blob/main/CHANGELOG.md"
+Issues = "https://github.com/guilyx/flybots/issues"
 
 [project.scripts]
 flybots = "uav_sim.cli.main:main"

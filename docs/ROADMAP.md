@@ -6,9 +6,9 @@ Planned improvements, grouped by domain and roughly prioritised within each
 section. Items marked **done** have shipped; the rest are open, and most are
 a reasonable first contribution.
 
-See [CONTRIBUTING](https://github.com/guilyx/autonomous-uav-guide/blob/main/CONTRIBUTING.md)
+See [CONTRIBUTING](https://github.com/guilyx/flybots/blob/main/CONTRIBUTING.md)
 for the bar a new algorithm has to clear, and
-[CHANGELOG](https://github.com/guilyx/autonomous-uav-guide/blob/main/CHANGELOG.md)
+[CHANGELOG](https://github.com/guilyx/flybots/blob/main/CHANGELOG.md)
 for what has already landed.
 
 ## Recently shipped

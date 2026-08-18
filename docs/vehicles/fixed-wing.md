@@ -6,7 +6,7 @@ coefficient build-up from
 > R. W. Beard, T. W. McLain, *Small Unmanned Aircraft: Theory and
 > Practice*, Princeton University Press, 2012 — Chapter 4 and Appendix E.
 
-Source: [`uav_sim/vehicles/fixed_wing/`](https://github.com/guilyx/autonomous-uav-guide/tree/main/src/uav_sim/vehicles/fixed_wing)
+Source: [`uav_sim/vehicles/fixed_wing/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/fixed_wing)
 
 ## Quick start
 
@@ -142,7 +142,7 @@ forever.
 ## Verified behaviour
 
 Each of these has a test in
-[`tests/test_fixed_wing_aero.py`](https://github.com/guilyx/autonomous-uav-guide/blob/main/tests/test_fixed_wing_aero.py):
+[`tests/test_fixed_wing_aero.py`](https://github.com/guilyx/flybots/blob/main/tests/test_fixed_wing_aero.py):
 
 ```text
 Pitch damping        1 rad/s disturbance: 2.92° swing -> 0.19° after 8 s

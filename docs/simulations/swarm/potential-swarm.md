@@ -43,7 +43,7 @@ python -m uav_sim.simulations.swarm.potential_swarm
 
 ## Evidence
 
-![Potential Swarm](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/swarm/potential_swarm/potential_swarm.gif)
+![Potential Swarm](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/potential_swarm/potential_swarm.gif)
 
 ## References
 

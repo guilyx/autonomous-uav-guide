@@ -5,7 +5,7 @@
 # Publishing uses PyPI Trusted Publishing (OIDC), so there is no API token
 # in the repository secrets. It needs a one-time setup on PyPI: on the
 # project's "Publishing" page, add a GitHub publisher for
-# guilyx/autonomous-uav-guide, workflow `release.yml`, environment `pypi`.
+# guilyx/flybots, workflow `release.yml`, environment `pypi`.
 # Until that exists the publish step fails with an OIDC error rather than
 # silently uploading nothing.
 

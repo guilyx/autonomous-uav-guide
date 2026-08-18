@@ -7,8 +7,8 @@ algorithm is *correct*, *readable*, and *runnable*, in that order.
 ## Quick start
 
 ```bash
-git clone https://github.com/guilyx/autonomous-uav-guide.git
-cd autonomous-uav-guide
+git clone https://github.com/guilyx/flybots.git
+cd flybots
 uv sync --all-groups
 uv run flybots doctor      # verify the install and physics self-checks
 uv run pytest
@@ -126,7 +126,7 @@ aircraft.reset_trimmed(airspeed=35.0, altitude=200.0)
 
 ## Questions
 
-Open a [discussion](https://github.com/guilyx/autonomous-uav-guide/discussions)
+Open a [discussion](https://github.com/guilyx/flybots/discussions)
 or an issue. Questions about *why* an algorithm is implemented a
 particular way are welcome — if the answer is not obvious from the code,
 that is a documentation bug.

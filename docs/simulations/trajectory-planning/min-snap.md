@@ -59,7 +59,7 @@ python -m uav_sim.simulations.trajectory_planning.min_snap
 
 ## Evidence
 
-![Minimum Snap](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/trajectory_planning/min_snap/min_snap.gif)
+![Minimum Snap](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/min_snap/min_snap.gif)
 
 ## References
 

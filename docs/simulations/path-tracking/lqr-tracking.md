@@ -73,7 +73,7 @@ python -m uav_sim.simulations.path_tracking.lqr_tracking
 
 ## Evidence
 
-![LQR Tracking](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/lqr_tracking/lqr_tracking.gif)
+![LQR Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/lqr_tracking/lqr_tracking.gif)
 
 ## References
 

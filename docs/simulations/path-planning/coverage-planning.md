@@ -29,7 +29,7 @@ python -m uav_sim.simulations.path_planning.coverage_planning
 
 ## Evidence
 
-![Coverage Planning](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_planning/coverage_planning/coverage_planning.gif)
+![Coverage Planning](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/coverage_planning/coverage_planning.gif)
 
 ## References
 

@@ -58,7 +58,7 @@ models include:
 
 The models are built to be *correct within their stated scope* and readable,
 not to be a certified flight-dynamics package. See the
-[safety note](https://github.com/guilyx/autonomous-uav-guide/blob/main/SECURITY.md#a-note-on-flight-safety).
+[safety note](https://github.com/guilyx/flybots/blob/main/SECURITY.md#a-note-on-flight-safety).
 
 ## The shared base
 

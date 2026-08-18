@@ -42,7 +42,7 @@ python -m uav_sim.simulations.sensors.gimbal_tracking
 
 ## Evidence
 
-![Gimbal Tracking](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/sensors/gimbal_tracking/gimbal_tracking.gif)
+![Gimbal Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/sensors/gimbal_tracking/gimbal_tracking.gif)
 
 ## References
 

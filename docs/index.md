@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: Autonomous UAV
+  name: flybots
   text: Flight algorithms, from scratch
   tagline: >
     Multirotor, fixed-wing and VTOL flight models with the physics written
@@ -17,7 +17,7 @@ hero:
       link: /simulations/
     - theme: alt
       text: GitHub
-      link: https://github.com/guilyx/autonomous-uav-guide
+      link: https://github.com/guilyx/flybots
 
 features:
   - icon: ✈️
@@ -85,7 +85,7 @@ features:
 
 Seventy-eight seconds: nine algorithm families in depth, then every one
 of the 42 simulations in the library. Every frame is simulated by
-[`scripts/make_promo.py`](https://github.com/guilyx/autonomous-uav-guide/blob/main/scripts/make_promo.py)
+[`scripts/make_promo.py`](https://github.com/guilyx/flybots/blob/main/scripts/make_promo.py)
 at render time — the same models this library ships, integrated live. No
 stock footage, and nothing that can drift out of sync with the code.
 

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+**Repository renamed to `flybots`**
+- `github.com/guilyx/autonomous-uav-guide` is now `github.com/guilyx/flybots`.
+  Every link, clone command, badge and raw-content URL follows it. GitHub
+  redirects the old paths, so nothing breaks in the meantime, but a redirect
+  is not documentation.
+- The documentation site moves with it, to
+  `guilyx.github.io/flybots/`. VitePress's `base` is the repository name on
+  a GitHub Pages project site, so this one is load-bearing rather than
+  cosmetic: left at the old value, every asset on the deployed site 404s.
+- The project is called `flybots` in the README, the docs site title and the
+  promo video, matching the distribution and the command. Prose describing
+  what it *is* — "autonomous UAV algorithms" — is unchanged; only the name is.
+
 **Distribution renamed to `flybots`**
 - The project is published to PyPI as `flybots`: `pip install flybots`,
   extras `flybots[gym]` and `flybots[video]`. It was `uav-sim`, which was
@@ -299,5 +312,5 @@ measurement:
 Initial release: quadrotor, fixed-wing and VTOL models, planners,
 estimators, perception, swarm algorithms and 40 runnable simulations.
 
-[Unreleased]: https://github.com/guilyx/autonomous-uav-guide/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/guilyx/autonomous-uav-guide/releases/tag/v0.1.0
+[Unreleased]: https://github.com/guilyx/flybots/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/guilyx/flybots/releases/tag/v0.1.0

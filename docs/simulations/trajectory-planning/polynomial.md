@@ -43,7 +43,7 @@ python -m uav_sim.simulations.trajectory_planning.polynomial_trajectory
 
 ## Evidence
 
-![Polynomial Trajectory](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif)
+![Polynomial Trajectory](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif)
 
 ## References
 

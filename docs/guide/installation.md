@@ -40,8 +40,8 @@ will land with its own major-version bump and migration notes.
 The project uses [uv](https://github.com/astral-sh/uv):
 
 ```bash
-git clone https://github.com/guilyx/autonomous-uav-guide.git
-cd autonomous-uav-guide
+git clone https://github.com/guilyx/flybots.git
+cd flybots
 uv sync --all-groups
 ```
 
@@ -81,7 +81,7 @@ Physics self-check
 
 A `FAIL` here means something is genuinely wrong with the install rather
 than with your code — please
-[open an issue](https://github.com/guilyx/autonomous-uav-guide/issues/new/choose)
+[open an issue](https://github.com/guilyx/flybots/issues/new/choose)
 with the full output.
 
 ## Run the tests
@@ -106,7 +106,7 @@ pre-commit run --all-files
 
 Ruff handles formatting and linting; commitizen enforces
 [Conventional Commits](https://www.conventionalcommits.org/) on the commit
-message. See [CONTRIBUTING.md](https://github.com/guilyx/autonomous-uav-guide/blob/main/CONTRIBUTING.md).
+message. See [CONTRIBUTING.md](https://github.com/guilyx/flybots/blob/main/CONTRIBUTING.md).
 
 ## Building the docs
 
