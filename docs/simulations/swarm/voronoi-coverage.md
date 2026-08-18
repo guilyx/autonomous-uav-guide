@@ -42,7 +42,7 @@ python -m uav_sim.simulations.swarm.voronoi_coverage
 
 ## Evidence
 
-![Voronoi Coverage](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/swarm/voronoi_coverage/voronoi_coverage.gif)
+![Voronoi Coverage](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/voronoi_coverage/voronoi_coverage.gif)
 
 ## References
 

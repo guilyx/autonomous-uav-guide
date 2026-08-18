@@ -29,7 +29,7 @@ python -m uav_sim.simulations.path_planning.astar_3d
 
 ## Evidence
 
-![Astar 3D](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_planning/astar_3d/astar_3d.gif)
+![Astar 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/astar_3d/astar_3d.gif)
 
 ## References
 

@@ -44,7 +44,7 @@ python -m uav_sim.simulations.swarm.virtual_structure
 
 ## Evidence
 
-![Virtual Structure](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/swarm/virtual_structure/virtual_structure.gif)
+![Virtual Structure](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/virtual_structure/virtual_structure.gif)
 
 ## References
 

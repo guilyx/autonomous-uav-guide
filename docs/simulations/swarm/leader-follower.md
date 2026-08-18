@@ -45,7 +45,7 @@ python -m uav_sim.simulations.swarm.leader_follower
 
 ## Evidence
 
-![Leader Follower](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/swarm/leader_follower/leader_follower.gif)
+![Leader Follower](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/leader_follower/leader_follower.gif)
 
 ## References
 

@@ -4,7 +4,7 @@
 Deliberately dependency-free. Training a drone to fly should not require a
 deep-learning stack — these tasks are low-dimensional enough that a two
 hidden layer MLP driven by an evolutionary search solves them, and being
-able to run ``uav-sim train hover`` on a fresh ``pip install`` matters more
+able to run ``flybots train hover`` on a fresh ``pip install`` matters more
 here than squeezing out the last few percent of return.
 """
 

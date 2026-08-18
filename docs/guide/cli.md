@@ -1,19 +1,23 @@
 # CLI reference
 
 ```bash
-uav-sim --help
-uav-sim --version
+flybots --help
+flybots --version
 ```
 
 Built on argparse, so the package stays dependency-free. Colour is disabled
 automatically when output is not a terminal, when `NO_COLOR` is set, or
 when `TERM=dumb`.
 
+The command used to be `uav-sim`. That name still works — it warns on
+stderr and forwards to `flybots` — but it will be removed in a later
+release.
+
 ## `list` — browse the catalogue
 
 ```bash
-uav-sim list
-uav-sim list --category planning
+flybots list
+flybots list --category planning
 ```
 
 Groups every simulation by domain, showing whether a preview GIF has been
@@ -23,10 +27,10 @@ walking the package, so a new one appears here as soon as it has a `run.py`.
 ## `run` — render a simulation
 
 ```bash
-uav-sim run pid_hover                    # by name
-uav-sim run path_planning/astar_3d       # by slug
-uav-sim run 'swarm/*' --all              # by glob
-uav-sim run ekf --traceback              # full traceback on failure
+flybots run pid_hover                    # by name
+flybots run path_planning/astar_3d       # by slug
+flybots run 'swarm/*' --all              # by glob
+flybots run ekf --traceback              # full traceback on failure
 ```
 
 Accepts a bare name, a `category/name` slug, or a glob. A pattern matching
@@ -37,7 +41,7 @@ Each simulation writes its GIF and a JSON log next to its `run.py`.
 ## `info` — details for one simulation
 
 ```bash
-uav-sim info ekf
+flybots info ekf
 ```
 
 Prints the summary, module path, the equivalent `python -m` command, the
@@ -46,7 +50,7 @@ GIF location, and the simulation's README.
 ## `envs` — list RL environments
 
 ```bash
-uav-sim envs
+flybots envs
 ```
 
 ```text
@@ -62,10 +66,10 @@ fw-waypoint  fixed-wing  hard    obs 16  act 4  Fly a fixed-wing route...
 ## `train` — learn a flight policy
 
 ```bash
-uav-sim train hover
-uav-sim train fw-cruise --iterations 200 --directions 16
-uav-sim train trajectory --hidden 64 64
-uav-sim train hover --optimizer cem --population 40
+flybots train hover
+flybots train fw-cruise --iterations 200 --directions 16
+flybots train trajectory --hidden 64 64
+flybots train hover --optimizer cem --population 40
 ```
 
 | Flag | Default | Meaning |
@@ -86,9 +90,9 @@ including the share of episodes ending in each termination reason.
 ## `play` — roll out a policy
 
 ```bash
-uav-sim play hover --policy policies/hover.npz
-uav-sim play hover --policy policies/hover.npz --episodes 5 --gif hover.gif
-uav-sim play landing                       # untrained zero policy
+flybots play hover --policy policies/hover.npz
+flybots play hover --policy policies/hover.npz --episodes 5 --gif hover.gif
+flybots play landing                       # untrained zero policy
 ```
 
 Reports per-episode return, length and termination reason. With `--gif`,
@@ -97,8 +101,8 @@ renders the flown trajectories against the goal.
 ## `trim` — fixed-wing trim table
 
 ```bash
-uav-sim trim aerosonde
-uav-sim trim skywalker_x8 --climb 2.0
+flybots trim aerosonde
+flybots trim skywalker_x8 --climb 2.0
 ```
 
 ```text
@@ -125,7 +129,7 @@ solution are marked `unreachable` rather than silently omitted. See
 ## `doctor` — check the install
 
 ```bash
-uav-sim doctor
+flybots doctor
 ```
 
 Reports the interpreter, dependency versions (marking optional ones as

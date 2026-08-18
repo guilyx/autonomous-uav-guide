@@ -49,7 +49,7 @@ python -m uav_sim.simulations.path_tracking.pid_hover
 
 ## Evidence
 
-![PID Hover](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif)
+![PID Hover](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif)
 
 ## References
 

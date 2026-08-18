@@ -84,7 +84,7 @@ python -m uav_sim.simulations.path_tracking.pure_pursuit
 
 ## Evidence
 
-![Pure Pursuit](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif)
+![Pure Pursuit](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif)
 
 ## References
 

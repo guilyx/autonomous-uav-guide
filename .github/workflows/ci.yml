@@ -130,15 +130,15 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --all-groups
       - name: Physics self-check
-        run: uv run uav-sim doctor
+        run: uv run flybots doctor
       - name: Catalogue is discoverable
         run: |
-          uv run uav-sim list
-          uv run uav-sim envs
+          uv run flybots list
+          uv run flybots envs
       - name: Trim solver
-        run: uv run uav-sim trim skywalker_x8
+        run: uv run flybots trim skywalker_x8
       - name: Training loop runs end to end
-        run: uv run uav-sim train hover --iterations 3 --directions 4 --eval-episodes 3
+        run: uv run flybots train hover --iterations 3 --directions 4 --eval-episodes 3
 
   docs:
     name: Docs build

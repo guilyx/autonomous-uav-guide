@@ -47,7 +47,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: Output of `uav-sim --version`
+      description: Output of `flybots --version`
     validations:
       required: true
 
@@ -55,5 +55,5 @@ body:
     id: doctor
     attributes:
       label: Environment
-      description: Output of `uav-sim doctor`
+      description: Output of `flybots doctor`
       render: shell

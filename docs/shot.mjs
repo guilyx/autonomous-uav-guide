@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
-const B='http://localhost:4173/autonomous-uav-guide';
-const out='/tmp/claude-0/-home-user-autonomous-uav-guide/5dd49567-9f47-5acd-bd1d-bac8b2fa687b/scratchpad';
+const B='http://localhost:4173/flybots';
+const out=process.env.SHOT_OUT ?? '.';
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 for (const [name, url, dark] of [
   ['home-dark', '/', true],

@@ -8,28 +8,40 @@ Matplotlib.
 ## From PyPI
 
 ```bash
-pip install uav-sim
+pip install flybots
 ```
 
 Optional extras:
 
 ```bash
-pip install "uav-sim[gym]"     # Gymnasium integration for external RL libraries
-pip install "uav-sim[video]"   # MP4 export via a bundled ffmpeg
-pip install "uav-sim[gym,video]"
+pip install "flybots[gym]"     # Gymnasium integration for external RL libraries
+pip install "flybots[video]"   # MP4 export via a bundled ffmpeg
+pip install "flybots[gym,video]"
 ```
 
 Neither extra is needed to train a policy — the built-in trainer is pure
 NumPy. `gym` only matters if you want to drive the environments with
 Stable-Baselines3, CleanRL or similar.
 
+::: warning Renamed from `uav-sim`
+The distribution and its command are now `flybots`. Installing `uav-sim`
+still leaves a `uav-sim` command on your PATH — it prints a deprecation
+notice on stderr and then runs `flybots`, and it will be removed in a later
+release.
+
+The *import* package has not been renamed yet: it is still `uav_sim`, so
+`from uav_sim.vehicles.multirotor import Quadrotor` is unchanged, as are the
+Gymnasium environment ids (`uav_sim/Hover-v0`). That rename is coming, and
+will land with its own major-version bump and migration notes.
+:::
+
 ## From source
 
 The project uses [uv](https://github.com/astral-sh/uv):
 
 ```bash
-git clone https://github.com/guilyx/autonomous-uav-guide.git
-cd autonomous-uav-guide
+git clone https://github.com/guilyx/flybots.git
+cd flybots
 uv sync --all-groups
 ```
 
@@ -52,7 +64,7 @@ code, `GIT_LFS_SKIP_SMUDGE=1 git clone ...` skips roughly 100 MB of media.
 ## Verify
 
 ```bash
-uav-sim doctor
+flybots doctor
 ```
 
 This prints the interpreter and dependency versions, counts the
@@ -69,7 +81,7 @@ Physics self-check
 
 A `FAIL` here means something is genuinely wrong with the install rather
 than with your code — please
-[open an issue](https://github.com/guilyx/autonomous-uav-guide/issues/new/choose)
+[open an issue](https://github.com/guilyx/flybots/issues/new/choose)
 with the full output.
 
 ## Run the tests
@@ -94,7 +106,7 @@ pre-commit run --all-files
 
 Ruff handles formatting and linting; commitizen enforces
 [Conventional Commits](https://www.conventionalcommits.org/) on the commit
-message. See [CONTRIBUTING.md](https://github.com/guilyx/autonomous-uav-guide/blob/main/CONTRIBUTING.md).
+message. See [CONTRIBUTING.md](https://github.com/guilyx/flybots/blob/main/CONTRIBUTING.md).
 
 ## Building the docs
 

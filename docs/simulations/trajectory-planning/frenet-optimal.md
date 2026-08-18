@@ -52,7 +52,7 @@ python -m uav_sim.simulations.trajectory_planning.frenet_optimal
 
 ## Evidence
 
-![Frenet Optimal](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/trajectory_planning/frenet_optimal/frenet_optimal.gif)
+![Frenet Optimal](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/frenet_optimal/frenet_optimal.gif)
 
 ## References
 

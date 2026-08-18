@@ -2,7 +2,7 @@
 
 ## Scope
 
-`uav-sim` is a simulation and educational library. It does not process
+`flybots` is a simulation and educational library. It does not process
 untrusted network input, handle credentials, or run privileged operations.
 The realistic security surface is small, but two categories matter:
 
@@ -28,7 +28,7 @@ not yet reached 1.0; older versions are not patched.
 Please **do not open a public issue** for a security problem.
 
 Report it privately through
-[GitHub Security Advisories](https://github.com/guilyx/autonomous-uav-guide/security/advisories/new),
+[GitHub Security Advisories](https://github.com/guilyx/flybots/security/advisories/new),
 or by email to **erwin.lejeune15@gmail.com**.
 
 Include:

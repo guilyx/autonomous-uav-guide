@@ -70,7 +70,7 @@ python -m uav_sim.simulations.estimation.particle_filter
 
 ## Evidence
 
-![Particle Filter](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/estimation/particle_filter/particle_filter.gif)
+![Particle Filter](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/particle_filter/particle_filter.gif)
 
 ## References
 

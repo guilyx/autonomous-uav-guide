@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: Autonomous UAV
+  name: flybots
   text: Flight algorithms, from scratch
   tagline: >
     Multirotor, fixed-wing and VTOL flight models with the physics written
@@ -17,7 +17,7 @@ hero:
       link: /simulations/
     - theme: alt
       text: GitHub
-      link: https://github.com/guilyx/autonomous-uav-guide
+      link: https://github.com/guilyx/flybots
 
 features:
   - icon: ✈️
@@ -85,7 +85,7 @@ features:
 
 Seventy-eight seconds: nine algorithm families in depth, then every one
 of the 42 simulations in the library. Every frame is simulated by
-[`scripts/make_promo.py`](https://github.com/guilyx/autonomous-uav-guide/blob/main/scripts/make_promo.py)
+[`scripts/make_promo.py`](https://github.com/guilyx/flybots/blob/main/scripts/make_promo.py)
 at render time — the same models this library ships, integrated live. No
 stock footage, and nothing that can drift out of sync with the code.
 
@@ -99,12 +99,12 @@ stock footage, and nothing that can drift out of sync with the code.
 ## Sixty seconds to first flight
 
 ```bash
-pip install uav-sim
+pip install flybots
 
-uav-sim doctor            # verify the install, run the physics self-checks
-uav-sim list              # browse 42 simulations
-uav-sim run pid_hover     # render one to a GIF
-uav-sim train hover       # teach a quadrotor to hold position
+flybots doctor            # verify the install, run the physics self-checks
+flybots list              # browse 42 simulations
+flybots run pid_hover     # render one to a GIF
+flybots train hover       # teach a quadrotor to hold position
 ```
 
 Or drive it from Python:

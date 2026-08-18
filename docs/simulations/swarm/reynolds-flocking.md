@@ -45,7 +45,7 @@ python -m uav_sim.simulations.swarm.reynolds_flocking
 
 ## Evidence
 
-![Reynolds Flocking](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/swarm/reynolds_flocking/reynolds_flocking.gif)
+![Reynolds Flocking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/reynolds_flocking/reynolds_flocking.gif)
 
 ## References
 

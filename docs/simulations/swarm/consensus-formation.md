@@ -29,7 +29,7 @@ python -m uav_sim.simulations.swarm.consensus_formation
 
 ## Evidence
 
-![Consensus Formation](https://media.githubusercontent.com/media/guilyx/autonomous-uav-guide/main/src/uav_sim/simulations/swarm/consensus_formation/consensus_formation.gif)
+![Consensus Formation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/consensus_formation/consensus_formation.gif)
 
 ## References
 
