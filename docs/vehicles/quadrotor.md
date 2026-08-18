@@ -65,6 +65,12 @@ excite the motor dynamics.
 using the arm length and the thrust/torque coefficients. Yaw torque comes
 from the reaction torque of the counter-rotating pairs.
 
+Both matrices are **derived** from the rotor positions and spin directions
+rather than written out by hand, which is what lets the same code mix a
+hexacopter or a coaxial X8 — see [Multirotor](/vehicles/multirotor). The
+X-frame column order is rear-left, rear-right, front-right, front-left,
+spinning `CCW, CW, CCW, CW`.
+
 ## Presets
 
 ```python
@@ -105,8 +111,12 @@ PositionController -> VelocityController -> AttitudeController -> RateController
 with `FlightController` composing them and `StateManager` running the
 ARM → TAKEOFF → HOVER → TRACKING → LAND mode sequence.
 
+`Quadrotor` is a preset over the general `Multirotor` model, so everything
+here applies to a hexacopter or an octocopter too.
+
 ## See also
 
+- [Multirotor — any rotor count](/vehicles/multirotor)
 - [Quadrotor dynamics simulation](/simulations/vehicles/quadrotor-dynamics)
 - [PID hover](/simulations/path-tracking/pid-hover)
 - [LQR hover](/simulations/path-tracking/lqr-hover)

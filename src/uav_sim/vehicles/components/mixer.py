@@ -1,26 +1,49 @@
 # Erwin Lejeune - 2026-02-16
 """Control allocation mixer: body wrench to individual motor forces.
 
+The mixing matrix used to be written out by hand, one literal per frame
+type. It is now derived from the rotor layout in
+:mod:`uav_sim.vehicles.components.allocation`, which reproduces both
+literals to machine precision — see ``tests/test_allocation.py``, which
+pins the historical matrices against the derivation. Deriving it is what
+lets the same code mix a hexacopter, an octocopter or a coaxial X8.
+
 Reference: R. Mahony, V. Kumar, P. Corke, "Multirotor Aerial Vehicles,"
 IEEE RAM, 2012. DOI: 10.1109/MRA.2012.2206474
 """
 
 from __future__ import annotations
 
-import numpy as np
-from numpy.typing import NDArray
+from uav_sim.vehicles.components.allocation import (
+    ControlAllocation,
+    Rotor,
+    plus_layout,
+    x_layout,
+)
 
 
-class Mixer:
-    """Maps ``[T, tau_x, tau_y, tau_z]`` to ``[f1, f2, f3, f4]`` and back.
+class Mixer(ControlAllocation):
+    """Maps ``[T, tau_x, tau_y, tau_z]`` to per-rotor forces and back.
 
-    Supports X-frame and +-frame quadrotor configurations.
+    A thin named entry point onto :class:`ControlAllocation` for the two
+    quadrotor frames the library has always shipped. Anything with a rotor
+    count other than four, or a layout that is not a symmetric ring, should
+    build a :class:`ControlAllocation` from an explicit rotor list instead.
+
+    The X-frame column order is **rear-left, rear-right, front-right,
+    front-left**, with spin directions ``CCW, CW, CCW, CW``; the ``+``-frame
+    order is rear, right, front, left with the same spins. Both fall out of
+    the geometry: they are the orders that reproduce the matrices this
+    module used to hard-code.
 
     Parameters:
         arm_length: Distance from CoM to motor [m].
         k_thrust: Thrust coefficient [N/(rad/s)^2].
         k_torque: Torque coefficient [Nm/(rad/s)^2].
         frame: ``"x"`` for X-frame, ``"+"`` for +-frame.
+        rotors: Explicit layout, overriding *frame* and *arm_length*.
+        max_thrust: Per-rotor thrust ceiling [N], or ``None`` for unbounded.
+        saturation: ``"clip"`` (default) or ``"prioritise_torque"``.
     """
 
     def __init__(
@@ -29,60 +52,27 @@ class Mixer:
         k_thrust: float = 8.55e-6,
         k_torque: float = 1.36e-7,
         frame: str = "x",
+        rotors: list[Rotor] | None = None,
+        max_thrust: float | None = None,
+        saturation: str = "clip",
     ) -> None:
+        if rotors is None:
+            rotors = self.frame_layout(frame, arm_length)
         self.arm_length = arm_length
-        self.k_thrust = k_thrust
-        self.k_torque = k_torque
         self.frame = frame
-        self._mix_matrix = self._build_mix_matrix()
-        self._inv_mix_matrix = np.linalg.inv(self._mix_matrix)
+        super().__init__(
+            rotors,
+            k_thrust=k_thrust,
+            k_torque=k_torque,
+            max_thrust=max_thrust,
+            saturation=saturation,
+        )
 
-    def _build_mix_matrix(self) -> NDArray[np.floating]:
-        """Build the 4x4 mixing matrix (wrench → forces)."""
-        L = self.arm_length
-        kappa = self.k_torque / self.k_thrust  # torque-to-thrust ratio
-
-        if self.frame == "x":
-            s = L / np.sqrt(2.0)
-            # Motor order: FL(CCW), FR(CW), RR(CCW), RL(CW)
-            return np.array(
-                [
-                    [1.0, 1.0, 1.0, 1.0],
-                    [s, -s, -s, s],
-                    [s, s, -s, -s],
-                    [-kappa, kappa, -kappa, kappa],
-                ]
-            )
-        elif self.frame == "+":
-            return np.array(
-                [
-                    [1.0, 1.0, 1.0, 1.0],
-                    [0.0, -L, 0.0, L],
-                    [L, 0.0, -L, 0.0],
-                    [-kappa, kappa, -kappa, kappa],
-                ]
-            )
-        else:
-            raise ValueError(f"Unknown frame type: {self.frame!r}. Use 'x' or '+'.")
-
-    def wrench_to_forces(self, wrench: NDArray[np.floating]) -> NDArray[np.floating]:
-        """Convert body wrench ``[T, τx, τy, τz]`` to motor forces ``[f1..f4]``.
-
-        Forces are clamped to non-negative values.
-        """
-        forces = self._inv_mix_matrix @ np.asarray(wrench, dtype=np.float64)
-        return np.maximum(forces, 0.0)
-
-    def forces_to_wrench(self, forces: NDArray[np.floating]) -> NDArray[np.floating]:
-        """Convert motor forces ``[f1..f4]`` to body wrench ``[T, τx, τy, τz]``."""
-        return self._mix_matrix @ np.asarray(forces, dtype=np.float64)
-
-    @property
-    def mix_matrix(self) -> NDArray[np.floating]:
-        """The 4x4 mixing matrix."""
-        return self._mix_matrix.copy()
-
-    @property
-    def inv_mix_matrix(self) -> NDArray[np.floating]:
-        """Inverse mixing matrix (wrench → forces)."""
-        return self._inv_mix_matrix.copy()
+    @staticmethod
+    def frame_layout(frame: str, arm_length: float, n_rotors: int = 4) -> list[Rotor]:
+        """Rotor layout for a named frame type."""
+        if frame == "x":
+            return x_layout(n_rotors, arm_length)
+        if frame == "+":
+            return plus_layout(n_rotors, arm_length)
+        raise ValueError(f"Unknown frame type: {frame!r}. Use 'x' or '+'.")

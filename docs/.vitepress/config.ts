@@ -117,6 +117,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/vehicles/' },
             { text: 'Quadrotor', link: '/vehicles/quadrotor' },
+            { text: 'Multirotor (N-rotor)', link: '/vehicles/multirotor' },
             { text: 'Fixed-wing', link: '/vehicles/fixed-wing' },
             { text: 'VTOL tilt-rotor', link: '/vehicles/vtol' },
           ],
@@ -154,6 +155,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/simulations/vehicles/' },
             { text: 'Quadrotor dynamics', link: '/simulations/vehicles/quadrotor-dynamics' },
+            { text: 'Multirotor mixer', link: '/simulations/vehicles/multirotor-mixer' },
             { text: 'Fixed-wing flight', link: '/simulations/vehicles/fixed-wing-flight' },
             { text: 'VTOL transition', link: '/simulations/vehicles/vtol-transition' },
           ],

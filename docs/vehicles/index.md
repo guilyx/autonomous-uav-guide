@@ -12,6 +12,12 @@ compose because they agree on frames — see
     body: '6DOF Newton-Euler rigid body with per-motor first-order dynamics and a configurable mixer.'
   },
   {
+    title: 'Multirotor',
+    meta: 'N rotors',
+    link: '/vehicles/multirotor',
+    body: 'Any even rotor count and any arm geometry, with the mixing matrix derived from rotor positions and spin directions rather than hard-coded.'
+  },
+  {
     title: 'Fixed-wing',
     meta: 'aerodynamic',
     link: '/vehicles/fixed-wing',
@@ -36,7 +42,7 @@ compose because they agree on frames — see
 | Stall | — | yes, flat-plate blend | yes, shared |
 | Propulsion | thrust-coefficient motors | momentum-theory propeller | tilting rotor thrust |
 | Trim solver | hover wrench (closed form) | numerical, `compute_trim` | — |
-| Presets | 4 | 4 | 1 |
+| Presets | 6 (4 quad, hex, coaxial octo) | 4 | 1 |
 | State velocity | world ENU | body FLU | world ENU |
 | Control input | `[T, τx, τy, τz]` | `[δe, δa, δr, δt]` | `[T, τx, τy, τz, tilt]` |
 
