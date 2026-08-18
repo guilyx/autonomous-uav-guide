@@ -26,7 +26,8 @@ for _ in range(12_000):
 ```text
 airspeed  ──PI───────────────────────────────▶ throttle
 altitude  ──PI──▶ pitch cmd  ──PD───────────▶ elevator
-course    ──PI──▶ roll cmd   ──PD───────────▶ aileron
+course    ──PI──▶(+)▶ roll cmd  ──PD────────▶ aileron
+turn bank ───────▲
 sideslip  ──P────┐
 yaw rate  ──washout──D──────────────────────▶ rudder
 ```
@@ -128,6 +129,27 @@ a few time constants.
 Both scale with `sign(Cndr)`, so the loop works on any airframe and
 disables itself entirely on a rudderless one where `Cndr == 0`.
 
+### The one feed-forward path
+
+`AutopilotCommand.roll_feedforward` lets a layer above hand the autopilot
+the bank a path of known curvature requires, leaving the course PI to
+regulate only the error around it. It defaults to zero, and at zero the
+cascade is exactly the pure feedback design it has always been.
+
+It exists because the course loop's plant is an integrator, so entering a
+turn is a *ramp* in commanded course, and a PI tracks a ramp with zero
+steady-state error only once its integrator has charged. On a circuit of
+alternating straights and turns the aircraft never gets that long, and the
+lag shows up as a bulge on every turn entry and an overshoot on every exit.
+Feeding the bank forward on a 2.5-turn-radius racetrack takes the mini
+trainer's worst-case path error from 18.3 m to 6.3 m.
+
+The PI is handed whatever bank authority the feed-forward has not spent, so
+its anti-windup still measures the real remaining range, and the sum is
+clamped to `max_roll`. See
+[mission navigation](/vehicles/mission-navigation) for the layer that uses
+it.
+
 ### Anti-windup
 
 The PI helper uses conditional integration: the integrator only advances
@@ -177,5 +199,7 @@ and a geometric SO(3) controller.
 
 ## See also
 
+- [Mission navigation](/vehicles/mission-navigation) — waypoints, orbits,
+  racetracks and return-to-launch on top of this autopilot
 - [Trim and equilibrium](/vehicles/trim)
 - [Frames and conventions](/guide/conventions)

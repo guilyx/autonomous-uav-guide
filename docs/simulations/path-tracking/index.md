@@ -18,6 +18,7 @@ This chapter spans linear and nonlinear feedback structures used for hover and m
 - [MPC Tracking](/simulations/path-tracking/mpc-tracking)
 - [Geometric Control on SE(3)](/simulations/path-tracking/geometric-control)
 - [Pure Pursuit 3D](/simulations/path-tracking/pure-pursuit)
+- [Fixed-Wing Mission Navigation](/simulations/path-tracking/fixed-wing-mission)
 - [Path Smoothing](/simulations/path-tracking/path-smoothing)
 - [Flight Ops Demo](/simulations/path-tracking/flight-ops-demo)
 
