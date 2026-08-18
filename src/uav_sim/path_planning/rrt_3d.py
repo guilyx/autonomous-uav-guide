@@ -150,6 +150,7 @@ class RRTStar3D(RRT3D):
         self.nodes = [np.asarray(start, dtype=np.float64)]
         self.parents = [-1]
         self.costs = [0.0]
+        self._children: list[list[int]] = [[]]
         best_goal_idx: int | None = None
 
         for _ in range(self.max_iter):
@@ -175,13 +176,18 @@ class RRTStar3D(RRT3D):
             self.nodes.append(q_new)
             self.parents.append(best_parent)
             self.costs.append(float(best_cost))
+            self._children.append([])
+            self._children[best_parent].append(new_idx)
 
             # Rewire.
             for ni in near_idxs:
                 new_cost = best_cost + np.linalg.norm(self.nodes[ni] - q_new)
                 if new_cost < self.costs[ni] and self._collision_free(q_new, self.nodes[ni]):
+                    self._children[self.parents[ni]].remove(ni)
                     self.parents[ni] = new_idx
+                    self._children[new_idx].append(ni)
                     self.costs[ni] = float(new_cost)
+                    self._propagate_cost(ni)
 
             if np.linalg.norm(q_new - goal) < self.goal_radius and (
                 best_goal_idx is None or self.costs[new_idx] < self.costs[best_goal_idx]
@@ -191,6 +197,24 @@ class RRTStar3D(RRT3D):
         if best_goal_idx is not None:
             return self._extract_path(best_goal_idx)
         return None
+
+    def _propagate_cost(self, idx: int) -> None:
+        """Push a rewired node's new cost down through its subtree.
+
+        A rewire shortens the route to ``idx``, and every node hanging off
+        it reaches the tree through that same route. Leaving the subtree on
+        its old costs makes ``costs`` disagree with the tree it describes,
+        so choose-parent rejects genuinely cheaper parents and the goal is
+        picked by comparing stale numbers.
+        """
+        stack = [idx]
+        while stack:
+            parent = stack.pop()
+            for child in self._children[parent]:
+                self.costs[child] = self.costs[parent] + float(
+                    np.linalg.norm(self.nodes[child] - self.nodes[parent])
+                )
+                stack.append(child)
 
     def _near(self, q: NDArray[np.floating]) -> list[int]:
         n = len(self.nodes)

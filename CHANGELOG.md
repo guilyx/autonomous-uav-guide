@@ -127,6 +127,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+**Unscented Kalman Filter** — the sigma points were built from the
+**rows** of the lower-triangular Cholesky factor instead of its columns.
+For `P = L Lᵀ`, summing `Lᵢ Lᵢᵀ` over columns recovers `P`; over rows it
+recovers `LᵀL`, a different matrix whenever `P` has any off-diagonal
+term. The filter therefore propagated a covariance it was never given.
+Feeding `P = [[2, 1], [1, 2]]` through an identity process model — which
+must return it unchanged — returned `[[2.5, 0.87], [0.87, 1.5]]`, and
+propagating it through a constant-velocity step reported a velocity
+variance of 0.71 against a true 0.95. Diagonal `P` masked it entirely,
+which is why the existing tests passed: they all started from `I`.
+
+**PRM edge collision checking** — `_edge_free` sampled
+`int(length / 0.5)` points along an edge, but `linspace` spreads *n*
+samples over *n − 1* intervals, so the actual spacing was
+`length / (int(length / 0.5) − 1)` — always coarser than the intended
+0.5 m, and for any edge up to 1.5 m it collapsed to two samples: the
+endpoints and nothing in between. A 1.4 m edge whose endpoints cleared a
+0.6 m sphere by 0.1 m, with the sphere's centre exactly at its midpoint,
+was admitted to the roadmap. Now `ceil(length / 0.5) + 1` samples, so
+consecutive checks are never more than 0.5 m apart at any edge length.
+
+**RRT\* rewiring** — rewiring gave a node a cheaper parent but left every
+node in its subtree on the old cost, so `costs` no longer described the
+tree it indexed. Over a 300-iteration plan six nodes overstated their
+cost, by up to 1.4 m out of 15.6 m. Those stale numbers are what
+choose-parent compares against, so genuinely cheaper parents were
+rejected, and the goal was selected by comparing costs that did not match
+the paths they labelled — on one seed the winning node claimed 17.31 m
+for a 17.02 m route. The saving is now pushed down the subtree.
+
+**3-D lidar pitch convention** — `Lidar3D` added the pitch angle to each
+beam's elevation, which is the aerospace (nose-up-positive) sign. The
+library's body frame is Forward-Left-Up, where positive `theta` is
+nose-**down**, so the whole scan was aimed into the sky by twice the
+pitch angle. A vehicle at 5 m pitched nose-down 29° reported clear air
+across all 1152 beams with a wall 4 m below and 10 m ahead of it; it now
+returns 9.6 m. `to_point_cloud` carried the same error, so the point
+cloud was self-consistent with the ranges and mis-oriented with the
+world. Beam elevation is now `va - theta`, which matches
+`euler_to_rotation` exactly for the zero-roll case the model covers.
+
 **Fixed-wing aerodynamics** — the previous model was not usable for
 anything beyond producing a moving picture:
 

@@ -132,8 +132,10 @@ class Lidar3D(Sensor):
             return ranges
 
         for vi, va in enumerate(self.v_angles):
-            cos_va = np.cos(pitch + va)
-            sin_va = np.sin(pitch + va)
+            # Beam elevation in the world frame. ``theta`` is positive
+            # nose-down in FLU, so a nose-down aircraft lowers every beam.
+            cos_va = np.cos(va - pitch)
+            sin_va = np.sin(va - pitch)
             for hi, ha in enumerate(self.h_angles):
                 dx = cos_va * np.cos(yaw + ha)
                 dy = cos_va * np.sin(yaw + ha)
@@ -180,8 +182,10 @@ class Lidar3D(Sensor):
 
         pts: list[NDArray[np.floating]] = []
         for vi, va in enumerate(self.v_angles):
-            cos_va = np.cos(pitch + va)
-            sin_va = np.sin(pitch + va)
+            # Beam elevation in the world frame. ``theta`` is positive
+            # nose-down in FLU, so a nose-down aircraft lowers every beam.
+            cos_va = np.cos(va - pitch)
+            sin_va = np.sin(va - pitch)
             for hi, ha in enumerate(self.h_angles):
                 r = ranges[vi, hi]
                 if r >= self.max_range - 1e-3:
