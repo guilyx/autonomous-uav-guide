@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0] - 2026-08-20
+
 ### Changed
 
 **Repository renamed to `flybots`**
@@ -452,5 +456,6 @@ measurement:
 Initial release: quadrotor, fixed-wing and VTOL models, planners,
 estimators, perception, swarm algorithms and 40 runnable simulations.
 
-[Unreleased]: https://github.com/guilyx/flybots/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/guilyx/flybots/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guilyx/flybots/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/guilyx/flybots/releases/tag/v0.1.0
