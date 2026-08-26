@@ -210,7 +210,7 @@ def main() -> None:
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail_arts, pos, k)
-        viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
+        viz.update_vehicle(pos[k], states[k, 3:6])
 
         ref_3d.set_data([refs[k, 0]], [refs[k, 1]])
         ref_3d.set_3d_properties([refs[k, 2]])

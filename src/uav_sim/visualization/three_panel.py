@@ -26,8 +26,11 @@ from numpy.typing import NDArray
 from uav_sim.environment.obstacles import BoxObstacle, CylinderObstacle, Obstacle
 from uav_sim.visualization.vehicle_artists import (
     clear_vehicle_artists,
+    draw_fixed_wing_3d,
+    draw_hexarotor_3d,
     draw_quadrotor_2d,
     draw_quadrotor_3d,
+    draw_vtol_3d,
 )
 
 
@@ -163,20 +166,72 @@ class ThreePanelViz:
         artists["3d"].set_3d_properties(pos[:, 2])
         artists["top"].set_data(pos[:, 0], pos[:, 1])
 
+    def vehicle_size(self, fraction: float = 0.07) -> float:
+        """Legible vehicle size for this figure's world scale.
+
+        A fixed size cannot suit every simulation: 1.5 m is a tenth of a
+        30 m room and a sixtieth of a 100 m one, so the same call that reads
+        as an aircraft in one simulation renders as a speck in the next.
+        Sizing off the axis limits keeps the vehicle the same size *on
+        screen* wherever it is flown.
+        """
+        return float(self.world_size) * fraction
+
     def update_vehicle(
         self,
         position: NDArray[np.floating],
         euler: NDArray[np.floating],
-        size: float = 1.5,
+        size: float | None = None,
+        platform: str = "quadrotor",
+        tilt: float = 0.0,
     ) -> None:
-        """Draw the quadrotor at given pose, clearing previous artists."""
+        """Draw the vehicle at the given pose, clearing the previous frame.
+
+        Parameters
+        ----------
+        position : (3,) world-frame position.
+        euler : (3,) ``[roll, pitch, yaw]`` in the ZYX convention.
+        size : Vehicle size in world units. Defaults to
+            :meth:`vehicle_size`, which scales with the world so the model
+            stays legible instead of shrinking to a dot in large worlds.
+        platform : ``"quadrotor"``, ``"hexarotor"``, ``"fixed_wing"`` or
+            ``"vtol"``. Simulations of a wing should not be illustrated
+            with a quadrotor.
+        tilt : Rotor tilt [rad], used only by ``"vtol"``.
+        """
         from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 
         clear_vehicle_artists(self._vehicle_arts_3d)
         clear_vehicle_artists(self._vehicle_arts_top)
 
+        if size is None:
+            size = self.vehicle_size()
+
         R = Quadrotor.rotation_matrix(*euler)
-        self._vehicle_arts_3d.extend(draw_quadrotor_3d(self.ax3d, position, R, size=size))
+
+        if platform == "fixed_wing":
+            self._vehicle_arts_3d.extend(
+                draw_fixed_wing_3d(
+                    self.ax3d, position, R, fuselage_length=size * 1.4, wingspan=size * 2.0
+                )
+            )
+        elif platform == "vtol":
+            self._vehicle_arts_3d.extend(
+                draw_vtol_3d(
+                    self.ax3d,
+                    position,
+                    R,
+                    tilt=tilt,
+                    fuselage_length=size * 1.4,
+                    wingspan=size * 2.0,
+                    arm_length=size * 0.5,
+                )
+            )
+        elif platform == "hexarotor":
+            self._vehicle_arts_3d.extend(draw_hexarotor_3d(self.ax3d, position, R, size=size))
+        else:
+            self._vehicle_arts_3d.extend(draw_quadrotor_3d(self.ax3d, position, R, size=size))
+
         self._vehicle_arts_top.extend(
             draw_quadrotor_2d(
                 self.ax_top,

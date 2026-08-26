@@ -143,7 +143,7 @@ def main() -> None:
             fi = f - n_tf
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
-            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
+            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6])
             title.set_text("Phase 2: Quadrotor Flying Polynomial Trajectory")
 
     anim.animate(update, total)

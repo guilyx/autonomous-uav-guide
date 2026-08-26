@@ -248,7 +248,7 @@ def main() -> None:
         k = idx[f]
         viz.update_trail(trail_true, true_xyz, k)
         viz.update_trail(trail_est, est_xyz, k)
-        viz.update_vehicle(est_xyz[k], flight_states[k, 3:6], size=1.5)
+        viz.update_vehicle(est_xyz[k], flight_states[k, 3:6])
         for a, line in zip(ANCHORS, range_lines):
             line.set_data([est_xyz[k, 0], a[0]], [est_xyz[k, 1], a[1]])
         err_line.set_data(times[:k], err[:k])

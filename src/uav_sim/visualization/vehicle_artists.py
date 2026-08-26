@@ -65,6 +65,103 @@ def _homogeneous_transform(
     return T
 
 
+def attitude_from_velocity(
+    velocity: NDArray[np.floating],
+    acceleration: NDArray[np.floating] | None = None,
+    *,
+    gravity: float = 9.81,
+    max_bank: float = np.pi / 4,
+    min_speed: float = 1e-3,
+) -> NDArray[np.floating]:
+    """Infer a plausible body-to-world rotation from how the vehicle is moving.
+
+    This is a *display* helper, not a state estimate. Many simulations model
+    a point mass and carry no attitude at all; drawing those with an identity
+    rotation leaves the vehicle stubbornly axis-aligned while it flies a
+    curve, which reads as a bug. Deriving heading and bank from the motion
+    that *is* simulated keeps the picture honest without inventing dynamics.
+
+    Angles follow the ZYX convention of
+    :meth:`~uav_sim.vehicles.multirotor.multirotor.Multirotor.rotation_matrix`,
+    where positive pitch is nose-down and positive roll raises the left wing.
+
+    Parameters
+    ----------
+    velocity : (3,) world-frame velocity. Sets heading and climb angle.
+    acceleration : (3,) world-frame acceleration, optional. Its component
+        across the direction of travel sets the coordinated-turn bank; with
+        no acceleration the vehicle flies wings-level.
+    gravity : magnitude used for the bank balance.
+    max_bank : bank limit [rad], so a tight turn cannot roll past knife-edge.
+    min_speed : below this the direction of travel is meaningless and the
+        identity rotation is returned.
+
+    Returns
+    -------
+    (3, 3) body-to-world rotation matrix.
+    """
+    v = np.asarray(velocity, dtype=float).reshape(3)
+    speed = float(np.linalg.norm(v))
+    if not np.isfinite(speed) or speed < min_speed:
+        return np.eye(3)
+
+    yaw = float(np.arctan2(v[1], v[0]))
+    pitch = -float(np.arcsin(np.clip(v[2] / speed, -1.0, 1.0)))
+
+    roll = 0.0
+    if acceleration is not None:
+        a = np.asarray(acceleration, dtype=float).reshape(3)
+        horiz = v[:2]
+        horiz_speed = float(np.linalg.norm(horiz))
+        if horiz_speed > min_speed and np.all(np.isfinite(a)):
+            # Left-pointing unit vector in the horizontal plane. The turn
+            # acceleration along it is what the bank has to balance.
+            left = np.array([-horiz[1], horiz[0]]) / horiz_speed
+            a_lat = float(np.dot(a[:2], left))
+            # Banking left lowers the left wing, which is negative roll.
+            roll = -float(np.arctan2(a_lat, gravity))
+            roll = float(np.clip(roll, -max_bank, max_bank))
+
+    cp, sp = np.cos(roll), np.sin(roll)
+    ct, st = np.cos(pitch), np.sin(pitch)
+    cy, sy = np.cos(yaw), np.sin(yaw)
+    return np.array(
+        [
+            [cy * ct, cy * st * sp - sy * cp, cy * st * cp + sy * sp],
+            [sy * ct, sy * st * sp + cy * cp, sy * st * cp - cy * sp],
+            [-st, ct * sp, ct * cp],
+        ]
+    )
+
+
+def attitude_series_from_positions(
+    positions: NDArray[np.floating],
+    dt: float,
+    **kwargs: Any,
+) -> list[NDArray[np.floating]]:
+    """Rotation matrices for a whole trajectory of positions.
+
+    Convenience wrapper around :func:`attitude_from_velocity` for the common
+    case where a simulation stored positions only. Velocity and acceleration
+    come from central differences, so the bank leads and trails a turn the
+    way it would if it had been flown.
+
+    Parameters
+    ----------
+    positions : (N, 3) world-frame positions.
+    dt : timestep between samples [s].
+    **kwargs : forwarded to :func:`attitude_from_velocity`.
+    """
+    p = np.asarray(positions, dtype=float)
+    if p.ndim != 2 or p.shape[1] != 3:
+        raise ValueError(f"positions must be (N, 3), got {p.shape}")
+    if p.shape[0] < 2 or dt <= 0.0:
+        return [np.eye(3) for _ in range(len(p))]
+    vel = np.gradient(p, dt, axis=0)
+    acc = np.gradient(vel, dt, axis=0)
+    return [attitude_from_velocity(vel[i], acc[i], **kwargs) for i in range(len(p))]
+
+
 # ---------------------------------------------------------------------------
 # Quadrotor (cross-arm pattern)
 # ---------------------------------------------------------------------------
@@ -80,6 +177,8 @@ def draw_quadrotor_3d(
     motor_color: str | None = None,
     motor_size: float = 25.0,
     arm_lw: float = 2.5,
+    rotor_disc: bool = True,
+    disc_ratio: float = 0.42,
     **_kw: Any,
 ) -> list[Artist]:
     """Draw a quadrotor cross-frame and return the created artists.
@@ -103,6 +202,10 @@ def draw_quadrotor_3d(
         whatever colour its arms were given.
     motor_size : Marker size for motor dots.
     arm_lw : Line width for arm segments.
+    rotor_disc : Draw the swept rotor discs. Without them the model is two
+        crossed lines, which at simulation scale reads as a marker rather
+        than as an aircraft.
+    disc_ratio : Rotor radius as a fraction of *size*.
 
     Returns
     -------
@@ -150,6 +253,26 @@ def draw_quadrotor_3d(
         depthshade=False,
     )
     arts.append(pt)
+
+    # Rotor discs. Four dots on two crossed lines read as a plus sign at the
+    # scale these simulations render at; the swept discs are what make the
+    # shape legible as a multirotor rather than a marker.
+    if rotor_disc:
+        theta = np.linspace(0.0, 2.0 * np.pi, 17)
+        r = size * disc_ratio
+        circle_body = np.stack([r * np.cos(theta), r * np.sin(theta), np.zeros_like(theta)])
+        for tip in (p1, p2, p3, p4):
+            pts = circle_body + tip[:3].reshape(3, 1)
+            world = R @ pts + np.asarray(position, dtype=float).reshape(3, 1)
+            (disc,) = ax.plot(
+                world[0],
+                world[1],
+                world[2],
+                color=center_color if motor_color is None else motor_color,
+                linewidth=arm_lw * 0.5,
+                alpha=0.85,
+            )
+            arts.append(disc)
 
     # Centre hub
     hub = ax.scatter(
@@ -380,6 +503,95 @@ def draw_fixed_wing_3d(
     nose_w = T @ nose
     pt = ax.scatter(*nose_w, color="red", s=25, zorder=6, depthshade=False)
     arts.append(pt)
+    return arts
+
+
+# ---------------------------------------------------------------------------
+# VTOL / tilt-rotor
+# ---------------------------------------------------------------------------
+
+
+def draw_vtol_3d(
+    ax: Axes3D,
+    position: NDArray[np.floating],
+    R: NDArray[np.floating],
+    tilt: float = 0.0,
+    fuselage_length: float = 1.0,
+    wingspan: float = 1.6,
+    arm_length: float = 0.3,
+    scale: float = 1.0,
+    body_color: str = "darkslategray",
+    wing_color: str = "teal",
+    rotor_color: str = "orangered",
+    tail_color: str = "slategray",
+    lw: float = 2.5,
+    **_kw: Any,
+) -> list[Artist]:
+    """Draw a tilt-rotor VTOL, with the rotors drawn at their actual tilt.
+
+    The tilt is the whole point of the airframe, so it is drawn rather than
+    implied: each nacelle's thrust axis rotates in the body x-z plane from
+    straight up to straight forward, matching
+    :attr:`~uav_sim.vehicles.vtol.tiltrotor.TiltrotorParams.max_tilt`.
+
+    Parameters
+    ----------
+    tilt : rotor tilt [rad]. ``0`` is hover (thrust along body ``+z``),
+        ``pi/2`` is cruise (thrust along body ``+x``), matching the sign
+        convention of :class:`~uav_sim.vehicles.vtol.tiltrotor.Tiltrotor`.
+    """
+    fl = fuselage_length * scale
+    ws = wingspan * scale
+    al = arm_length * scale
+
+    T = _homogeneous_transform(position, R)
+
+    def _line(
+        p1: NDArray[np.floating],
+        p2: NDArray[np.floating],
+        color: str,
+        width: float,
+    ) -> Artist:
+        pw1 = T @ np.array([p1[0], p1[1], p1[2], 1.0])
+        pw2 = T @ np.array([p2[0], p2[1], p2[2], 1.0])
+        (art,) = ax.plot(
+            [pw1[0], pw2[0]],
+            [pw1[1], pw2[1]],
+            [pw1[2], pw2[2]],
+            color=color,
+            linewidth=width,
+        )
+        return art
+
+    arts: list[Artist] = []
+
+    # Fuselage and wing.
+    nose = np.array([fl / 2, 0.0, 0.0])
+    tail = np.array([-fl / 2, 0.0, 0.0])
+    arts.append(_line(nose, tail, body_color, lw))
+    wing_l = np.array([fl * 0.05, ws / 2, 0.0])
+    wing_r = np.array([fl * 0.05, -ws / 2, 0.0])
+    arts.append(_line(wing_l, wing_r, wing_color, lw))
+
+    # V-tail, same silhouette as the fixed-wing artist.
+    tail_l = np.array([-fl / 2, ws * 0.15, ws * 0.10])
+    tail_r = np.array([-fl / 2, -ws * 0.15, ws * 0.10])
+    arts.append(_line(tail, tail_l, tail_color, lw * 0.8))
+    arts.append(_line(tail, tail_r, tail_color, lw * 0.8))
+
+    # Four nacelles, ahead of and behind the wing at each semi-span.
+    axis = np.array([np.sin(tilt), 0.0, np.cos(tilt)])
+    for sy in (1.0, -1.0):
+        mount = np.array([fl * 0.05, sy * ws * 0.30, 0.0])
+        for sx in (1.0, -1.0):
+            hub = mount + np.array([sx * al, 0.0, 0.0])
+            arts.append(_line(mount, hub, wing_color, lw * 0.6))
+            arts.append(_line(hub, hub + axis * al * 0.8, rotor_color, lw * 0.9))
+            hub_w = T @ np.array([hub[0], hub[1], hub[2], 1.0])
+            arts.append(ax.scatter(*hub_w, color=rotor_color, s=18, zorder=6, depthshade=False))
+
+    nose_w = T @ np.array([nose[0], nose[1], nose[2], 1.0])
+    arts.append(ax.scatter(*nose_w, color="red", s=25, zorder=6, depthshade=False))
     return arts
 
 

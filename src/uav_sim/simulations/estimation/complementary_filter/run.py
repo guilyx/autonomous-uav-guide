@@ -186,7 +186,7 @@ def main() -> None:
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail_arts, pos, k)
-        viz.update_vehicle(pos[k], flight_states[k, 3:6], size=1.5)
+        viz.update_vehicle(pos[k], flight_states[k, 3:6])
         l_tr.set_data(times[:k], true_rp[:k, 0])
         l_er.set_data(times[:k], est_rp[:k, 0])
         l_tp.set_data(times[:k], true_rp[:k, 1])
