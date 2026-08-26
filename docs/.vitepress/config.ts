@@ -236,6 +236,8 @@ export default defineConfig({
             { text: 'EKF-SLAM', link: '/simulations/perception/ekf-slam' },
             { text: 'Occupancy mapping', link: '/simulations/perception/occupancy-mapping' },
             { text: 'Visual servoing', link: '/simulations/perception/visual-servoing' },
+            { text: 'Visual servoing — fixed camera', link: '/simulations/perception/visual-servoing-fixed' },
+            { text: 'Visual servoing — gimbal camera', link: '/simulations/perception/visual-servoing-gimbal' },
             { text: 'Sensor suite', link: '/simulations/perception/sensor-suite' },
           ],
         },
