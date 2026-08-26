@@ -30,6 +30,25 @@ Lloyd update moves each agent to its cell centroid.
   force says how far the last step moved; it says nothing about whether the
   configuration is any good.
 
+- **The region travels.** Lloyd on a static box converges once and then has
+  nothing left to do. Here a fixed-size region tracks the swarm figure-8, so
+  coverage becomes a continuous problem and the team keeps redistributing
+  itself as its ground slides away. `recenter` translates the precomputed
+  integration grid rather than rebuilding it: re-meshing every step would
+  dominate runtime for a result identical to a vector add, and it would
+  change the grid point count whenever the new bounds missed a multiple of
+  `resolution`, making the cost jump for reasons unrelated to the agents.
+- **An agent outside the region is stranded, not merely idle.** Its Voronoi
+  cell contains no grid points, so Lloyd hands back a centroid equal to its
+  own position and the force is *exactly zero* — it never returns. This
+  never arises while the region covers the whole workspace, because every
+  agent always owns some of it; with a travelling region agents fall outside
+  constantly. `compute_forces` recalls them, and `recall_outside=False`
+  keeps textbook-pure Lloyd available for comparison.
+- **Feed the region's velocity forward.** The coverage force only ever
+  points at where the region is *now*, so without it the team spends the
+  whole run chasing and never settles inside. With it the cost falls
+  monotonically and stays down while the region moves.
 - Convergence depends on bounded domain and update damping.
 - Density `\phi(q)` can bias coverage toward high-priority regions.
 - Voronoi recomputation cost grows with agent count.
