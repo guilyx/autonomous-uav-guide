@@ -245,7 +245,6 @@ def main() -> None:
         viz.update_vehicle(
             np.array([est_xy[k, 0], est_xy[k, 1], CRUISE_ALT]),
             flight_states[fi, 3:6],
-            size=1.5,
         )
 
         pts = part_hist[k]

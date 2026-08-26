@@ -192,7 +192,7 @@ def main() -> None:
 
         viz.update_trail(trail_arts, pos, k)
         euler = states_arr[k, 3:6]
-        viz.update_vehicle(pos[k], euler, size=1.5)
+        viz.update_vehicle(pos[k], euler)
 
         clear_vehicle_artists(fov_arts)
         clear_vehicle_artists(pc_arts)

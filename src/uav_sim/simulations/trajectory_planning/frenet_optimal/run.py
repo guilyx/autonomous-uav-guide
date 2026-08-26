@@ -270,7 +270,7 @@ def main() -> None:
             fi = f - cand_pause
             k = fly_frames[min(fi, len(fly_frames) - 1)]
             viz.update_trail(fly_trail, flight_pos, k)
-            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6], size=1.5)
+            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6])
             l_ct.set_data(flight_times[:k], cross_track[:k])
             l_sp.set_data(flight_times[:k], flight_speed[:k])
 

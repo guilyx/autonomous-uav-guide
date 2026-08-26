@@ -307,7 +307,7 @@ def main() -> None:
 
         viz.update_trail(trail_true, true_3d, k)
         viz.update_trail(trail_est, est_3d, k)
-        viz.update_vehicle(true_3d[k], flight_states[fi, 3:6], size=1.5)
+        viz.update_vehicle(true_3d[k], flight_states[fi, 3:6])
 
         vis_k = seen_hist[k]
         lm_pts = lm_est_hist[k]

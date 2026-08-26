@@ -109,7 +109,7 @@ def main() -> None:
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail, pos, k)
-        viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
+        viz.update_vehicle(pos[k], states[k, 3:6])
         l_err.set_data(times[:k], err[:k])
         l_phi.set_data(times[:k], states[:k, 3])
         l_theta.set_data(times[:k], states[:k, 4])

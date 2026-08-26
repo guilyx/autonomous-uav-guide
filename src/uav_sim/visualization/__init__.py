@@ -36,17 +36,22 @@ from .sensor_viz import (
 )
 from .three_panel import ThreePanelViz
 from .vehicle_artists import (
+    attitude_from_velocity,
+    attitude_series_from_positions,
     clear_vehicle_artists,
     draw_fixed_wing_3d,
     draw_hexarotor_3d,
     draw_multirotor_3d,
     draw_quadrotor_2d,
     draw_quadrotor_3d,
+    draw_vtol_3d,
 )
 
 __all__ = [
     "SimAnimator",
     "ThreePanelViz",
+    "attitude_from_velocity",
+    "attitude_series_from_positions",
     "clear_vehicle_artists",
     "create_four_panel_figure",
     "draw_camera_fov_side",
@@ -66,6 +71,7 @@ __all__ = [
     "draw_occupancy_overlay",
     "draw_quadrotor_2d",
     "draw_quadrotor_3d",
+    "draw_vtol_3d",
     "plot_quadrotor_3d",
     "plot_state_history",
     "plot_trajectory_3d",

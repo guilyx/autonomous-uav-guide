@@ -121,7 +121,7 @@ def main() -> None:
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail, pos, k)
-        viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
+        viz.update_vehicle(pos[k], states[k, 3:6])
         cp = carrot_points[k]
         carrot_3d.set_data([cp[0]], [cp[1]])
         carrot_3d.set_3d_properties([cp[2]])

@@ -35,7 +35,7 @@ from uav_sim.vehicles.vtol import Tiltrotor
 from uav_sim.visualization import SimAnimator, ThreePanelViz
 from uav_sim.visualization.vehicle_artists import (
     clear_vehicle_artists,
-    draw_quadrotor_3d,
+    draw_vtol_3d,
 )
 
 matplotlib.use("Agg")
@@ -184,15 +184,21 @@ def main() -> None:
 
         clear_vehicle_artists(vehicle_arts_3d)
         R = Quadrotor.rotation_matrix(*eulers[k])
+        # Draw the tilt-rotor at its actual rotor angle. The transition is
+        # the subject of this simulation, so illustrating it with a
+        # fixed-geometry quadrotor hid the one thing worth watching.
         vehicle_arts_3d.extend(
-            draw_quadrotor_3d(
+            draw_vtol_3d(
                 viz.ax3d,
                 positions[k],
                 R,
-                size=22.0,
-                arm_colors=(_MODE_COLORS[modes[k]], _MODE_COLORS[modes[k]]),
-                center_color=_MODE_COLORS[modes[k]],
-                motor_color=_MODE_COLORS[modes[k]],
+                tilt=float(tilt_angles[k]),
+                fuselage_length=30.0,
+                wingspan=48.0,
+                arm_length=10.0,
+                body_color=_MODE_COLORS[modes[k]],
+                wing_color=_MODE_COLORS[modes[k]],
+                tail_color=_MODE_COLORS[modes[k]],
             )
         )
 

@@ -124,7 +124,7 @@ def main() -> None:
     def update(f: int) -> None:
         k = idx[f]
         viz.update_trail(trail, pos, k)
-        viz.update_vehicle(pos[k], states[k, 3:6], size=1.5)
+        viz.update_vehicle(pos[k], states[k, 3:6])
         phase = _current_phase(k)
         title.set_text(f"Flight Ops — {phase}")
         l_dist.set_data(times[:k], dist_to_goal[:k])
