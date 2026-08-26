@@ -20,6 +20,15 @@ Nothing yet.
   docs site link them from GitHub and nothing imports them at runtime -- so
   they are excluded from both the wheel and the sdist. The wheel is 432 KB.
 
+**Every card link on the docs site 404'd**
+- `CardGrid.vue` bound `:href` to the raw link, and VitePress rewrites links
+  written in markdown to include `base` but not an href bound in a component.
+  All 16 cards -- on the landing page, the RL overview and the vehicles index
+  -- pointed at the domain root instead of the site. The links now go through
+  `withBase`.
+- This was invisible on the Vercel preview, where `base` is '/', and broken on
+  GitHub Pages, where it is '/flybots/', which is why CI never caught it.
+
 **Simulation GIFs are in Git LFS for real**
 - `.gitattributes` had declared `*.gif filter=lfs` since the GIFs were added,
   but none were ever migrated: they sat in the pack as plain 1-5 MB blobs.
