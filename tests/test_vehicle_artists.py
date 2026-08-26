@@ -41,9 +41,9 @@ class TestAttitudeFromVelocity:
 
     def test_left_turn_drops_the_left_wing(self):
         # Flying +x, accelerating towards +y: a left turn.
-        left_wing = attitude_from_velocity(
-            np.array([10.0, 0.0, 0.0]), np.array([0.0, 9.81, 0.0])
-        )[:, 1]
+        left_wing = attitude_from_velocity(np.array([10.0, 0.0, 0.0]), np.array([0.0, 9.81, 0.0]))[
+            :, 1
+        ]
         assert left_wing[2] < 0.0
 
     def test_right_turn_raises_the_left_wing(self):
@@ -106,9 +106,7 @@ class TestAttitudeSeries:
             attitude_series_from_positions(np.zeros((5, 2)), 0.1)
 
     def test_degenerate_inputs_are_identity(self):
-        assert attitude_series_from_positions(np.zeros((1, 3)), 0.1) == [
-            pytest.approx(np.eye(3))
-        ]
+        assert attitude_series_from_positions(np.zeros((1, 3)), 0.1) == [pytest.approx(np.eye(3))]
         for R in attitude_series_from_positions(np.zeros((4, 3)), 0.0):
             np.testing.assert_allclose(R, np.eye(3))
 

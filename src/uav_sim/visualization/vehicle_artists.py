@@ -588,9 +588,7 @@ def draw_vtol_3d(
             arts.append(_line(mount, hub, wing_color, lw * 0.6))
             arts.append(_line(hub, hub + axis * al * 0.8, rotor_color, lw * 0.9))
             hub_w = T @ np.array([hub[0], hub[1], hub[2], 1.0])
-            arts.append(
-                ax.scatter(*hub_w, color=rotor_color, s=18, zorder=6, depthshade=False)
-            )
+            arts.append(ax.scatter(*hub_w, color=rotor_color, s=18, zorder=6, depthshade=False))
 
     nose_w = T @ np.array([nose[0], nose[1], nose[2], 1.0])
     arts.append(ax.scatter(*nose_w, color="red", s=25, zorder=6, depthshade=False))
