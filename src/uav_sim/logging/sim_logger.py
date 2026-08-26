@@ -58,6 +58,7 @@ class SimLogger:
         self._timeseries: dict[str, list[Any]] = {}
         self._completion: dict[str, Any] = {}
         self._step_count = 0
+        self._recorded_step_count = 0
 
     _REQUIRED_COMPLETION_KEYS = (
         "goal_reached_xy",
@@ -84,6 +85,7 @@ class SimLogger:
         self._step_count += 1
         if not keep:
             return
+        self._recorded_step_count += 1
         for key, value in kwargs.items():
             self._timeseries.setdefault(key, []).append(value)
 
@@ -114,6 +116,11 @@ class SimLogger:
             "simulation": self._sim_name,
             "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "metadata": self._metadata,
+            "trace": {
+                "source_steps": self._step_count,
+                "recorded_steps": self._recorded_step_count,
+                "downsample": self._downsample,
+            },
             "summary": self._summary,
             "completion": self._completion,
             "timeseries": self._timeseries,

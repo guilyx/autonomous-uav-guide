@@ -115,8 +115,10 @@ everything runs headless.
 ## Logging
 
 `SimLogger` writes a JSON record next to each simulation: metadata,
-per-step state, and summary metrics. That makes runs comparable across
-commits without re-reading a GIF.
+per-step state, trace sampling details, and summary metrics. The trace block
+records source steps, retained steps, and the downsample factor, so consumers
+can interpret a reduced timeseries without knowing how its simulation was run.
+That makes runs comparable across commits without re-reading a GIF.
 
 ## Testing
 
