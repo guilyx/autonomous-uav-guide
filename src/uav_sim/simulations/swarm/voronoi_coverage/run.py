@@ -164,7 +164,10 @@ def main() -> None:
     ax_top.plot(
         [swarm_figure_8_ref(t)[0][0] for t in np.arange(0.0, n_steps * dt, 0.5)],
         [swarm_figure_8_ref(t)[0][1] for t in np.arange(0.0, n_steps * dt, 0.5)],
-        color="gray", lw=0.8, alpha=0.5, zorder=1,
+        color="gray",
+        lw=0.8,
+        alpha=0.5,
+        zorder=1,
     )
     (region_box,) = ax_top.plot([], [], color="crimson", lw=1.4, alpha=0.9, zorder=8)
     (region_c,) = ax_top.plot([], [], "x", color="crimson", ms=8, zorder=9)

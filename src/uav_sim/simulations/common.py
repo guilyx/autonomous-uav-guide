@@ -104,8 +104,14 @@ def swarm_figure_8_ref(
     but the path they trace does not.
     """
     return figure_8_ref(
-        t, center=center, rx=rx, ry=ry, alt=alt, omega=omega,
-        alt_amp=alt_amp, alt_freq=alt_freq,
+        t,
+        center=center,
+        rx=rx,
+        ry=ry,
+        alt=alt,
+        omega=omega,
+        alt_amp=alt_amp,
+        alt_freq=alt_freq,
     )
 
 

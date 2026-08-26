@@ -161,8 +161,15 @@ def main() -> None:
 
     # Show the curve the flock is meant to be on, so "is it tracking?" is
     # answerable from the picture rather than only from the metrics.
-    ax3d.plot(guide_hist[:, 0], guide_hist[:, 1], guide_hist[:, 2],
-              color="gray", lw=0.8, alpha=0.5, label="Figure-8 guide")
+    ax3d.plot(
+        guide_hist[:, 0],
+        guide_hist[:, 1],
+        guide_hist[:, 2],
+        color="gray",
+        lw=0.8,
+        alpha=0.5,
+        label="Figure-8 guide",
+    )
     ax_top.plot(guide_hist[:, 0], guide_hist[:, 1], color="gray", lw=0.8, alpha=0.5)
 
     sc_top = ax_top.scatter(pos[:, 0], pos[:, 1], c=colors, s=30, zorder=5)

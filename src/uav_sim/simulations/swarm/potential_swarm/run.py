@@ -132,8 +132,15 @@ def main() -> None:
     ax3d.set_zlabel("Z")
     # The goal moves now, so draw the curve it travels and animate the
     # marker on it; a single star would show only where it finished.
-    ax3d.plot(goal_hist[:, 0], goal_hist[:, 1], goal_hist[:, 2],
-              color="gray", lw=0.8, alpha=0.5, label="Goal path")
+    ax3d.plot(
+        goal_hist[:, 0],
+        goal_hist[:, 1],
+        goal_hist[:, 2],
+        color="gray",
+        lw=0.8,
+        alpha=0.5,
+        label="Goal path",
+    )
     (goal_3d,) = ax3d.plot([], [], [], "*", color="gold", ms=14, zorder=6)
     ax3d.legend(fontsize=7, loc="upper left")
 

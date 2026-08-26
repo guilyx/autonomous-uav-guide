@@ -187,8 +187,14 @@ def swarm_figure_8_reference(
     failing when it is really just a missing feed-forward term.
     """
     pos, vel = swarm_figure_8_ref(
-        t, center=center, rx=rx, ry=ry, alt=alt, omega=omega,
-        alt_amp=alt_amp, alt_freq=alt_freq,
+        t,
+        center=center,
+        rx=rx,
+        ry=ry,
+        alt=alt,
+        omega=omega,
+        alt_amp=alt_amp,
+        alt_freq=alt_freq,
     )
     acc = np.array(
         [
