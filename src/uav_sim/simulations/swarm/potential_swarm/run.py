@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.common import swarm_figure_8_ref
 from uav_sim.swarm.potential_swarm import PotentialSwarm
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -53,11 +54,18 @@ def main() -> None:
 
     snap = [pos.copy()]
     dist_to_goal = np.zeros((n_steps, n_ag))
+    goal_hist = np.zeros((n_steps, 3))
     mean_dist = np.zeros(n_steps)
     centroid_err = np.zeros(n_steps)
     spacing_err = np.zeros(n_steps)
 
     for step in range(n_steps):
+        # The goal now travels the shared figure-8 instead of sitting at a
+        # corner. A static goal makes the Lennard-Jones lattice a one-off
+        # settling transient; a moving one keeps the swarm holding its
+        # spacing while it is dragged through a reversal.
+        goal = swarm_figure_8_ref(step * dt)[0]
+        goal_hist[step] = goal
         forces = ctrl.compute_forces(pos, goal=goal)
         vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
@@ -122,7 +130,18 @@ def main() -> None:
     ax3d.set_xlabel("X")
     ax3d.set_ylabel("Y")
     ax3d.set_zlabel("Z")
-    ax3d.scatter(*goal, c="gold", s=150, marker="*", label="Goal", zorder=5)
+    # The goal moves now, so draw the curve it travels and animate the
+    # marker on it; a single star would show only where it finished.
+    ax3d.plot(
+        goal_hist[:, 0],
+        goal_hist[:, 1],
+        goal_hist[:, 2],
+        color="gray",
+        lw=0.8,
+        alpha=0.5,
+        label="Goal path",
+    )
+    (goal_3d,) = ax3d.plot([], [], [], "*", color="gold", ms=14, zorder=6)
     ax3d.legend(fontsize=7, loc="upper left")
 
     ax_top.set_xlim(0, WORLD_SIZE)
@@ -130,7 +149,8 @@ def main() -> None:
     ax_top.set_aspect("equal")
     ax_top.set_title("Top Down", fontsize=9)
     ax_top.grid(True, alpha=0.15)
-    ax_top.plot(goal[0], goal[1], "y*", ms=15, zorder=10)
+    ax_top.plot(goal_hist[:, 0], goal_hist[:, 1], color="gray", lw=0.8, alpha=0.5)
+    (goal_top,) = ax_top.plot([], [], "y*", ms=15, zorder=10)
 
     ax_dist.set_xlim(0, n_steps * dt)
     ax_dist.set_ylim(0, max(5, dist_to_goal.max() * 1.1))
@@ -163,6 +183,11 @@ def main() -> None:
     def update(f: int) -> None:
         step = idx[f]
         p = snap[step]
+
+        g = goal_hist[min(step, len(goal_hist) - 1)]
+        goal_3d.set_data([g[0]], [g[1]])
+        goal_3d.set_3d_properties([g[2]])
+        goal_top.set_data([g[0]], [g[1]])
 
         clear_vehicle_artists(veh_arts)
         for i in range(n_ag):

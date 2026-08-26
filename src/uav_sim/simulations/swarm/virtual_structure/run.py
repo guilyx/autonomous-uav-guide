@@ -1,8 +1,9 @@
 # Erwin Lejeune - 2026-02-19
 """Virtual-structure formation: 100m env with quad models, 3D + top + data.
 
-4 agents track a moving virtual structure. The structure follows a
-circular path in the 100m world.
+4 agents track a moving virtual structure. The structure follows the
+shared swarm figure-8, so the formation has to hold its shape through a
+reversal rather than settling into one steady bank.
 
 Reference: M. A. Lewis, K.-H. Tan, "High Precision Formation Control of Mobile
 Robots Using Virtual Structures," Autonomous Robots, 1997. DOI: 10.1023/A:1008814708459
@@ -17,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.standards import swarm_figure_8_reference
 from uav_sim.swarm.virtual_structure import VirtualStructure
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -44,37 +46,25 @@ def main() -> None:
     centroid_hist = np.zeros((n_steps, 3))
     mean_dist = np.zeros(n_steps)
 
-    orbit_rate = 0.06
-    climb_rate = 0.03
-    r = 25.0
     for step in range(n_steps):
         t = step * dt
-        body_pos = np.array(
-            [
-                50 + r * np.sin(orbit_rate * t),
-                50 + r * np.cos(orbit_rate * t),
-                50 + 10 * np.sin(climb_rate * t),
-            ]
+        # The virtual body flies the shared swarm figure-8, and the
+        # reference supplies its own analytic derivatives: driven on
+        # position alone the whole formation trails the body by kd*v/kp.
+        body_pos, body_vel, body_acc = swarm_figure_8_reference(t)
+        # The structure is a rigid body: yaw it along the path tangent so
+        # the formation banks into each turn instead of translating
+        # sideways through the crossing.
+        body_yaw = float(np.arctan2(body_vel[1], body_vel[0]))
+        # d/dt atan2(vy, vx). Constant on an orbit, but not on a figure-8:
+        # it reverses sign at the crossing, and feeding the old constant
+        # would yaw the structure the wrong way through half the path.
+        speed_sq = float(body_vel[0] ** 2 + body_vel[1] ** 2)
+        body_yaw_rate = (
+            float(body_vel[0] * body_acc[1] - body_vel[1] * body_acc[0]) / speed_sq
+            if speed_sq > 1e-9
+            else 0.0
         )
-        # Analytic derivative of the path above: without this feed-forward
-        # the whole formation trails the virtual body by kd·v_body/kp.
-        body_vel = np.array(
-            [
-                r * orbit_rate * np.cos(orbit_rate * t),
-                -r * orbit_rate * np.sin(orbit_rate * t),
-                10 * climb_rate * np.cos(climb_rate * t),
-            ]
-        )
-        body_acc = np.array(
-            [
-                -r * orbit_rate**2 * np.sin(orbit_rate * t),
-                -r * orbit_rate**2 * np.cos(orbit_rate * t),
-                -10 * climb_rate**2 * np.sin(climb_rate * t),
-            ]
-        )
-        # The structure is a rigid body: yaw it with the orbit so the
-        # formation banks into the turn instead of translating sideways.
-        body_yaw = -orbit_rate * t
         centroid_hist[step] = body_pos
         forces = ctrl.compute_forces(
             pos,
@@ -82,7 +72,7 @@ def main() -> None:
             body_pos,
             body_yaw=body_yaw,
             body_vel=body_vel,
-            body_yaw_rate=-orbit_rate,
+            body_yaw_rate=body_yaw_rate,
             body_acc=body_acc,
         )
         # Double integrator: the PD's own kd term is the damping. Adding a

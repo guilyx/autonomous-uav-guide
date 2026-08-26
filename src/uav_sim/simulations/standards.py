@@ -16,7 +16,13 @@ from .common import (
     DEFAULT_RX,
     DEFAULT_RY,
     STANDARD_DURATION,
+    SWARM_ALT,
+    SWARM_CENTER,
+    SWARM_OMEGA,
+    SWARM_RX,
+    SWARM_RY,
     figure_8_ref,
+    swarm_figure_8_ref,
 )
 from .common import (
     DEFAULT_ALT as FIG8_ALT,
@@ -151,6 +157,44 @@ def figure_8_reference(
     """Return time-parameterized figure-8 reference as (pos, vel, acc)."""
     pos, vel = figure_8_ref(
         t, rx=rx, ry=ry, alt=alt, omega=omega, alt_amp=alt_amp, alt_freq=alt_freq
+    )
+    acc = np.array(
+        [
+            -rx * (omega**2) * np.sin(omega * t),
+            -ry * ((2.0 * omega) ** 2) * np.sin(2.0 * omega * t),
+            -alt_amp * (alt_freq**2) * np.sin(alt_freq * t),
+        ]
+    )
+    return pos, vel, acc
+
+
+def swarm_figure_8_reference(
+    t: float,
+    *,
+    center: NDArray[np.floating] = SWARM_CENTER,
+    rx: float = SWARM_RX,
+    ry: float = SWARM_RY,
+    alt: float = SWARM_ALT,
+    omega: float = SWARM_OMEGA,
+    alt_amp: float = 4.0,
+    alt_freq: float = 0.12,
+) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
+    """Swarm-scale figure-8 as ``(pos, vel, acc)``.
+
+    The acceleration matters for the formation simulations: a virtual
+    structure driven on position and velocity alone lags the curve by a
+    constant offset through every turn, which reads as the algorithm
+    failing when it is really just a missing feed-forward term.
+    """
+    pos, vel = swarm_figure_8_ref(
+        t,
+        center=center,
+        rx=rx,
+        ry=ry,
+        alt=alt,
+        omega=omega,
+        alt_amp=alt_amp,
+        alt_freq=alt_freq,
     )
     acc = np.array(
         [

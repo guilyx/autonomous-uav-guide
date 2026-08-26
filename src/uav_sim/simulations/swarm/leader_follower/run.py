@@ -1,7 +1,8 @@
 # Erwin Lejeune - 2026-02-19
 """Leader-follower: 100m env with quad models, 3D + top + data.
 
-Shows the leader on a circular path with 3 followers maintaining offsets.
+Shows the leader on the shared swarm figure-8 with 3 followers holding
+offsets through the crossing.
 Uses quad models, 3D/top panels plus follower error + distances.
 
 Reference: J. Desai et al., "Modeling and Control of Formations of
@@ -17,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.common import swarm_figure_8_ref
 from uav_sim.swarm.leader_follower import LeaderFollower
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -38,9 +40,9 @@ def main() -> None:
     # Seeded: the global np.random state is shared with everything else in
     # the process, so drawing from it makes the run irreproducible.
     rng = np.random.default_rng(11)
-    orbit_rate, climb_rate, r = 0.08, 0.04, 25.0
     pos = np.zeros((n_ag, 3))
-    pos[0] = [50 + r, 50, CRUISE_ALT]
+    # Start the leader on the curve so step 0 is not a jump.
+    pos[0] = swarm_figure_8_ref(0.0)[0]
     for i in range(ctrl.num_followers):
         pos[1 + i] = pos[0] + offsets[i] + rng.normal(0, 1, 3) * 15
     vel = np.zeros((n_ag, 3))
@@ -52,23 +54,15 @@ def main() -> None:
 
     for step in range(n_steps):
         t = step * dt
-        new_leader = np.array(
-            [
-                50 + r * np.cos(orbit_rate * t),
-                50 + r * np.sin(orbit_rate * t),
-                CRUISE_ALT + 5 * np.sin(climb_rate * t),
-            ]
-        )
-        # Analytic derivative, not a backward difference: differencing
+        # The leader flies the shared swarm figure-8. An orbit lets the
+        # followers settle into one steady bank and hold it forever; the
+        # crossing forces the formation through a reversal, which is where
+        # a trailing-offset scheme actually has to work for its living.
+        #
+        # The reference returns its own analytic derivative. Differencing
         # against the initial position produced a 250 m/s spike on step 0
         # and kicked every follower out of formation.
-        leader_vel = np.array(
-            [
-                -r * orbit_rate * np.sin(orbit_rate * t),
-                r * orbit_rate * np.cos(orbit_rate * t),
-                5 * climb_rate * np.cos(climb_rate * t),
-            ]
-        )
+        new_leader, leader_vel = swarm_figure_8_ref(t)
         pos[0] = new_leader
         forces = ctrl.compute_forces(pos[0], leader_vel, pos[1:], vel[1:])
         # Double integrator: kd in the PD is the damping. A multiplicative

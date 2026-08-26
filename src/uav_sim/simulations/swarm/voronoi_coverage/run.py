@@ -1,8 +1,13 @@
 # Erwin Lejeune - 2026-02-19
 """Voronoi coverage (Lloyd's algorithm): 100 m env, coverage areas shown.
 
-6 agents converge to Voronoi centroids in a 100x100 XY region. The
-Voronoi tessellation is drawn at each frame, showing each agent's
+6 agents cover a fixed-size region that travels the shared swarm
+figure-8. Lloyd's algorithm is normally shown on a static box, where it
+converges once and then has nothing left to do; giving it a moving area
+turns it into a continuous problem, and the team has to keep
+redistributing itself as the ground it is responsible for slides away.
+
+The Voronoi tessellation is drawn at each frame, showing each agent's
 coverage area. Agents are rendered as quad models.
 
 Reference: J. Cortes et al., "Coverage Control for Mobile Sensing Networks,"
@@ -19,6 +24,7 @@ import numpy as np
 from scipy.spatial import QhullError, Voronoi
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.common import swarm_figure_8_ref
 from uav_sim.swarm.coverage import CoverageController
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -31,6 +37,7 @@ matplotlib.use("Agg")
 
 WORLD_SIZE = 100.0
 CRUISE_ALT = 50.0
+REGION_SIZE = 36.0
 
 
 def _clip_voronoi_region(vertices: np.ndarray, ws: float) -> np.ndarray:
@@ -43,21 +50,36 @@ def main() -> None:
     rng = np.random.default_rng(4)
     # [[x_min, y_min], [x_max, y_max]] — transposing these corners yields an
     # empty integration grid and silently zeroes every coverage force.
-    bounds = np.array([[0.0, 0.0], [WORLD_SIZE, WORLD_SIZE]])
+    # A fixed-size patch, not the whole world: it is the region that moves
+    # along the figure-8, and sizing it so the swept area stays inside the
+    # world keeps agents from being driven into the clip boundary.
+    half = REGION_SIZE / 2.0
+    start_c = swarm_figure_8_ref(0.0)[0][:2]
+    bounds = np.array([start_c - half, start_c + half])
     pos_2d = rng.uniform(2, WORLD_SIZE - 2, (n_ag, 2))
     vel_2d = np.zeros((n_ag, 2))
     ctrl = CoverageController(bounds=bounds, resolution=2.0, gain=0.5)
 
     dt, n_steps = 0.1, 600
     damping = 0.85
-    max_speed = 5.0
+    max_speed = 9.0
 
     snap: list[np.ndarray] = [pos_2d.copy()]
     coverage_cost = np.zeros(n_steps)
+    region_hist = np.zeros((n_steps, 2, 2))
     mean_dist = np.zeros(n_steps)
 
     for step in range(n_steps):
-        forces = ctrl.compute_forces(pos_2d)
+        guide, guide_vel = swarm_figure_8_ref(step * dt)
+        ctrl.recenter(guide)
+        region_hist[step] = ctrl.bounds
+        # Lloyd's force alone only ever points at where the region is
+        # *now*, so the team spends the whole run chasing it and never
+        # settles inside. The feed-forward converts the region's velocity
+        # into the force this integrator needs to hold it: at steady
+        # state v = f*dt/(1 - damping).
+        feedforward = guide_vel[:2] * (1.0 - damping) / dt
+        forces = ctrl.compute_forces(pos_2d) + feedforward
         vel_2d = vel_2d * damping + forces * dt
         speed = np.linalg.norm(vel_2d, axis=1, keepdims=True)
         speed_safe = np.maximum(speed, 1e-8)
@@ -136,6 +158,20 @@ def main() -> None:
     trails_top = [ax_top.plot([], [], color=colors[i], lw=0.6, alpha=0.4)[0] for i in range(n_ag)]
     sc_top = ax_top.scatter(pos_2d[:, 0], pos_2d[:, 1], c=colors, s=60, zorder=10)
 
+    # The region is the thing being covered, so draw it and the path its
+    # centre travels; without them the agents just look like they are
+    # wandering.
+    ax_top.plot(
+        [swarm_figure_8_ref(t)[0][0] for t in np.arange(0.0, n_steps * dt, 0.5)],
+        [swarm_figure_8_ref(t)[0][1] for t in np.arange(0.0, n_steps * dt, 0.5)],
+        color="gray",
+        lw=0.8,
+        alpha=0.5,
+        zorder=1,
+    )
+    (region_box,) = ax_top.plot([], [], color="crimson", lw=1.4, alpha=0.9, zorder=8)
+    (region_c,) = ax_top.plot([], [], "x", color="crimson", ms=8, zorder=9)
+
     voronoi_patches: list = []
     veh_arts: list = []
     title = ax3d.set_title("t = 0.0 s")
@@ -148,6 +184,13 @@ def main() -> None:
         p = snap[k]
 
         sc_top.set_offsets(p)
+
+        lo, hi = region_hist[min(step, n_steps - 1)]
+        region_box.set_data(
+            [lo[0], hi[0], hi[0], lo[0], lo[0]],
+            [lo[1], lo[1], hi[1], hi[1], lo[1]],
+        )
+        region_c.set_data([(lo[0] + hi[0]) / 2.0], [(lo[1] + hi[1]) / 2.0])
 
         for patch in voronoi_patches:
             patch.remove()
