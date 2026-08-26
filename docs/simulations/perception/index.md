@@ -16,6 +16,8 @@ The chapter emphasizes probabilistic mapping and vision-in-the-loop feedback.
 - [Occupancy Mapping](/simulations/perception/occupancy-mapping)
 - [Sensor Suite Fusion](/simulations/perception/sensor-suite)
 - [Visual Servoing](/simulations/perception/visual-servoing)
+- [Visual Servoing — Fixed Camera](/simulations/perception/visual-servoing-fixed)
+- [Visual Servoing — Gimbal Camera](/simulations/perception/visual-servoing-gimbal)
 
 ## Prerequisites
 

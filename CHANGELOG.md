@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 Nothing yet.
 
+## [1.0.1] - 2026-08-26
+
+### Fixed
+
+**The 1.0.0 upload never reached PyPI**
+- `[tool.hatch.build.targets.wheel] packages = ["src/uav_sim"]` swept the 44
+  simulation GIFs into the distribution, putting the wheel at 137 MB against
+  PyPI's 100 MB per-file limit. The GIFs are documentation -- the README and
+  docs site link them from GitHub and nothing imports them at runtime -- so
+  they are excluded from both the wheel and the sdist. The wheel is 432 KB.
+
+**Simulation GIFs are in Git LFS for real**
+- `.gitattributes` had declared `*.gif filter=lfs` since the GIFs were added,
+  but none were ever migrated: they sat in the pack as plain 1-5 MB blobs.
+  Every fresh clone reported them as modified, because checkout wrote the real
+  blob and the clean filter then rewrote it to a pointer for diffing.
+- History is rewritten to drop 357 historical media blobs. The pack goes from
+  275 MB to 20 MB, and a clone from ~275 MB to 21 MB.
+- The LFS rule is scoped to `src/uav_sim/simulations` so `docs/public` stays
+  plain: VitePress bundles those at build time, and the README links
+  `promo.gif` through `raw.githubusercontent.com`, which serves an LFS file as
+  its pointer text rather than as the image.
+
+### Added
+
+- Documentation pages for `visual_servoing_fixed` and `visual_servoing_gimbal`,
+  the only two simulations that had none.
+
+### Changed
+
+- The simulation count reads 44 rather than 42 in the README, the docs landing
+  page and the package description. `flybots list` had been reporting 44 since
+  the two visual-servoing variants landed.
+
 ## [1.0.0] - 2026-08-20
 
 ### Changed
@@ -456,6 +490,7 @@ measurement:
 Initial release: quadrotor, fixed-wing and VTOL models, planners,
 estimators, perception, swarm algorithms and 40 runnable simulations.
 
-[Unreleased]: https://github.com/guilyx/flybots/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/guilyx/flybots/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guilyx/flybots/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/guilyx/flybots/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/guilyx/flybots/releases/tag/v0.1.0
