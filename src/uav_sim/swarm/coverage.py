@@ -50,6 +50,37 @@ class CoverageController:
         xx, yy = np.meshgrid(x, y)
         self.grid = np.column_stack([xx.ravel(), yy.ravel()])
 
+    @property
+    def region_center(self) -> NDArray[np.floating]:
+        """Centre of the coverage region."""
+        return self.bounds.mean(axis=0)
+
+    def recenter(self, center: NDArray[np.floating]) -> None:
+        """Move the coverage region so it is centred on *center*.
+
+        The region keeps its size and shape; only its position changes.
+        That turns static coverage into coverage of a travelling area --
+        a patch of ground that moves, with the team redistributing itself
+        across it as it goes.
+
+        The integration grid is translated rather than rebuilt. Re-meshing
+        it every step would dominate the simulation's runtime for a result
+        identical to a vector add, and it would also silently change the
+        grid point count whenever the new bounds did not land on the same
+        multiple of ``resolution``, which makes the coverage cost jump for
+        reasons that have nothing to do with where the agents are.
+
+        Args:
+            center: ``[x, y]`` new region centre. Extra components are
+                ignored, so a 3D guide point can be passed straight in.
+        """
+        c = np.asarray(center, dtype=np.float64).reshape(-1)[:2]
+        if c.shape != (2,):
+            raise ValueError(f"center must have at least 2 components, got {center!r}")
+        delta = c - self.region_center
+        self.bounds = self.bounds + delta
+        self.grid = self.grid + delta
+
     def compute_centroids(
         self,
         positions_2d: NDArray[np.floating],
@@ -79,20 +110,47 @@ class CoverageController:
 
         return centroids
 
+    def empty_cells(self, positions_2d: NDArray[np.floating]) -> NDArray[np.bool_]:
+        """Mask of agents whose Voronoi cell contains no grid points.
+
+        An agent far enough outside the region owns none of it, and
+        Lloyd's algorithm then has no opinion about where it should go.
+        """
+        n = len(positions_2d)
+        if n < 2 or len(self.grid) == 0:
+            return np.zeros(n, dtype=bool)
+        dists = np.linalg.norm(self.grid[:, None, :] - positions_2d[None, :, :], axis=2)
+        assignments = np.argmin(dists, axis=1)
+        return ~np.isin(np.arange(n), assignments)
+
     def compute_forces(
         self,
         positions_2d: NDArray[np.floating],
+        recall_outside: bool = True,
     ) -> NDArray[np.floating]:
         """Compute coverage forces (direction towards Voronoi centroid).
 
         Args:
             positions_2d: (N, 2) current 2D positions.
+            recall_outside: Steer agents with an empty Voronoi cell back
+                towards the region. Lloyd's algorithm gives such an agent
+                a centroid equal to its own position, so its force is
+                exactly zero and it is stranded permanently. That never
+                arises while the region covers the whole workspace, but
+                with a travelling region agents fall outside constantly,
+                and without this they are simply abandoned. Pass ``False``
+                for textbook-pure Lloyd.
 
         Returns:
             (N, 2) force vectors.
         """
         centroids = self.compute_centroids(positions_2d)
-        return self.gain * (centroids - positions_2d)
+        forces = self.gain * (centroids - positions_2d)
+        if recall_outside:
+            stranded = self.empty_cells(positions_2d)
+            if np.any(stranded):
+                forces[stranded] = self.gain * (self.region_center - positions_2d[stranded])
+        return forces
 
     def coverage_cost(
         self,

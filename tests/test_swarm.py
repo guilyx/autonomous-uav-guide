@@ -2,6 +2,7 @@
 """Tests for swarm algorithms."""
 
 import numpy as np
+import pytest
 
 from uav_sim.swarm.consensus_formation import ConsensusFormation
 from uav_sim.swarm.coverage import CoverageController
@@ -158,3 +159,67 @@ class TestCoverage:
         # be on opposite sides of x = 5.
         assert centroids[0, 0] < 5.0
         assert centroids[1, 0] > 5.0
+
+
+class TestCoverageMovingRegion:
+    """A fixed-size region that travels, rather than a static workspace."""
+
+    def _ctrl(self):
+        return CoverageController(
+            bounds=np.array([[0.0, 0.0], [20.0, 20.0]]), resolution=1.0, gain=0.5
+        )
+
+    def test_recenter_moves_the_region(self):
+        cc = self._ctrl()
+        cc.recenter(np.array([70.0, 40.0]))
+        np.testing.assert_allclose(cc.region_center, [70.0, 40.0])
+        np.testing.assert_allclose(cc.bounds, [[60.0, 30.0], [80.0, 50.0]])
+
+    def test_recenter_preserves_the_grid(self):
+        """Re-meshing would change the point count and jolt the cost."""
+        cc = self._ctrl()
+        n_before = len(cc.grid)
+        cc.recenter(np.array([70.3, 40.7]))
+        assert len(cc.grid) == n_before
+
+    def test_recenter_accepts_a_3d_guide_point(self):
+        cc = self._ctrl()
+        cc.recenter(np.array([70.0, 40.0, 50.0]))
+        np.testing.assert_allclose(cc.region_center, [70.0, 40.0])
+
+    def test_cost_is_translation_invariant(self):
+        cc = self._ctrl()
+        pos = np.array([[5.0, 5.0], [15.0, 15.0]])
+        before = cc.coverage_cost(pos)
+        cc.recenter(np.array([70.0, 40.0]))
+        after = cc.coverage_cost(pos + (cc.region_center - np.array([10.0, 10.0])))
+        assert after == pytest.approx(before)
+
+    def test_recenter_rejects_a_scalar_centre(self):
+        with pytest.raises(ValueError, match="at least 2 components"):
+            self._ctrl().recenter(np.array([1.0]))
+
+    def test_pure_lloyd_strands_an_agent_outside_the_region(self):
+        """An empty Voronoi cell yields zero force — the documented flaw."""
+        cc = self._ctrl()
+        pos = np.array([[10.0, 10.0], [95.0, 95.0]])
+        assert cc.empty_cells(pos).tolist() == [False, True]
+        forces = cc.compute_forces(pos, recall_outside=False)
+        np.testing.assert_allclose(forces[1], [0.0, 0.0])
+
+    def test_recall_steers_a_stranded_agent_back(self):
+        cc = self._ctrl()
+        pos = np.array([[10.0, 10.0], [95.0, 95.0]])
+        forces = cc.compute_forces(pos, recall_outside=True)
+        assert np.linalg.norm(forces[1]) > 0.0
+        # and it must point towards the region, not merely be non-zero
+        assert float(np.dot(forces[1], cc.region_center - pos[1])) > 0.0
+
+    def test_recall_does_not_disturb_agents_inside(self):
+        cc = self._ctrl()
+        pos = np.array([[6.0, 6.0], [14.0, 14.0]])
+        assert not cc.empty_cells(pos).any()
+        np.testing.assert_allclose(
+            cc.compute_forces(pos, recall_outside=True),
+            cc.compute_forces(pos, recall_outside=False),
+        )
