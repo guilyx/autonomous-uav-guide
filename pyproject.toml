@@ -61,6 +61,15 @@ video = ["imageio-ffmpeg>=0.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/uav_sim"]
+# The simulation GIFs sit next to the code that generates them, but they are
+# documentation: the README and the docs site link them from GitHub, and
+# nothing imports them at runtime. Shipping them put the 1.0.0 wheel at
+# 137 MB, over PyPI's 100 MB per-file limit, so they stay out of the dists.
+exclude = ["**/*.gif"]
+
+[tool.hatch.build.targets.sdist]
+# Same reasoning, plus the promo reel under docs/public/media.
+exclude = ["**/*.gif", "**/*.mp4"]
 
 [dependency-groups]
 dev = [
