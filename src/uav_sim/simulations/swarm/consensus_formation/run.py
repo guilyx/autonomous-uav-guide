@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.common import swarm_figure_8_ref
 from uav_sim.swarm.consensus_formation import ConsensusFormation
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -49,10 +50,22 @@ def main() -> None:
 
     snap = [pos.copy()]
     form_err = np.zeros(n_steps)
+    guide_hist = np.zeros((n_steps, 3))
     mean_dist = np.zeros(n_steps)
 
+    # Consensus settles the *shape* but leaves the centroid wherever it
+    # happens to converge, so the formation just sits there. A common
+    # tracking term moves the whole group along the shared figure-8
+    # without touching the relative dynamics: it is identical for every
+    # agent, so it cancels out of every pairwise consensus error and the
+    # formation metric still measures only the algorithm's own work.
+    track_gain = 0.6
+
     for step in range(n_steps):
-        forces = ctrl.compute_forces(pos)
+        guide_pos, guide_vel = swarm_figure_8_ref(step * dt)
+        guide_hist[step] = guide_pos
+        track = track_gain * (guide_pos - pos.mean(axis=0)) + guide_vel
+        forces = ctrl.compute_forces(pos) + track
         vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
         max_speed = 5.0

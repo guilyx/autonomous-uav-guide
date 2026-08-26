@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from uav_sim.logging import SimLogger
+from uav_sim.simulations.common import swarm_figure_8_ref
 from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
 from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
 from uav_sim.visualization import SimAnimator
@@ -54,21 +55,32 @@ def main() -> None:
     n_steps = 600
     max_speed = 6.0
     damping = 0.92
-    # Reynolds' migratory urge: a slowly rotating cruise velocity every
-    # agent steers towards. The three classic rules all go to zero once
-    # the flock is in formation, so with damping and no urge the flock
-    # coasts to a standstill instead of flying anywhere.
-    cruise_speed = 4.0
-    turn_rate = 0.25
+    # Reynolds' migratory urge, now following the shared swarm figure-8. The
+    # three classic rules all go to zero once the flock is in formation, so
+    # with damping and no urge the flock coasts to a standstill instead of
+    # flying anywhere. The previous urge was a heading that rotated forever,
+    # which never revisits its own track and so never shows whether the flock
+    # can be pulled through a reversal and put back together. The crossing
+    # does exactly that.
+    track_gain = 0.30
+    max_migration = 6.0
 
     positions_hist = [pos.copy()]
     velocities_hist = [vel.copy()]
     mean_speed_hist = np.zeros(n_steps)
+    guide_hist = np.zeros((n_steps, 3))
     cohesion_hist = np.zeros(n_steps)
 
     for step in range(n_steps):
-        heading = turn_rate * step * dt
-        migration = cruise_speed * np.array([np.cos(heading), np.sin(heading), 0.0])
+        guide_pos, guide_vel = swarm_figure_8_ref(step * dt)
+        # Feed-forward along the curve plus a pull back onto it: velocity
+        # alone lets the flock fly a parallel track forever, since nothing
+        # in it references where the curve actually is.
+        migration = guide_vel + track_gain * (guide_pos - pos.mean(axis=0))
+        m_norm = float(np.linalg.norm(migration))
+        if m_norm > max_migration:
+            migration = migration / m_norm * max_migration
+        guide_hist[step] = guide_pos
         forces = flock.compute_forces(pos, vel, migration_velocity=migration)
         vel = vel * damping + forces * dt
         speed = np.linalg.norm(vel, axis=1, keepdims=True)
@@ -116,7 +128,7 @@ def main() -> None:
     ax_speed = fig.add_subplot(gs[1, 0])
     ax_coh = fig.add_subplot(gs[1, 1])
 
-    fig.suptitle("Reynolds Flocking (100m env)", fontsize=13)
+    fig.suptitle("Reynolds Flocking — figure-8 migration (100m env)", fontsize=13)
 
     ax3d.set_xlim(0, WORLD_SIZE)
     ax3d.set_ylim(0, WORLD_SIZE)
@@ -146,6 +158,12 @@ def main() -> None:
     ax_coh.set_title("Flock Cohesion", fontsize=9)
     ax_coh.grid(True, alpha=0.3)
     (lcoh,) = ax_coh.plot([], [], "m-", lw=0.8)
+
+    # Show the curve the flock is meant to be on, so "is it tracking?" is
+    # answerable from the picture rather than only from the metrics.
+    ax3d.plot(guide_hist[:, 0], guide_hist[:, 1], guide_hist[:, 2],
+              color="gray", lw=0.8, alpha=0.5, label="Figure-8 guide")
+    ax_top.plot(guide_hist[:, 0], guide_hist[:, 1], color="gray", lw=0.8, alpha=0.5)
 
     sc_top = ax_top.scatter(pos[:, 0], pos[:, 1], c=colors, s=30, zorder=5)
 

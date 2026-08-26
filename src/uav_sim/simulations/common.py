@@ -72,6 +72,53 @@ def figure_8_path(
     return np.array([figure_8_ref(t, **kwargs)[0] for t in times])
 
 
+# ── swarm-scale figure-8 (for group-motion sims) ────────────────────────────
+# The swarm chapter flies a 100 m world rather than the 30 m one the
+# single-vehicle sims use, so the control-scale figure-8 above would be a
+# knot in the middle of the map. These are the same curve at swarm scale,
+# and slow enough that a formation can actually hold together around it.
+SWARM_WORLD_SIZE: float = 100.0
+SWARM_CENTER = np.array([50.0, 50.0])
+SWARM_RX: float = 30.0
+SWARM_RY: float = 18.0
+SWARM_ALT: float = 50.0
+SWARM_OMEGA: float = 0.10
+
+
+def swarm_figure_8_ref(
+    t: float,
+    center: NDArray[np.floating] = SWARM_CENTER,
+    rx: float = SWARM_RX,
+    ry: float = SWARM_RY,
+    alt: float = SWARM_ALT,
+    omega: float = SWARM_OMEGA,
+    alt_amp: float = 4.0,
+    alt_freq: float = 0.12,
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+    """Return ``(position, velocity)`` of the swarm's guide point at *t*.
+
+    Every group-motion simulation steers the same curve, so the algorithms
+    can be compared on how they *hold formation* rather than on where each
+    one happened to be sent. What each simulation attaches to this point
+    differs -- a leader, a virtual structure's origin, a potential well --
+    but the path they trace does not.
+    """
+    return figure_8_ref(
+        t, center=center, rx=rx, ry=ry, alt=alt, omega=omega,
+        alt_amp=alt_amp, alt_freq=alt_freq,
+    )
+
+
+def swarm_figure_8_path(
+    duration: float = STANDARD_DURATION,
+    dt: float = 0.1,
+    **kwargs,
+) -> NDArray[np.floating]:
+    """Sample :func:`swarm_figure_8_ref` and return an ``(N, 3)`` array."""
+    times = np.arange(0.0, duration, dt)
+    return np.array([swarm_figure_8_ref(t, **kwargs)[0] for t in times])
+
+
 # ── line-to-goal through obstacles (for planning sims) ──────────────────────
 START_POS = np.array([3.0, 3.0, CRUISE_ALT])
 GOAL_POS = np.array([27.0, 27.0, CRUISE_ALT])
