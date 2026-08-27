@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "flybots"
 version = "1.1.0"
-description = "From-scratch autonomous UAV algorithms: multirotor, fixed-wing and VTOL flight models, 44 runnable simulations and reinforcement-learning environments."
+description = "From-scratch autonomous UAV algorithms: multirotor, fixed-wing and VTOL flight models, 45 runnable simulations and reinforcement-learning environments."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
