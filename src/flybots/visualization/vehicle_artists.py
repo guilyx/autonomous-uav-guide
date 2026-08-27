@@ -608,26 +608,70 @@ def draw_quadrotor_2d(
     arm_colors: tuple[str, str] = ("red", "blue"),
     arm_lw: float = 1.5,
     motor_size: float = 15.0,
+    motor_color: str | None = None,
+    center_color: str | None = None,
+    rotor_disc: bool = True,
+    disc_ratio: float = 0.42,
 ) -> list[Artist]:
-    """Draw a quadrotor top-down cross footprint on a 2D axes."""
+    """Draw a quadrotor top-down cross footprint on a 2D axes.
+
+    Args:
+        yaw : Heading [rad]. Pass the direction of travel and the model
+            points where the aircraft is going.
+        motor_color : Colour of the four motors. Defaults to black, which
+            is right for a single vehicle and wrong for a swarm: at fleet
+            scale the arms are a few pixels long, so black motors make
+            every agent render black whatever colour its arms were given.
+        center_color : Colour of the hub. Defaults to *motor_color*.
+        rotor_disc : Draw the swept discs. A bare cross reads as a marker
+            at these sizes; the discs are what make it read as an aircraft.
+    """
     c, s = np.cos(yaw), np.sin(yaw)
     R2 = np.array([[c, -s], [s, c]])
+    motor = "k" if motor_color is None else motor_color
+    hub_colour = motor if center_color is None else center_color
 
-    p1 = R2 @ np.array([size, 0]) + position_xy
-    p2 = R2 @ np.array([-size, 0]) + position_xy
-    p3 = R2 @ np.array([0, size]) + position_xy
-    p4 = R2 @ np.array([0, -size]) + position_xy
+    tips = [
+        R2 @ np.array([size, 0.0]) + position_xy,
+        R2 @ np.array([-size, 0.0]) + position_xy,
+        R2 @ np.array([0.0, size]) + position_xy,
+        R2 @ np.array([0.0, -size]) + position_xy,
+    ]
 
     arts: list[Artist] = []
-    (arm1,) = ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=arm_colors[0], linewidth=arm_lw)
+    (arm1,) = ax.plot(
+        [tips[0][0], tips[1][0]],
+        [tips[0][1], tips[1][1]],
+        color=arm_colors[0],
+        linewidth=arm_lw,
+    )
     arts.append(arm1)
-    (arm2,) = ax.plot([p3[0], p4[0]], [p3[1], p4[1]], color=arm_colors[1], linewidth=arm_lw)
+    (arm2,) = ax.plot(
+        [tips[2][0], tips[3][0]],
+        [tips[2][1], tips[3][1]],
+        color=arm_colors[1],
+        linewidth=arm_lw,
+    )
     arts.append(arm2)
 
-    for p in [p1, p2, p3, p4]:
-        (pt,) = ax.plot(p[0], p[1], "ko", ms=motor_size / 4)
-        arts.append(pt)
+    if rotor_disc:
+        theta = np.linspace(0.0, 2.0 * np.pi, 17)
+        r = size * disc_ratio
+        circle = np.stack([r * np.cos(theta), r * np.sin(theta)])
+        for tip in tips:
+            (disc,) = ax.plot(
+                circle[0] + tip[0],
+                circle[1] + tip[1],
+                color=motor,
+                linewidth=arm_lw * 0.55,
+                alpha=0.85,
+            )
+            arts.append(disc)
+    else:
+        for tip in tips:
+            (pt,) = ax.plot(tip[0], tip[1], "o", color=motor, ms=motor_size / 4)
+            arts.append(pt)
 
-    (hub,) = ax.plot(*position_xy, "ko", ms=motor_size / 3)
+    (hub,) = ax.plot(*position_xy, "o", color=hub_colour, ms=motor_size / 3)
     arts.append(hub)
     return arts

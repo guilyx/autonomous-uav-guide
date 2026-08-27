@@ -32,6 +32,7 @@ import numpy as np
 from flybots.comms import GaussianLink, connectivity_gradient, hop_counts
 from flybots.logging import SimLogger
 from flybots.visualization import SimAnimator
+from flybots.visualization.vehicle_artists import draw_quadrotor_2d
 
 matplotlib.use("Agg")
 
@@ -202,9 +203,28 @@ def main() -> None:
                     artists.append(ln)
 
         (base,) = ax_top.plot(p[0, 0], p[0, 1], "s", color="white", ms=11, mec="k", mew=1.4)
-        (esc,) = ax_top.plot(p[1:-1, 0], p[1:-1, 1], "o", color="tab:blue", ms=6)
         (conv,) = ax_top.plot(p[-1, 0], p[-1, 1], "^", color="tab:orange", ms=11, mec="k")
-        artists.extend([base, esc, conv])
+        artists.extend([base, conv])
+        # The escorts are aircraft, so draw them as aircraft, pointed along
+        # the leg of the chain they are flying.
+        # Heading over several steps, not one: a single step at low
+        # speed is mostly integrator wobble and the model spins.
+        prev = relay[max(step - 12, 0)]
+        for i in range(1, len(p) - 1):
+            d = p[i, :2] - prev[i, :2]
+            yaw = float(np.arctan2(d[1], d[0])) if np.linalg.norm(d) > 1e-9 else 0.0
+            artists.extend(
+                draw_quadrotor_2d(
+                    ax_top,
+                    p[i, :2],
+                    yaw,
+                    size=9.0,
+                    arm_colors=("tab:blue", "tab:blue"),
+                    motor_color="tab:blue",
+                    arm_lw=1.3,
+                    motor_size=10,
+                )
+            )
 
         k_on.set_data(times[:step], linked_on[:step])
         k_off.set_data(times[:step], linked_off[:step])

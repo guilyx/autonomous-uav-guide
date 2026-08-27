@@ -13,10 +13,11 @@ in each -- the one whose removal costs the most connectivity -- is switched
 off.
 
 Neither fleet actually splits, and that is worth stating rather than
-staging: what the loss costs is *margin*. The loosely-held fleet drops from
-k = 2 to k = 1, so it is now one further failure from fragmenting; the
-tightly-held one goes 3 to 3 and is no more fragile than it started.
-Redundancy is the thing being spent, and k is what measures it.
+staging. The tightly-held fleet keeps a worst-case k of 2 or better, so it
+still survives any single further loss; the loosely-held one sits at k = 1
+before the failure and after it, having been a single point of failure the
+whole time. Redundancy is what is being measured, and it is a different
+question from "is the network up".
 
 Note also that k is computed on the *thresholded* graph, while lambda-2 is
 computed on the weighted one. A Gaussian link never reaches exactly zero,
@@ -128,10 +129,29 @@ def _fly(lambda_min: float):
     return history, alive_hist, lam, kconn, failed
 
 
+def _rolling_min(series: np.ndarray, window: int) -> np.ndarray:
+    """Worst value over a trailing window.
+
+    k flips as agents drift across the link threshold, so the raw trace
+    square-waves. The worst recent value is both readable and the right
+    statistic for a resilience claim: what matters is the weakest moment,
+    not the average one.
+    """
+    out = np.empty_like(series)
+    for i in range(len(series)):
+        out[i] = series[max(0, i - window) : i + 1].min()
+    return out
+
+
 def main() -> None:
     tight, alive_t, lam_t, k_t, failed_t = _fly(lambda_min=0.55)
     loose, alive_l, lam_l, k_l, failed_l = _fly(lambda_min=0.24)
     times = np.arange(STEPS) * DT
+
+    # Report the same statistic the plot draws, so the two agree.
+    window = int(6.0 / DT)
+    k_t_plot = _rolling_min(k_t, window)
+    k_l_plot = _rolling_min(k_l, window)
 
     logger = SimLogger("resilient_mesh", out_dir=Path(__file__).parent, downsample=10)
     logger.log_metadata("algorithm", "Connectivity maintenance under agent loss")
@@ -148,8 +168,10 @@ def main() -> None:
         )
     logger.log_summary("failed_agent_tight", failed_t)
     logger.log_summary("failed_agent_loose", failed_l)
-    logger.log_summary("k_before_failure_tight", int(k_t[FAILURE_STEP - 1]))
-    logger.log_summary("k_before_failure_loose", int(k_l[FAILURE_STEP - 1]))
+    logger.log_summary("k_worst_before_failure_tight", int(k_t_plot[FAILURE_STEP - 1]))
+    logger.log_summary("k_worst_before_failure_loose", int(k_l_plot[FAILURE_STEP - 1]))
+    logger.log_summary("k_worst_after_failure_tight", int(k_t_plot[-1]))
+    logger.log_summary("k_worst_after_failure_loose", int(k_l_plot[-1]))
     logger.log_summary("lambda2_after_failure_tight", float(lam_t[-1]))
     logger.log_summary("lambda2_after_failure_loose", float(lam_l[-1]))
     logger.log_summary("survived_tight", bool(lam_t[-1] > 1e-3))
@@ -192,7 +214,7 @@ def main() -> None:
     ax_k.set_ylim(-0.2, 3.5)
     ax_k.set_xlabel("Time [s]", fontsize=8)
     ax_k.set_ylabel("k-connectivity", fontsize=8)
-    ax_k.set_title("k = 1 means one loss splits the mesh", fontsize=9)
+    ax_k.set_title("k = 1 means one loss splits the mesh (worst over 6 s)", fontsize=9)
     ax_k.grid(True, alpha=0.3)
     ax_k.axvline(FAILURE_STEP * DT, color="k", ls=":", lw=1.2)
     (k_tl,) = ax_k.plot([], [], color="tab:green", lw=1.5, label="tight floor")
@@ -253,17 +275,17 @@ def main() -> None:
 
         l_t.set_data(times[:step], np.maximum(lam_t[:step], 1e-6))
         l_l.set_data(times[:step], np.maximum(lam_l[:step], 1e-6))
-        k_tl.set_data(times[:step], k_t[:step])
-        k_ll.set_data(times[:step], k_l[:step])
+        k_tl.set_data(times[:step], k_t_plot[:step])
+        k_ll.set_data(times[:step], k_l_plot[:step])
         state = "before failure" if step < FAILURE_STEP else "after failure"
         title.set_text(f"t = {step * DT:.1f} s   {state}   k = {int(k_t[step])}")
 
     anim.animate(update, len(idx))
     anim.save()
 
-    for label, k, lam in (("tight floor", k_t, lam_t), ("loose floor", k_l, lam_l)):
+    for label, k, lam in (("tight floor", k_t_plot, lam_t), ("loose floor", k_l_plot, lam_l)):
         print(
-            f"  {label}: k {int(k[FAILURE_STEP - 1])} -> {int(k[-1])}"
+            f"  {label}: worst k {int(k[FAILURE_STEP - 1])} -> {int(k[-1])}"
             f"   lambda2 after {lam[-1]:.4f}"
         )
 

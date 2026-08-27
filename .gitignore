@@ -43,7 +43,7 @@ htmlcov/
 .env
 
 # Generated simulation artifacts
-src/uav_sim/simulations/**/*_log.json
+src/flybots/simulations/**/*_log.json
 
 # Trained policies, other than the checked-in reference ones.
 # The learning curve belongs with the policy: `scripts/make_promo.py` only

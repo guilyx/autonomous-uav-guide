@@ -44,6 +44,7 @@ from flybots.comms import (
 )
 from flybots.logging import SimLogger
 from flybots.visualization import SimAnimator
+from flybots.visualization.vehicle_artists import draw_quadrotor_2d
 
 matplotlib.use("Agg")
 
@@ -195,8 +196,24 @@ def main() -> None:
                             alpha=0.5,
                         )
                         artists.append(ln)
-            (dots,) = ax.plot(p[:, 0], p[:, 1], "o", color=colour, ms=4)
-            artists.append(dots)
+            # Heading over several steps, not one: a single step at low
+            # speed is mostly integrator wobble and the model spins.
+            prev = hist[max(step - 12, 0)]
+            for i in range(N_AGENTS):
+                d = p[i, :2] - prev[i, :2]
+                yaw = float(np.arctan2(d[1], d[0])) if np.linalg.norm(d) > 1e-9 else 0.0
+                artists.extend(
+                    draw_quadrotor_2d(
+                        ax,
+                        p[i, :2],
+                        yaw,
+                        size=7.0,
+                        arm_colors=(colour, colour),
+                        motor_color=colour,
+                        arm_lw=1.1,
+                        motor_size=8,
+                    )
+                )
 
         s_free.set_data(times[:step], free_spread[:step])
         s_clut.set_data(times[:step], clut_spread[:step])
