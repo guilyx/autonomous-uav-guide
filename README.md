@@ -5,7 +5,7 @@
 **Flight algorithms, from scratch.**
 
 Multirotor, fixed-wing and VTOL flight models with the physics written out
-in full — plus 45 runnable simulations and a gym for teaching a drone to
+in full — plus 47 runnable simulations and a gym for teaching a drone to
 fly itself.
 
 [**Documentation**](https://guilyx.github.io/flybots/) ·
@@ -29,7 +29,7 @@ fly itself.
   <img src="https://raw.githubusercontent.com/guilyx/flybots/main/docs/public/media/promo.gif" alt="flybots — quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning" width="820"/>
 </a>
 
-<sub>Quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning, closing on all 45 simulations. Every frame is simulated at render time by <a href="https://github.com/guilyx/flybots/blob/main/scripts/make_promo.py"><code>scripts/make_promo.py</code></a> — no stock footage, and nothing that can drift out of sync with the code. Above is a sample of each scene; the full seventy-eight seconds, at full resolution, is <a href="https://guilyx.github.io/flybots/#see-it-fly">on the docs site</a>.</sub>
+<sub>Quadrotor, fixed-wing, VTOL, planning, trajectory generation, estimation, mapping, swarms and reinforcement learning, closing on all 47 simulations. Every frame is simulated at render time by <a href="https://github.com/guilyx/flybots/blob/main/scripts/make_promo.py"><code>scripts/make_promo.py</code></a> — no stock footage, and nothing that can drift out of sync with the code. Above is a sample of each scene; the full seventy-eight seconds, at full resolution, is <a href="https://guilyx.github.io/flybots/#see-it-fly">on the docs site</a>.</sub>
 
 ---
 
@@ -41,7 +41,7 @@ pip install flybots
 
 ```bash
 flybots doctor            # verify the install, run the physics self-checks
-flybots list              # browse 45 simulations
+flybots list              # browse 47 simulations
 flybots run pid_hover     # render one to a GIF
 flybots train hover       # teach a quadrotor to hold position
 ```
@@ -76,6 +76,8 @@ print(aircraft.state[2])    # 160.0
 | **Estimation** | EKF · UKF · particle filter · complementary filter · EKF-SLAM |
 | **Perception** | Occupancy mapping · obstacle detection · visual servoing · gimbal tracking |
 | **Swarm** | Reynolds flocking · consensus · virtual structure · leader-follower · Voronoi coverage |
+| **Comms** | Algebraic connectivity maintenance · relay coverage · path-loss and Gaussian link models |
+| **Safety** | Control barrier functions · CBF-QP safety filter · geofence, separation and speed barriers |
 | **Learning** | 6 RL environments · pure-NumPy trainer (ARS, CEM) · optional Gymnasium integration |
 
 Nothing here wraps a solver. The Newton-Euler equations, the aerodynamic

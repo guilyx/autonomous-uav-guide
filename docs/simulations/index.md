@@ -13,8 +13,8 @@ flybots run astar_3d         # render it
 Or as a module: `python -m uav_sim.simulations.<category>.<name>`.
 
 <StatBand :items="[
-  { value: '43', label: 'simulations' },
-  { value: '10', label: 'domains' },
+  { value: '47', label: 'simulations' },
+  { value: '12', label: 'domains' },
   { value: '100%', label: 'with references' },
 ]" />
 
@@ -117,6 +117,23 @@ See also the model documentation: [quadrotor](/vehicles/quadrotor),
 | Leader-follower | [Open](/simulations/swarm/leader-follower) | ![leader follower](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/leader_follower/leader_follower.gif) |
 | Potential swarm | [Open](/simulations/swarm/potential-swarm) | ![potential swarm](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/potential_swarm/potential_swarm.gif) |
 | Voronoi coverage | [Open](/simulations/swarm/voronoi-coverage) | ![voronoi](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/voronoi_coverage/voronoi_coverage.gif) |
+
+## Communications
+
+The radio network as part of the plant rather than an assumption.
+
+| Algorithm | Article | Preview |
+|---|---|---|
+| Connectivity maintenance | [Open](/simulations/comms/connectivity-maintenance) | ![connectivity](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/comms/connectivity_maintenance/connectivity_maintenance.gif) |
+| Relay coverage | [Open](/simulations/comms/relay-coverage) | ![relay](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/comms/relay_coverage/relay_coverage.gif) |
+
+## Safety
+
+Barriers that edit a controller's command rather than replacing it.
+
+| Algorithm | Article | Preview |
+|---|---|---|
+| Position exchange (CBF) | [Open](/simulations/safety/position-exchange) | ![cbf](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/safety/position_exchange/position_exchange.gif) |
 
 ## Reinforcement learning
 
