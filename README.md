@@ -76,6 +76,8 @@ print(aircraft.state[2])    # 160.0
 | **Estimation** | EKF · UKF · particle filter · complementary filter · EKF-SLAM |
 | **Perception** | Occupancy mapping · obstacle detection · visual servoing · gimbal tracking |
 | **Swarm** | Reynolds flocking · consensus · virtual structure · leader-follower · Voronoi coverage |
+| **Comms** | Algebraic connectivity maintenance · relay coverage · path-loss and Gaussian link models |
+| **Safety** | Control barrier functions · CBF-QP safety filter · geofence, separation and speed barriers |
 | **Learning** | 6 RL environments · pure-NumPy trainer (ARS, CEM) · optional Gymnasium integration |
 
 Nothing here wraps a solver. The Newton-Euler equations, the aerodynamic
