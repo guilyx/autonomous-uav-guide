@@ -35,3 +35,20 @@ def test_empty_trace_has_zero_step_counts(tmp_path):
         "recorded_steps": 0,
         "downsample": 1,
     }
+
+
+def test_log_file_ends_with_a_newline(tmp_path):
+    """CI's end-of-file hook rewrites the log otherwise.
+
+    `json.dump` writes no trailing newline, so every regenerated log needed
+    fixing by the pre-commit hook. That is invisible locally -- the hook
+    edits the file and reports success -- and fails CI, where nothing is
+    allowed to change.
+    """
+    logger = SimLogger("newline_probe", out_dir=tmp_path)
+    logger.log_metadata("algorithm", "probe")
+    logger.log_step(t=0.0, value=1.0)
+    logger.log_summary("done", True)
+    path = logger.save()
+
+    assert path.read_bytes().endswith(b"\n")
