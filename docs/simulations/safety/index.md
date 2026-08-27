@@ -32,6 +32,9 @@ are visible in the position-exchange simulation.
 ## Algorithms
 
 - [Position Exchange](/simulations/safety/position-exchange)
+- [Obstacle Slalom](/simulations/safety/obstacle-slalom)
+- [Connectivity Annulus](/simulations/safety/connectivity-annulus)
+- [Geofence and Floor](/simulations/safety/geofence-floor)
 
 ## Prerequisites
 

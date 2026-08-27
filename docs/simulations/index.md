@@ -13,7 +13,7 @@ flybots run astar_3d         # render it
 Or as a module: `python -m flybots.simulations.<category>.<name>`.
 
 <StatBand :items="[
-  { value: '47', label: 'simulations' },
+  { value: '53', label: 'simulations' },
   { value: '12', label: 'domains' },
   { value: '100%', label: 'with references' },
 ]" />
@@ -126,6 +126,9 @@ The radio network as part of the plant rather than an assumption.
 |---|---|---|
 | Connectivity maintenance | [Open](/simulations/comms/connectivity-maintenance) | ![connectivity](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/connectivity_maintenance/connectivity_maintenance.gif) |
 | Relay coverage | [Open](/simulations/comms/relay-coverage) | ![relay](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/relay_coverage/relay_coverage.gif) |
+| Resilient mesh | [Open](/simulations/comms/resilient-mesh) | ![resilient](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/resilient_mesh/resilient_mesh.gif) |
+| Link budget | [Open](/simulations/comms/link-budget) | ![link budget](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/link_budget/link_budget.gif) |
+| Convoy escort | [Open](/simulations/comms/convoy-escort) | ![convoy](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/convoy_escort/convoy_escort.gif) |
 
 ## Safety
 
@@ -134,6 +137,9 @@ Barriers that edit a controller's command rather than replacing it.
 | Algorithm | Article | Preview |
 |---|---|---|
 | Position exchange (CBF) | [Open](/simulations/safety/position-exchange) | ![cbf](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/position_exchange/position_exchange.gif) |
+| Obstacle slalom | [Open](/simulations/safety/obstacle-slalom) | ![slalom](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/obstacle_slalom/obstacle_slalom.gif) |
+| Connectivity annulus | [Open](/simulations/safety/connectivity-annulus) | ![annulus](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/connectivity_annulus/connectivity_annulus.gif) |
+| Geofence and floor | [Open](/simulations/safety/geofence-floor) | ![geofence](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/geofence_floor/geofence_floor.gif) |
 
 ## Reinforcement learning
 

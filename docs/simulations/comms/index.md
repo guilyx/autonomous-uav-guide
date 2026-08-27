@@ -35,6 +35,9 @@ a property you check into one you fly.
 
 - [Connectivity Maintenance](/simulations/comms/connectivity-maintenance)
 - [Relay Coverage](/simulations/comms/relay-coverage)
+- [Resilient Mesh](/simulations/comms/resilient-mesh)
+- [Link Budget](/simulations/comms/link-budget)
+- [Convoy Escort](/simulations/comms/convoy-escort)
 
 ## Prerequisites
 

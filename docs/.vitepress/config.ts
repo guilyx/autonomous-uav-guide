@@ -260,6 +260,9 @@ export default defineConfig({
               link: '/simulations/comms/connectivity-maintenance',
             },
             { text: 'Relay coverage', link: '/simulations/comms/relay-coverage' },
+            { text: 'Resilient mesh', link: '/simulations/comms/resilient-mesh' },
+            { text: 'Link budget', link: '/simulations/comms/link-budget' },
+            { text: 'Convoy escort', link: '/simulations/comms/convoy-escort' },
           ],
         },
         {
@@ -268,6 +271,9 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/simulations/safety/' },
             { text: 'Position exchange', link: '/simulations/safety/position-exchange' },
+            { text: 'Obstacle slalom', link: '/simulations/safety/obstacle-slalom' },
+            { text: 'Connectivity annulus', link: '/simulations/safety/connectivity-annulus' },
+            { text: 'Geofence and floor', link: '/simulations/safety/geofence-floor' },
           ],
         },
         {
