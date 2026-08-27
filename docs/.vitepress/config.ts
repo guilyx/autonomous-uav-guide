@@ -251,6 +251,18 @@ export default defineConfig({
           ],
         },
         {
+          text: 'Communications',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/simulations/comms/' },
+            {
+              text: 'Connectivity maintenance',
+              link: '/simulations/comms/connectivity-maintenance',
+            },
+            { text: 'Relay coverage', link: '/simulations/comms/relay-coverage' },
+          ],
+        },
+        {
           text: 'Safety',
           collapsed: true,
           items: [
