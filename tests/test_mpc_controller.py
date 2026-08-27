@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.path_tracking.mpc_controller import MPCController
+from flybots.path_tracking.mpc_controller import MPCController
 
 
 class TestMPCController:

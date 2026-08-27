@@ -5,9 +5,9 @@ from importlib.metadata import version
 
 
 def test_import():
-    import uav_sim
+    import flybots
 
-    assert uav_sim.__version__
+    assert flybots.__version__
 
 
 def test_version_matches_the_installed_distribution():
@@ -18,6 +18,6 @@ def test_version_matches_the_installed_distribution():
     not notice them drifting apart. A `v1.0.0` tag against a pyproject
     still reading 0.2.0 is what that drift costs at release time.
     """
-    import uav_sim
+    import flybots
 
-    assert uav_sim.__version__ == version("flybots")
+    assert flybots.__version__ == version("flybots")

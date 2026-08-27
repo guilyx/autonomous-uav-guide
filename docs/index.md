@@ -110,8 +110,8 @@ flybots train hover       # teach a quadrotor to hold position
 Or drive it from Python:
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
-from uav_sim.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
 
 aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
 aircraft.reset_trimmed(altitude=120.0)          # solve for equilibrium flight

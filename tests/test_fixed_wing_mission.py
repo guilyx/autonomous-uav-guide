@@ -19,12 +19,12 @@ from functools import lru_cache
 import numpy as np
 import pytest
 
-from uav_sim.control.fixed_wing_autopilot import (
+from flybots.control.fixed_wing_autopilot import (
     AutopilotCommand,
     AutopilotGains,
     FixedWingAutopilot,
 )
-from uav_sim.guidance import (
+from flybots.guidance import (
     FixedWingMission,
     GuidanceError,
     GuidanceGains,
@@ -38,8 +38,8 @@ from uav_sim.guidance import (
     waypoint_plan,
     waypoint_reached,
 )
-from uav_sim.guidance.fixed_wing_mission import LineLeg, OrbitLeg
-from uav_sim.vehicles.fixed_wing import (
+from flybots.guidance.fixed_wing_mission import LineLeg, OrbitLeg
+from flybots.vehicles.fixed_wing import (
     FixedWingPreset,
     create_fixed_wing,
     get_fixed_wing_params,

@@ -48,7 +48,7 @@ and grows without bound as $\lambda_2$ approaches its floor.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.comms.connectivity_maintenance
+python -m flybots.simulations.comms.connectivity_maintenance
 ```
 
 ## Evidence
@@ -62,7 +62,7 @@ The aware run does **not** reach its goals — mean goal error plateaus near
 110 m while the task-only run drives it to zero. Connectivity was bought
 with mission progress, and the second panel shows the bill.
 
-![Connectivity Maintenance](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/comms/connectivity_maintenance/connectivity_maintenance.gif)
+![Connectivity Maintenance](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/connectivity_maintenance/connectivity_maintenance.gif)
 
 ## References
 

@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.vehicles.footprint import (
+from flybots.vehicles.footprint import (
     CircularFootprint,
     RectangularFootprint,
     swarm_convex_hull,

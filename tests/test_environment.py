@@ -4,9 +4,9 @@
 import numpy as np
 import pytest
 
-from uav_sim.environment.buildings import add_city_grid
-from uav_sim.environment.obstacles import BoxObstacle, CylinderObstacle, SphereObstacle
-from uav_sim.environment.world import DynamicAgent, World, WorldType
+from flybots.environment.buildings import add_city_grid
+from flybots.environment.obstacles import BoxObstacle, CylinderObstacle, SphereObstacle
+from flybots.environment.world import DynamicAgent, World, WorldType
 
 
 class TestSphereObstacle:

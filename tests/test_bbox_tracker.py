@@ -3,12 +3,12 @@
 
 import numpy as np
 
-from uav_sim.perception.bbox_tracker import (
+from flybots.perception.bbox_tracker import (
     Detection,
     SimulatedDetector,
     VisualServoController,
 )
-from uav_sim.sensors.gimbal import Gimbal
+from flybots.sensors.gimbal import Gimbal
 
 
 class TestSimulatedDetector:

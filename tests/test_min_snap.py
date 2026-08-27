@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from uav_sim.trajectory_planning.min_snap import MinSnapTrajectory
-from uav_sim.trajectory_planning.polynomial_trajectory import PolynomialTrajectory
+from flybots.trajectory_planning.min_snap import MinSnapTrajectory
+from flybots.trajectory_planning.polynomial_trajectory import PolynomialTrajectory
 
 # ---------------------------------------------------------------------------
 # Polynomial trajectory

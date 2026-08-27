@@ -22,12 +22,12 @@ PRM consists of:
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_planning.prm_3d
+python -m flybots.simulations.path_planning.prm_3d
 ```
 
 ## Evidence
 
-![PRM 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/prm_3d/prm_3d.gif)
+![PRM 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_planning/prm_3d/prm_3d.gif)
 
 ## References
 

@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.sensors.gimbal import Gimbal
+from flybots.sensors.gimbal import Gimbal
 
 
 class TestGimbal:

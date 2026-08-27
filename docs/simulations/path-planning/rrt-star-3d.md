@@ -25,12 +25,12 @@ As iterations grow, solution cost converges toward optimal.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_planning.rrt_star_3d
+python -m flybots.simulations.path_planning.rrt_star_3d
 ```
 
 ## Evidence
 
-![RRT Star 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/rrt_star_3d/rrt_star_3d.gif)
+![RRT Star 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_planning/rrt_star_3d/rrt_star_3d.gif)
 
 ## References
 

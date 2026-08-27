@@ -1,7 +1,7 @@
 # Architecture
 
 ```text
-uav_sim/
+flybots/
 ├── vehicles/            Quadrotor (6DOF), Fixed-Wing, VTOL + presets
 │   ├── multirotor/      Newton-Euler rigid body, mixer, motor dynamics
 │   ├── fixed_wing/      Aerodynamic coefficients, trim solver, presets
@@ -99,7 +99,7 @@ simulations/<category>/<name>/
 ```
 
 Discovery walks the tree for `run.py`, so adding one requires no registry
-edit. `uav_sim/cli/catalogue.py` reads the summary from the module
+edit. `flybots/cli/catalogue.py` reads the summary from the module
 docstring **as text** rather than by importing, so listing the catalogue
 stays fast and cannot be broken by an import error in one simulation.
 

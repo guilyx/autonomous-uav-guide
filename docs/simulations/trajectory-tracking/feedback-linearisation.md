@@ -44,12 +44,12 @@ Then choose `v` as a PD/PID law over trajectory tracking error.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.trajectory_tracking.feedback_linearisation
+python -m flybots.simulations.trajectory_tracking.feedback_linearisation
 ```
 
 ## Evidence
 
-![Feedback Linearisation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif)
+![Feedback Linearisation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/trajectory_tracking/feedback_linearisation/feedback_linearisation.gif)
 
 ## References
 

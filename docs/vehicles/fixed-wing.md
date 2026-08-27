@@ -6,12 +6,12 @@ coefficient build-up from
 > R. W. Beard, T. W. McLain, *Small Unmanned Aircraft: Theory and
 > Practice*, Princeton University Press, 2012 — Chapter 4 and Appendix E.
 
-Source: [`uav_sim/vehicles/fixed_wing/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/fixed_wing)
+Source: [`flybots/vehicles/fixed_wing/`](https://github.com/guilyx/flybots/tree/main/src/flybots/vehicles/fixed_wing)
 
 ## Quick start
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
 
 aircraft = create_fixed_wing(FixedWingPreset.AEROSONDE)
 controls = aircraft.reset_trimmed(airspeed=35.0, altitude=200.0)
@@ -166,7 +166,7 @@ the source.
 
 ```python
 from dataclasses import replace
-from uav_sim.vehicles.fixed_wing import AeroCoefficients, FixedWing, FixedWingParams
+from flybots.vehicles.fixed_wing import AeroCoefficients, FixedWing, FixedWingParams
 
 unstable = replace(AeroCoefficients(), Cma=-0.2)   # nearly neutral in pitch
 aircraft = FixedWing(FixedWingParams(coeffs=unstable, mass=10.0))

@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from uav_sim.path_tracking.lqr_controller import LQRController
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.path_tracking.lqr_controller import LQRController
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 class TestLQRInit:

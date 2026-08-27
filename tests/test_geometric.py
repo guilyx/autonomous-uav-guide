@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from uav_sim.path_tracking.geometric_controller import GeometricController
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.path_tracking.geometric_controller import GeometricController
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 class TestGeometricCompute:

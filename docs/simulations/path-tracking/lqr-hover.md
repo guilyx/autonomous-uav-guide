@@ -50,12 +50,12 @@ where `P` solves the continuous-time algebraic Riccati equation.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_tracking.lqr_hover
+python -m flybots.simulations.path_tracking.lqr_hover
 ```
 
 ## Evidence
 
-![LQR Hover](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/lqr_hover/lqr_hover.gif)
+![LQR Hover](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_tracking/lqr_hover/lqr_hover.gif)
 
 ## References
 

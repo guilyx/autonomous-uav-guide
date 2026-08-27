@@ -66,7 +66,7 @@ guarantee.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.safety.position_exchange
+python -m flybots.simulations.safety.position_exchange
 ```
 
 ## Evidence
@@ -80,7 +80,7 @@ python -m uav_sim.simulations.safety.position_exchange
 Safe distance 1.800 m. The unfiltered run reaches every goal and passes
 through itself to do it; the filtered run never violates the barrier.
 
-![Position Exchange](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/safety/position_exchange/position_exchange.gif)
+![Position Exchange](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/position_exchange/position_exchange.gif)
 
 ## References
 

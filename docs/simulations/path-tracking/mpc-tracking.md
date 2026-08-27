@@ -65,12 +65,12 @@ that is 20× — and the horizon effectively ends in mid-air.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_tracking.mpc_tracking
+python -m flybots.simulations.path_tracking.mpc_tracking
 ```
 
 ## Evidence
 
-![MPC Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/mpc_tracking/mpc_tracking.gif)
+![MPC Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_tracking/mpc_tracking/mpc_tracking.gif)
 
 ## References
 

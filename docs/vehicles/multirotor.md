@@ -14,14 +14,14 @@ dynamics, controllers and estimators unchanged.
 > Automatica 49(5):1087-1103, 2013.
 > [doi:10.1016/j.automatica.2013.01.035](https://doi.org/10.1016/j.automatica.2013.01.035)
 
-Source: [`uav_sim/vehicles/multirotor/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/multirotor)
-and [`components/allocation.py`](https://github.com/guilyx/flybots/blob/main/src/uav_sim/vehicles/components/allocation.py)
+Source: [`flybots/vehicles/multirotor/`](https://github.com/guilyx/flybots/tree/main/src/flybots/vehicles/multirotor)
+and [`components/allocation.py`](https://github.com/guilyx/flybots/blob/main/src/flybots/vehicles/components/allocation.py)
 
 ## Quick start
 
 ```python
 import numpy as np
-from uav_sim.vehicles import VehiclePreset, create_multirotor
+from flybots.vehicles import VehiclePreset, create_multirotor
 
 craft = create_multirotor(VehiclePreset.HEX_S550)
 craft.reset(position=np.array([0.0, 0.0, 5.0]))
@@ -36,7 +36,7 @@ craft.mixer.rank          # 4 — thrust and all three torques reachable
 ```
 
 The control input is a body wrench `[T, τx, τy, τz]` whatever the rotor
-count, so every controller in `uav_sim.control` works on all of them
+count, so every controller in `flybots.control` works on all of them
 without modification.
 
 ## Where the mixing matrix comes from
@@ -94,7 +94,7 @@ pinned by a test, with the historical matrices written out as literals so
 the reference cannot drift with the code:
 
 ```python
-from uav_sim.vehicles.components.mixer import Mixer
+from flybots.vehicles.components.mixer import Mixer
 
 Mixer(arm_length=0.175, frame="x").mix_matrix
 ```
@@ -107,7 +107,7 @@ it started at the front left.
 ## Layouts
 
 ```python
-from uav_sim.vehicles import x_layout, plus_layout, h_layout, coaxial_layout, Rotor
+from flybots.vehicles import x_layout, plus_layout, h_layout, coaxial_layout, Rotor
 ```
 
 | Builder | Shape |
@@ -229,7 +229,7 @@ upper one in hover.
 `Quadrotor` is a preset over `Multirotor`, not a separate model:
 
 ```python
-from uav_sim.vehicles import Quadrotor, create_quadrotor, VehiclePreset
+from flybots.vehicles import Quadrotor, create_quadrotor, VehiclePreset
 
 isinstance(create_quadrotor(VehiclePreset.CRAZYFLIE), Multirotor)   # True
 ```

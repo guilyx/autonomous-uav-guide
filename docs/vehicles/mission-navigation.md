@@ -3,7 +3,7 @@
 
 An autopilot answers *hold this course, altitude and airspeed*. A mission
 answers *which course, altitude and airspeed should I be holding right
-now*. `uav_sim.guidance` is the layer in between for fixed-wing aircraft:
+now*. `flybots.guidance` is the layer in between for fixed-wing aircraft:
 straight-line and orbit vector fields, waypoint sequencing, racetrack
 patterns and return-to-launch.
 
@@ -12,14 +12,14 @@ patterns and return-to-launch.
 > Chapter 11 (path management).
 
 Source:
-[`uav_sim/guidance/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/guidance)
+[`flybots/guidance/`](https://github.com/guilyx/flybots/tree/main/src/flybots/guidance)
 
 ## Quick start
 
 ```python
-from uav_sim.control.fixed_wing_autopilot import FixedWingAutopilot
-from uav_sim.guidance import FixedWingMission, GuidanceGains, waypoint_plan
-from uav_sim.vehicles.fixed_wing import FixedWingPreset, create_fixed_wing
+from flybots.control.fixed_wing_autopilot import FixedWingAutopilot
+from flybots.guidance import FixedWingMission, GuidanceGains, waypoint_plan
+from flybots.vehicles.fixed_wing import FixedWingPreset, create_fixed_wing
 
 aircraft = create_fixed_wing(FixedWingPreset.MINI_TRAINER)
 aircraft.reset_trimmed(airspeed=12.0, altitude=120.0)
@@ -255,7 +255,7 @@ arrival, not a corner, and the half-plane through it is exactly the
 Two straight legs joined by half-orbits:
 
 ```python
-from uav_sim.guidance import racetrack_plan, OrbitDirection
+from flybots.guidance import racetrack_plan, OrbitDirection
 
 circuit = racetrack_plan(
     [250, 240, 110],          # centre; its z is the pattern altitude
@@ -326,7 +326,7 @@ radius by itself.
 ## Wind
 
 ::: danger The airframe model has no wind
-`uav_sim.vehicles.fixed_wing` has no wind field. Its body velocity is both
+`flybots.vehicles.fixed_wing` has no wind field. Its body velocity is both
 the air-relative and the inertial velocity, so nothing here is tested
 against wind and no claim is made that it is wind-compensating. Adding
 wind and gust models is a separate open [roadmap](/ROADMAP) item.

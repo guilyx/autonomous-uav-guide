@@ -4,13 +4,13 @@
 import numpy as np
 import pytest
 
-from uav_sim.gym import ENV_SPECS, evaluate, list_envs, make, train
-from uav_sim.gym.base import EnvConfig, UAVEnv
-from uav_sim.gym.optimizers import AugmentedRandomSearch, CrossEntropyMethod, build_optimizer
-from uav_sim.gym.policy import MLPPolicy, RunningNormalizer
-from uav_sim.gym.quadrotor_envs import QuadrotorEnvConfig
-from uav_sim.gym.spaces import Box
-from uav_sim.gym.train import TrainConfig, rollout
+from flybots.gym import ENV_SPECS, evaluate, list_envs, make, train
+from flybots.gym.base import EnvConfig, UAVEnv
+from flybots.gym.optimizers import AugmentedRandomSearch, CrossEntropyMethod, build_optimizer
+from flybots.gym.policy import MLPPolicy, RunningNormalizer
+from flybots.gym.quadrotor_envs import QuadrotorEnvConfig
+from flybots.gym.spaces import Box
+from flybots.gym.train import TrainConfig, rollout
 
 ALL_ENV_IDS = sorted(ENV_SPECS)
 
@@ -448,3 +448,46 @@ class TestEnvConfig:
         env = make("hover", config=QuadrotorEnvConfig(max_episode_seconds=2.0))
         assert env.config.max_episode_steps == 100
         env.close()
+
+
+class TestGymnasiumAdapter:
+    """`gym.make` must yield a conforming environment, not merely register."""
+
+    def test_make_returns_a_working_env(self):
+        gymnasium = pytest.importorskip("gymnasium")
+        import flybots.gym  # noqa: F401  — registers on import
+
+        env = gymnasium.make("flybots/Hover-v0")
+        obs, _ = env.reset(seed=0)
+        assert env.observation_space.contains(obs)
+        obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
+        assert env.observation_space.contains(obs)
+        assert isinstance(reward, float)
+        assert isinstance(terminated, bool)
+        assert isinstance(truncated, bool)
+        env.close()
+
+    def test_adapter_subclasses_gymnasium_env(self):
+        """Gymnasium type-checks the entry point and refuses anything else."""
+        gymnasium = pytest.importorskip("gymnasium")
+        from flybots.gym.registry import _adapter_class
+
+        assert issubclass(_adapter_class(), gymnasium.Env)
+
+    def test_observations_match_the_declared_dtype(self):
+        """A widened dtype silently corrupts anything trusting the space."""
+        gymnasium = pytest.importorskip("gymnasium")
+        import flybots.gym  # noqa: F401
+
+        env = gymnasium.make("flybots/Hover-v0")
+        obs, _ = env.reset(seed=0)
+        assert obs.dtype == env.observation_space.dtype
+        env.close()
+
+    def test_ids_use_the_flybots_namespace(self):
+        """Renamed in 2.0.0; the old namespace must be gone entirely."""
+        gymnasium = pytest.importorskip("gymnasium")
+        import flybots.gym  # noqa: F401
+
+        assert any(k.startswith("flybots/") for k in gymnasium.registry)
+        assert not any(k.startswith("uav_sim/") for k in gymnasium.registry)

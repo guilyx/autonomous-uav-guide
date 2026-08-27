@@ -2,7 +2,7 @@
 
 import json
 
-from uav_sim.logging import SimLogger
+from flybots.logging import SimLogger
 
 
 def test_saved_trace_describes_downsampling(tmp_path):

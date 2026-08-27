@@ -44,12 +44,12 @@ forming a linear system for `a_0..a_5`.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.trajectory_planning.quintic_polynomial_demo
+python -m flybots.simulations.trajectory_planning.quintic_polynomial_demo
 ```
 
 ## Evidence
 
-![Quintic Polynomial](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/quintic_polynomial_demo/quintic_polynomial_demo.gif)
+![Quintic Polynomial](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/trajectory_planning/quintic_polynomial_demo/quintic_polynomial_demo.gif)
 
 ## References
 

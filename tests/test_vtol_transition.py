@@ -10,14 +10,14 @@ never tilted with bank (so the aircraft could not turn).
 import numpy as np
 import pytest
 
-from uav_sim.control.vtol_controller import (
+from flybots.control.vtol_controller import (
     VTOLCommand,
     VTOLController,
     VTOLGains,
     VTOLMode,
 )
-from uav_sim.vehicles.vtol import Tiltrotor, TiltrotorParams
-from uav_sim.vehicles.vtol.tiltrotor import CRUISE_TILT, HOVER_TILT
+from flybots.vehicles.vtol import Tiltrotor, TiltrotorParams
+from flybots.vehicles.vtol.tiltrotor import CRUISE_TILT, HOVER_TILT
 
 
 def _cruising_state(airspeed: float = 20.0, pitch: float = 0.0, roll: float = 0.0):

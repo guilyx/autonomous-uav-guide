@@ -37,12 +37,12 @@ Desired angles are generated from look-at geometry between camera and target coo
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.sensors.gimbal_tracking
+python -m flybots.simulations.sensors.gimbal_tracking
 ```
 
 ## Evidence
 
-![Gimbal Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/sensors/gimbal_tracking/gimbal_tracking.gif)
+![Gimbal Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/sensors/gimbal_tracking/gimbal_tracking.gif)
 
 ## References
 

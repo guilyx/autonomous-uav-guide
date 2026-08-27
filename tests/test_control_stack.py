@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from uav_sim.control import (
+from flybots.control import (
     AttitudeController,
     ControlMode,
     FlightController,
@@ -12,7 +12,7 @@ from uav_sim.control import (
     RateController,
     VelocityController,
 )
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 class TestRateController:

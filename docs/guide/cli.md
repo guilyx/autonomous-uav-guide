@@ -152,6 +152,6 @@ so it is usable in CI.
 The CLI is a convenience. Every simulation is also a module:
 
 ```bash
-python -m uav_sim.simulations.path_tracking.pid_hover
-python -m uav_sim.simulations.estimation.ekf
+python -m flybots.simulations.path_tracking.pid_hover
+python -m flybots.simulations.estimation.ekf
 ```

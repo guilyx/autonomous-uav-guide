@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.path_planning.prm_3d import PRM3D
+from flybots.path_planning.prm_3d import PRM3D
 
 
 class TestPRM3D:

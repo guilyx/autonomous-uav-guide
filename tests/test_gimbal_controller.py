@@ -3,8 +3,8 @@
 
 import numpy as np
 
-from uav_sim.sensors.gimbal import Gimbal
-from uav_sim.sensors.gimbal_controller import (
+from flybots.sensors.gimbal import Gimbal
+from flybots.sensors.gimbal_controller import (
     BBoxTracker,
     PointTracker,
     project_to_image,

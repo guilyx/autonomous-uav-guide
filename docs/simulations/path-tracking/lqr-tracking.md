@@ -68,12 +68,12 @@ error with a 4.6 % amplitude overshoot and **0.017 m** with none.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_tracking.lqr_tracking
+python -m flybots.simulations.path_tracking.lqr_tracking
 ```
 
 ## Evidence
 
-![LQR Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/lqr_tracking/lqr_tracking.gif)
+![LQR Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_tracking/lqr_tracking/lqr_tracking.gif)
 
 ## References
 

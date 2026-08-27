@@ -4,11 +4,11 @@
 import numpy as np
 import pytest
 
-from uav_sim.trajectory_tracking.feedback_linearisation import (
+from flybots.trajectory_tracking.feedback_linearisation import (
     FeedbackLinearisationTracker,
 )
-from uav_sim.trajectory_tracking.mppi import MPPITracker
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.trajectory_tracking.mppi import MPPITracker
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 # ---------------------------------------------------------------------------
 # Feedback linearisation

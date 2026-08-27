@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
+from flybots.path_tracking.pure_pursuit_3d import PurePursuit3D
 
 
 class TestPurePursuit3D:

@@ -53,12 +53,12 @@ In bounding-box tracking, feature vectors include center and area terms.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.perception.visual_servoing
+python -m flybots.simulations.perception.visual_servoing
 ```
 
 ## Evidence
 
-![Visual Servoing](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/visual_servoing/visual_servoing.gif)
+![Visual Servoing](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/perception/visual_servoing/visual_servoing.gif)
 
 ## References
 

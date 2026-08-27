@@ -38,12 +38,12 @@ where `U_{ij}` can be Lennard-Jones-like or quadratic barrier potentials.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.swarm.potential_swarm
+python -m flybots.simulations.swarm.potential_swarm
 ```
 
 ## Evidence
 
-![Potential Swarm](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/potential_swarm/potential_swarm.gif)
+![Potential Swarm](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/swarm/potential_swarm/potential_swarm.gif)
 
 ## References
 

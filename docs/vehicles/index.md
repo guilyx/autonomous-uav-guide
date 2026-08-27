@@ -72,7 +72,7 @@ Every airframe subclasses `UAVBase`, which owns the state vector, RK4
 integration and reset semantics:
 
 ```python
-from uav_sim.vehicles.base import UAVBase, UAVParams
+from flybots.vehicles.base import UAVBase, UAVParams
 
 class MyAirframe(UAVBase):
     @property

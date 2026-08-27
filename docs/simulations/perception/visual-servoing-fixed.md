@@ -64,12 +64,12 @@ when it looks too small.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.perception.visual_servoing_fixed
+python -m flybots.simulations.perception.visual_servoing_fixed
 ```
 
 ## Evidence
 
-![Visual Servoing — Fixed Camera](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/visual_servoing_fixed/visual_servoing_fixed.gif)
+![Visual Servoing — Fixed Camera](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/perception/visual_servoing_fixed/visual_servoing_fixed.gif)
 
 ## References
 

@@ -10,7 +10,7 @@ hexacopter and the octocopter do rests on that agreement.
 import numpy as np
 import pytest
 
-from uav_sim.vehicles.components.allocation import (
+from flybots.vehicles.components.allocation import (
     ControlAllocation,
     Rotor,
     allocation_matrix,
@@ -20,7 +20,7 @@ from uav_sim.vehicles.components.allocation import (
     radial_layout,
     x_layout,
 )
-from uav_sim.vehicles.components.mixer import Mixer
+from flybots.vehicles.components.mixer import Mixer
 
 ARM = 0.175
 K_THRUST = 8.55e-6

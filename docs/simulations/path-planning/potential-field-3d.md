@@ -28,12 +28,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_planning.potential_field_3d
+python -m flybots.simulations.path_planning.potential_field_3d
 ```
 
 ## Evidence
 
-![Potential Field 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/potential_field_3d/potential_field_3d.gif)
+![Potential Field 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_planning/potential_field_3d/potential_field_3d.gif)
 
 ## References
 

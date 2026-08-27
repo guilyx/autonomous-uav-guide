@@ -47,12 +47,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.perception.occupancy_mapping
+python -m flybots.simulations.perception.occupancy_mapping
 ```
 
 ## Evidence
 
-![Occupancy Mapping](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/occupancy_mapping/occupancy_mapping.gif)
+![Occupancy Mapping](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/perception/occupancy_mapping/occupancy_mapping.gif)
 
 ## References
 

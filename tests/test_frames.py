@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.testing import assert_allclose
 
-from uav_sim.frames import (
+from flybots.frames import (
     FrameID,
     batch_body_to_world,
     batch_world_to_body,

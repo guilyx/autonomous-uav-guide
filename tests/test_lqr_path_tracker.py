@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.path_tracking.lqr_path_tracker import LQRPathTracker
+from flybots.path_tracking.lqr_path_tracker import LQRPathTracker
 
 
 class TestLQRPathTracker:

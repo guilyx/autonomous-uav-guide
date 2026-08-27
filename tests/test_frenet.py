@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.trajectory_planning.frenet_optimal import FrenetOptimalPlanner
+from flybots.trajectory_planning.frenet_optimal import FrenetOptimalPlanner
 
 
 class TestFrenetOptimalPlanner:

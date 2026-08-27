@@ -41,7 +41,7 @@ $$
 
 ## Evidence
 
-![Fixed Wing Flight](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/vehicles/fixed_wing_flight/fixed_wing_flight.gif)
+![Fixed Wing Flight](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/vehicles/fixed_wing_flight/fixed_wing_flight.gif)
 
 ## References
 

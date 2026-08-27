@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from uav_sim.safety import (
+from flybots.safety import (
     AltitudeFloorBarrier,
     ConnectivityBarrier,
     GeofenceBoxBarrier,

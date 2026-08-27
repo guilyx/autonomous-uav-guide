@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from uav_sim.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
+from flybots.path_planning.coverage_planner import CoveragePathPlanner, CoverageRegion
 
 
 class TestCoveragePathPlanner:

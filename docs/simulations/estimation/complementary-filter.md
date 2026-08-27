@@ -39,12 +39,12 @@ where `\alpha \in (0, 1)` defines the crossover between gyro and accelerometer t
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.estimation.complementary_filter
+python -m flybots.simulations.estimation.complementary_filter
 ```
 
 ## Evidence
 
-![Complementary Filter](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/complementary_filter/complementary_filter.gif)
+![Complementary Filter](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/estimation/complementary_filter/complementary_filter.gif)
 
 ## References
 

@@ -23,16 +23,22 @@ Neither extra is needed to train a policy — the built-in trainer is pure
 NumPy. `gym` only matters if you want to drive the environments with
 Stable-Baselines3, CleanRL or similar.
 
-::: warning Renamed from `uav-sim`
-The distribution and its command are now `flybots`. Installing `uav-sim`
-still leaves a `uav-sim` command on your PATH — it prints a deprecation
-notice on stderr and then runs `flybots`, and it will be removed in a later
-release.
+::: warning Upgrading from 1.x
+**The import package was renamed in 2.0.0.** It was `uav_sim`; it is now
+`flybots`, matching the distribution and the command:
 
-The *import* package has not been renamed yet: it is still `uav_sim`, so
-`from uav_sim.vehicles.multirotor import Quadrotor` is unchanged, as are the
-Gymnasium environment ids (`uav_sim/Hover-v0`). That rename is coming, and
-will land with its own major-version bump and migration notes.
+```python
+from uav_sim.vehicles.multirotor import Quadrotor   # 1.x
+from flybots.vehicles.multirotor import Quadrotor   # 2.0
+```
+
+The Gymnasium environment ids moved with it: `uav_sim/Hover-v0` is now
+`flybots/Hover-v0`. There is no compatibility shim — `import uav_sim` fails
+outright rather than working with a warning, so a missed import surfaces at
+once instead of partway through a training run.
+
+The old `uav-sim` *command* survives one more release. It prints a
+deprecation notice on stderr and forwards to `flybots`.
 :::
 
 ## From source

@@ -47,12 +47,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.trajectory_planning.frenet_optimal
+python -m flybots.simulations.trajectory_planning.frenet_optimal
 ```
 
 ## Evidence
 
-![Frenet Optimal](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/frenet_optimal/frenet_optimal.gif)
+![Frenet Optimal](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/trajectory_planning/frenet_optimal/frenet_optimal.gif)
 
 ## References
 

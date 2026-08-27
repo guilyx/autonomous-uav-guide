@@ -51,8 +51,8 @@ flybots train hover       # teach a quadrotor to hold position
 A fixed wing, trimmed and flown to a new altitude and heading:
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
-from uav_sim.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
 
 aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
 aircraft.reset_trimmed(altitude=120.0)          # solve for equilibrium flight
@@ -89,7 +89,7 @@ are written out in NumPy next to the citation they came from.
 Three airframes, one frame convention, so they compose.
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
 
 aircraft = create_fixed_wing(FixedWingPreset.AEROSONDE)
 controls = aircraft.reset_trimmed(airspeed=35.0, altitude=200.0)
@@ -118,14 +118,14 @@ flybots play hover --policy policies/hover.npz --gif hover.gif
 ```
 
 ```python
-from uav_sim.gym import make, train, evaluate
+from flybots.gym import make, train, evaluate
 
 result = train("hover", iterations=120, seed=0)
 print(evaluate("hover", result.policy, episodes=25))
 ```
 
 Gymnasium's API without the Gymnasium dependency. Install
-`flybots[gym]` and the environments register as `uav_sim/Hover-v0` for use
+`flybots[gym]` and the environments register as `flybots/Hover-v0` for use
 with any standard RL library.
 
 The interesting part is not the algorithm — it is that

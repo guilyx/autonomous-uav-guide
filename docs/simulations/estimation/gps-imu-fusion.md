@@ -60,12 +60,12 @@ the filter is mistuned — no amount of extra sensor rate will fix it.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.estimation.gps_imu_fusion
+python -m flybots.simulations.estimation.gps_imu_fusion
 ```
 
 ## Evidence
 
-![GPS IMU Fusion](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/gps_imu_fusion/gps_imu_fusion.gif)
+![GPS IMU Fusion](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/estimation/gps_imu_fusion/gps_imu_fusion.gif)
 
 ## References
 

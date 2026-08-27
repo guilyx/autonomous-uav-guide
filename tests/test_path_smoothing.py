@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from uav_sim.path_tracking.path_smoothing import rdp_simplify, smooth_path_3d
+from flybots.path_tracking.path_smoothing import rdp_simplify, smooth_path_3d
 
 
 class TestRDPSimplify:

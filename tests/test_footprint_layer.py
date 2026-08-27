@@ -3,9 +3,9 @@
 
 import numpy as np
 
-from uav_sim.costmap.footprint_layer import FootprintInflationLayer
-from uav_sim.costmap.occupancy_grid import OccupancyGrid
-from uav_sim.vehicles.footprint import CircularFootprint, RectangularFootprint
+from flybots.costmap.footprint_layer import FootprintInflationLayer
+from flybots.costmap.occupancy_grid import OccupancyGrid
+from flybots.vehicles.footprint import CircularFootprint, RectangularFootprint
 
 
 class TestFootprintInflationLayer:

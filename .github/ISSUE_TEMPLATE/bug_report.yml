@@ -33,7 +33,7 @@ body:
       description: A short script beats a description. This is rendered as Python.
       render: python
       placeholder: |
-        from uav_sim.vehicles.fixed_wing import FixedWing
+        from flybots.vehicles.fixed_wing import FixedWing
 
         aircraft = FixedWing()
         controls = aircraft.reset_trimmed(airspeed=35.0, altitude=200.0)

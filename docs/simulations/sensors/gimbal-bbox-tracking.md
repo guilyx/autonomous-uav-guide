@@ -53,12 +53,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.sensors.gimbal_bbox_tracking
+python -m flybots.simulations.sensors.gimbal_bbox_tracking
 ```
 
 ## Evidence
 
-![Gimbal BBox Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/sensors/gimbal_bbox_tracking/gimbal_bbox_tracking.gif)
+![Gimbal BBox Tracking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/sensors/gimbal_bbox_tracking/gimbal_bbox_tracking.gif)
 
 ## References
 

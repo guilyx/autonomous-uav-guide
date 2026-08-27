@@ -65,12 +65,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.estimation.particle_filter
+python -m flybots.simulations.estimation.particle_filter
 ```
 
 ## Evidence
 
-![Particle Filter](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/particle_filter/particle_filter.gif)
+![Particle Filter](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/estimation/particle_filter/particle_filter.gif)
 
 ## References
 

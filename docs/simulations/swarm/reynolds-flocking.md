@@ -40,12 +40,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.swarm.reynolds_flocking
+python -m flybots.simulations.swarm.reynolds_flocking
 ```
 
 ## Evidence
 
-![Reynolds Flocking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/reynolds_flocking/reynolds_flocking.gif)
+![Reynolds Flocking](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/swarm/reynolds_flocking/reynolds_flocking.gif)
 
 ## References
 

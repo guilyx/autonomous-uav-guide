@@ -24,12 +24,12 @@ where `\Delta_{ij}` encodes desired formation offsets.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.swarm.consensus_formation
+python -m flybots.simulations.swarm.consensus_formation
 ```
 
 ## Evidence
 
-![Consensus Formation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/consensus_formation/consensus_formation.gif)
+![Consensus Formation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/swarm/consensus_formation/consensus_formation.gif)
 
 ## References
 

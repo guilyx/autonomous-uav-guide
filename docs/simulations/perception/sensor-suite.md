@@ -33,12 +33,12 @@ A synchronized timeline is essential for stable fusion outputs.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.perception.sensor_suite_demo
+python -m flybots.simulations.perception.sensor_suite_demo
 ```
 
 ## Evidence
 
-![Sensor Suite](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif)
+![Sensor Suite](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/perception/sensor_suite_demo/sensor_suite_demo.gif)
 
 ## References
 

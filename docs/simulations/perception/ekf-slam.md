@@ -32,12 +32,12 @@ Prediction/update follow EKF recursion over the full covariance block matrix, pr
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.perception.ekf_slam
+python -m flybots.simulations.perception.ekf_slam
 ```
 
 ## Evidence
 
-![EKF SLAM](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/ekf_slam/ekf_slam.gif)
+![EKF SLAM](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/perception/ekf_slam/ekf_slam.gif)
 
 ## References
 
