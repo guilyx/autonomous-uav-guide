@@ -51,7 +51,17 @@ MAX_SPEED = 6.0
 MAX_ACCEL = 8.0
 SWIRL_GAIN = 4.0
 DT = 0.02
-STEPS = 3000
+STEPS = 3600
+# Swap, then swap back, then again. One exchange is over in five seconds and
+# leaves forty of frozen ring; alternating keeps the crossing -- the only
+# part worth watching -- happening for the whole run.
+#
+# It also turns the deadlock from an anecdote into a pattern. Without the
+# swirl the *outbound* leg jams every single time and the return leg always
+# completes, because returning is the direction the jam is not blocking.
+# Reporting only the final error hides that: the run ends on a return leg,
+# which finishes, and the deadlock looks like it never happened.
+SWAP_PERIOD = 900
 
 
 def _ring() -> tuple[np.ndarray, np.ndarray]:
@@ -91,7 +101,8 @@ def _closest_pair(positions: np.ndarray) -> float:
 
 def _fly(use_filter: bool, swirl: bool):
     """Run the exchange once, returning its trace."""
-    pos, goal = _ring()
+    start, goal = _ring()
+    pos = start.copy()
     vel = np.zeros_like(pos)
     filt = SafetyFilter(
         [SafeDistanceBarrier(SAFE_DISTANCE, k1=6.0, k2=6.0), SpeedLimitBarrier(MAX_SPEED)],
@@ -106,7 +117,9 @@ def _fly(use_filter: bool, swirl: bool):
 
     for step in range(STEPS):
         closest = _closest_pair(pos)
-        nominal = 3.0 * (goal - pos) - 3.5 * vel
+        # Alternate which side of the ring each agent is aiming for.
+        target = goal if (step // SWAP_PERIOD) % 2 == 0 else start
+        nominal = 3.0 * (target - pos) - 3.5 * vel
         if swirl:
             nominal = nominal + _swirl(pos, closest)
         nominal = np.clip(nominal, -MAX_ACCEL, MAX_ACCEL)
@@ -123,7 +136,7 @@ def _fly(use_filter: bool, swirl: bool):
 
         history[step] = pos
         separation[step] = closest
-        goal_error[step] = float(np.mean(np.linalg.norm(pos - goal, axis=1)))
+        goal_error[step] = float(np.mean(np.linalg.norm(pos - target, axis=1)))
 
     return history, separation, goal_error, correction, goal
 
@@ -154,8 +167,11 @@ def main() -> None:
     logger.log_summary("min_separation_m", float(sep_live.min()))
     logger.log_summary("min_separation_unfiltered_m", float(sep_off.min()))
     logger.log_summary("barrier_held", bool(sep_live.min() >= SAFE_DISTANCE * 0.98))
-    logger.log_summary("final_goal_error_m", float(err_live[-1]))
-    logger.log_summary("final_goal_error_no_swirl_m", float(err_lock[-1]))
+    # Worst leg, not the last sample: the run ends on a return leg, which
+    # always completes, so the final value hides the outbound deadlock.
+    legs = [k * SWAP_PERIOD - 1 for k in range(1, STEPS // SWAP_PERIOD + 1)]
+    logger.log_summary("worst_leg_error_m", float(max(err_live[i] for i in legs)))
+    logger.log_summary("worst_leg_error_no_swirl_m", float(max(err_lock[i] for i in legs)))
     logger.save()
 
     skip = max(1, STEPS // 150)
@@ -198,7 +214,7 @@ def main() -> None:
     ax_err.set_ylim(0, max(err_live.max(), err_off.max()) * 1.1)
     ax_err.set_xlabel("Time [s]", fontsize=8)
     ax_err.set_ylabel("Mean distance to goal [m]", fontsize=8)
-    ax_err.set_title("Liveness is not — the symmetric fleet deadlocks", fontsize=9)
+    ax_err.set_title("Liveness is not — every outbound leg deadlocks", fontsize=9)
     ax_err.grid(True, alpha=0.3)
     (e_live,) = ax_err.plot([], [], color="tab:green", lw=1.5, label="filtered + swirl")
     (e_lock,) = ax_err.plot([], [], color="tab:blue", lw=1.1, alpha=0.8, label="filtered")
@@ -250,12 +266,16 @@ def main() -> None:
     anim.animate(update, len(idx))
     anim.save()
 
+    legs_idx = [k * SWAP_PERIOD - 1 for k in range(1, STEPS // SWAP_PERIOD + 1)]
     for label, sep, err in (
         ("unfiltered", sep_off, err_off),
         ("filtered", sep_lock, err_lock),
         ("filtered + swirl", sep_live, err_live),
     ):
-        print(f"  {label:<17} min separation {sep.min():.3f} m   goal error {err[-1]:.3f} m")
+        worst_leg = max(err[i] for i in legs_idx)
+        print(
+            f"  {label:<17} min separation {sep.min():.3f} m   worst leg error {worst_leg:.3f} m"
+        )
     print(f"  {'safe distance':<17} {SAFE_DISTANCE:.3f} m")
 
 

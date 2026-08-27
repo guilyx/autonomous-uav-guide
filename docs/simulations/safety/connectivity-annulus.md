@@ -29,16 +29,29 @@ a solution satisfies both simultaneously.
   26 m radio: satisfying one barrier by breaking the other.
 - **Infeasibility is a real outcome.** Ask for more separation than the range
   allows and no input satisfies both.
+- **A static scene proves nothing.** Pushing outward against a fixed range
+  reaches equilibrium in about thirteen seconds and then nothing moves.
+  Flying the formation along a figure-8 instead put it in motion but pulled
+  it together: the guide attraction beat the outward push, the furthest pair
+  collapsed to half the range, and the connectivity barrier stopped being
+  active at all — the shell, the entire point, quietly disappeared. Varying
+  the *range* rather than the position keeps both barriers working.
 
 ## Evidence
 
 | quantity | value | limit |
 |---|---|---|
-| closest pair | **6.00 m** | 6.0 m |
-| furthest pair | **26.00 m** | 26.0 m |
+| closest pair | **6.00 m** | safe distance 6.0 m |
+| furthest pair | **31.94 m** | comm range 32.0 m (peak) |
 
-Both barriers held exactly at their bound. The impossible case reports
-infeasible on **2200/2200** steps rather than returning something unsafe.
+The radio range **breathes** between 12 m and 32 m and the shell breathes
+with it: the fleet expands to fill whatever range it is given and contracts
+as that range collapses, never once closing inside the safe distance.
+Nothing schedules that — the barrier is simply time-varying and the QP
+re-solves against it each step.
+
+The impossible case reports infeasible on **2200/2200** steps rather than
+returning something unsafe.
 
 ![Connectivity Annulus](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/connectivity_annulus/connectivity_annulus.gif)
 

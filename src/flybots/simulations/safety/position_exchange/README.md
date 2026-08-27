@@ -20,13 +20,22 @@ $$u^\star = \arg\min_u \tfrac12 \lVert u - u_{\text{nom}} \rVert^2
 
 ## Result
 
-| run | closest pair | goal error |
+| run | closest pair | worst leg error |
 |---|---|---|
-| unfiltered | 0.051 m | 0.000 m |
-| filtered | 1.790 m | 8.633 m |
+| unfiltered | **0.051 m** | 0.000 m |
+| filtered | 1.799 m | **13.803 m** |
 | filtered + swirl | 1.784 m | 0.000 m |
 
 Safe distance is 1.800 m.
+
+The fleet swaps, swaps back, and repeats, so the crossing — the only part
+worth watching — recurs through the whole run instead of finishing in five
+seconds and leaving forty of frozen ring. That also turns the deadlock from
+an anecdote into a pattern: **without the swirl the outbound leg jams every
+single time**, while the return leg always completes, because returning is
+the direction the jam does not block. The figure quoted is therefore the
+worst leg, not the last sample — the run ends on a return leg, which hides
+it.
 
 The middle row is the point. **A CBF guarantees safety, not liveness.**
 Standing still is safe, so the QP will happily hold a symmetric fleet

@@ -7,10 +7,25 @@ shell -- close enough to talk, far enough not to touch -- without anything
 having planned that shape. It falls out of the intersection of two safe
 sets.
 
+The radio range then **breathes** -- degrading and recovering on a slow
+cycle, as a real link does when terrain or weather moves against it -- and
+the shell breathes with it. The fleet expands to fill whatever range it is
+given and contracts as that range collapses, never once closing inside the
+safe distance. Nothing schedules that; the barrier is simply time-varying
+and the QP re-solves against it every step.
+
+Two earlier versions of this scene are worth recording. Pushing outward
+against a fixed range reaches equilibrium in about thirteen seconds and
+then nothing moves for the rest of the run. Flying the whole formation
+along a figure-8 instead put it in motion but pulled it together: the
+guide attraction beat the outward push, the furthest pair collapsed to
+half the range, the connectivity barrier stopped being active at all, and
+the shell -- the entire point -- quietly disappeared.
+
 This is also the honest way to show a filter failing. Widen the safe
 distance past the communication range and the two barriers ask for
 something impossible: the QP has no solution, and the filter says so rather
-than quietly returning an unsafe command. The third run does exactly that.
+than quietly returning an unsafe command. The comparison run does that.
 
 References:
 - A. D. Ames et al., "Control Barrier Function Based Quadratic Programs for
@@ -39,11 +54,15 @@ from flybots.visualization.vehicle_artists import clear_vehicle_artists, draw_qu
 
 matplotlib.use("Agg")
 
-WORLD = 60.0
-ALT = 30.0
+WORLD = 70.0
+ALT = 35.0
 N_AGENTS = 6
+# The radio degrades and recovers on a slow cycle; the shell follows it.
+RANGE_MIN = 12.0
+RANGE_MAX = 32.0
+RANGE_OMEGA = 0.30
 SAFE_DISTANCE = 6.0
-COMM_RANGE = 26.0
+COMM_RANGE = RANGE_MAX
 MAX_SPEED = 6.0
 MAX_ACCEL = 8.0
 DT = 0.02
@@ -74,10 +93,11 @@ def _fly(safe_distance: float, comm_range: float):
     pos[:, :2] += rng.uniform(-0.4, 0.4, (N_AGENTS, 2))
     vel = np.zeros_like(pos)
 
+    connectivity = ConnectivityBarrier(comm_range, k1=4.0, k2=4.0)
     filt = SafetyFilter(
         [
             SafeDistanceBarrier(safe_distance, k1=4.0, k2=4.0),
-            ConnectivityBarrier(comm_range, k1=4.0, k2=4.0),
+            connectivity,
             SpeedLimitBarrier(MAX_SPEED),
         ],
         u_min=-MAX_ACCEL,
@@ -85,17 +105,28 @@ def _fly(safe_distance: float, comm_range: float):
     )
 
     history = np.zeros((STEPS, N_AGENTS, 3))
+    range_hist = np.zeros(STEPS)
     closest = np.zeros(STEPS)
     furthest = np.zeros(STEPS)
     infeasible = np.zeros(STEPS)
 
     for step in range(STEPS):
-        # A deliberately unhelpful task: everyone told to scatter outward.
-        # The barriers alone decide the shape that survives it.
+        t = step * DT
+        # A link budget that comes and goes. The connectivity barrier is
+        # rebuilt against it each step, which is all a time-varying safe set
+        # requires -- the QP does not care that the bound moved.
+        live_range = 0.5 * (comm_range + RANGE_MIN) + 0.5 * (comm_range - RANGE_MIN) * np.sin(
+            RANGE_OMEGA * t
+        )
+        connectivity.comm_range = float(live_range)
+        range_hist[step] = live_range
+
+        # The only task is "spread out". Every bit of structure in the
+        # result is the barriers'.
         radial = pos - np.array([WORLD / 2, WORLD / 2, ALT])
         radial[:, 2] = 0.0
         norm = np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-6)
-        nominal = np.clip(4.0 * radial / norm - 1.5 * vel, -MAX_ACCEL, MAX_ACCEL)
+        nominal = np.clip(6.0 * radial / norm - 1.2 * vel, -MAX_ACCEL, MAX_ACCEL)
 
         report = filt(pos, vel, nominal)
         infeasible[step] = float(report.infeasible)
@@ -111,13 +142,13 @@ def _fly(safe_distance: float, comm_range: float):
         closest[step] = min(pairs)
         furthest[step] = max(pairs)
 
-    return history, closest, furthest, infeasible
+    return history, closest, furthest, infeasible, range_hist
 
 
 def main() -> None:
-    ok, close_ok, far_ok, infeas_ok = _fly(SAFE_DISTANCE, COMM_RANGE)
+    ok, close_ok, far_ok, infeas_ok, live_range = _fly(SAFE_DISTANCE, COMM_RANGE)
     # Ask for more separation than the radio can span: no input satisfies both.
-    _, close_bad, far_bad, infeas_bad = _fly(COMM_RANGE * 1.6, COMM_RANGE)
+    _, close_bad, far_bad, infeas_bad, _ = _fly(COMM_RANGE * 1.6, COMM_RANGE)
     times = np.arange(STEPS) * DT
 
     logger = SimLogger("connectivity_annulus", out_dir=Path(__file__).parent, downsample=10)
@@ -163,13 +194,13 @@ def main() -> None:
     ax3d.set_zlabel("Z [m]")
 
     ax_pair.set_xlim(0, times[-1])
-    ax_pair.set_ylim(0, COMM_RANGE * 1.35)
+    ax_pair.set_ylim(0, RANGE_MAX * 1.25)
     ax_pair.set_xlabel("Time [s]", fontsize=8)
     ax_pair.set_ylabel("Pair distance [m]", fontsize=8)
-    ax_pair.set_title("The fleet is squeezed into a shell", fontsize=9)
+    ax_pair.set_title("The shell breathes with the radio", fontsize=9)
     ax_pair.grid(True, alpha=0.3)
     ax_pair.axhline(SAFE_DISTANCE, color="crimson", ls="--", lw=1.1, label="safe distance")
-    ax_pair.axhline(COMM_RANGE, color="tab:blue", ls="--", lw=1.1, label="comm range")
+    (l_range,) = ax_pair.plot([], [], color="tab:blue", ls="--", lw=1.2, label="comm range")
     (l_close,) = ax_pair.plot([], [], color="tab:red", lw=1.5, label="closest pair")
     (l_far,) = ax_pair.plot([], [], color="tab:blue", lw=1.5, label="furthest pair")
     ax_pair.legend(fontsize=7, loc="center right")
@@ -226,13 +257,14 @@ def main() -> None:
                 )
             )
 
+        l_range.set_data(times[:step], live_range[:step])
         l_close.set_data(times[:step], close_ok[:step])
         l_far.set_data(times[:step], far_ok[:step])
         i_ok.set_data(times[:step], infeas_ok[:step])
         i_bad.set_data(times[:step], infeas_bad[:step])
         title.set_text(
-            f"t = {step * DT:.1f} s   closest {close_ok[step]:.1f} m   "
-            f"furthest {far_ok[step]:.1f} m"
+            f"t = {step * DT:.1f} s   range {live_range[step]:.0f} m   "
+            f"closest {close_ok[step]:.1f}   furthest {far_ok[step]:.1f}"
         )
 
     anim.animate(update, len(idx))

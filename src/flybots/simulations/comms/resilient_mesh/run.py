@@ -65,6 +65,23 @@ STEPS = 1600
 FAILURE_STEP = STEPS // 2
 
 
+def _view_window(positions: np.ndarray, half: float) -> tuple:
+    """Axis limits that follow the fleet.
+
+    The goals are scattered across the whole world on purpose -- that is
+    what tears the mesh -- but the fleet the controller holds together is a
+    fraction of it, so a box drawn around the world renders the network as a
+    speck. Tracking the centroid keeps the mesh legible and costs nothing:
+    the physics is unchanged, only the camera moves.
+    """
+    c = positions.mean(axis=0)
+    return (
+        (c[0] - half, c[0] + half),
+        (c[1] - half, c[1] + half),
+        (max(0.0, c[2] - half * 0.6), c[2] + half * 0.6),
+    )
+
+
 def _worst_single_loss(weights: np.ndarray, alive: np.ndarray) -> int:
     """Index of the agent whose removal costs the most connectivity.
 
@@ -191,9 +208,6 @@ def main() -> None:
 
     fig.suptitle("Resilient Mesh — one relay is switched off at the halfway mark", fontsize=13)
 
-    ax3d.set_xlim(0, WORLD)
-    ax3d.set_ylim(0, WORLD)
-    ax3d.set_zlim(0, 120)
     ax3d.set_xlabel("X [m]")
     ax3d.set_ylabel("Y [m]")
     ax3d.set_zlabel("Z [m]")
@@ -233,6 +247,11 @@ def main() -> None:
         step = idx[frame]
         p, alive = tight[step], alive_t[step]
 
+        xlim, ylim, zlim = _view_window(p[np.flatnonzero(alive)], 58.0)
+        ax3d.set_xlim(*xlim)
+        ax3d.set_ylim(*ylim)
+        ax3d.set_zlim(*zlim)
+
         clear_vehicle_artists(veh)
         for artist in links:
             artist.remove()
@@ -266,7 +285,7 @@ def main() -> None:
                     ax3d,
                     p[i],
                     attitude_from_velocity(v),
-                    size=5.0,
+                    size=3.0,
                     arm_colors=(c_rgb[i], c_rgb[i]),
                     center_color=c_rgb[i],
                     motor_color=c_rgb[i],
