@@ -34,7 +34,11 @@ from flybots.sensors.gimbal import Gimbal
 from flybots.sensors.gimbal_controller import BBoxTracker, BBoxTrackerConfig
 from flybots.simulations.common import figure_8_ref
 from flybots.visualization import SimAnimator
-from flybots.visualization.vehicle_artists import clear_vehicle_artists
+from flybots.visualization.vehicle_artists import (
+    clear_vehicle_artists,
+    draw_quadrotor_2d,
+    draw_quadrotor_3d,
+)
 
 matplotlib.use("Agg")
 
@@ -189,8 +193,12 @@ def main() -> None:
             matplotlib.patches.Rectangle(b.min_corner[:2], sz[0], sz[1], fc="gray", alpha=0.3)
         )
 
-    ax3d.scatter(*DRONE_POS, c="black", s=80, marker="D", zorder=10, label="Drone")
-    ax_top.plot(DRONE_POS[0], DRONE_POS[1], "kD", ms=8, zorder=10)
+    # The aircraft carrying the gimbal is the subject of the scene, so
+    # draw it rather than marking its position with a diamond. It hovers,
+    # so this is drawn once outside the animation loop.
+    draw_quadrotor_3d(ax3d, DRONE_POS, np.eye(3), size=1.1)
+    ax3d.scatter(*DRONE_POS, c="black", s=1, label="Drone")
+    draw_quadrotor_2d(ax_top, DRONE_POS[:2], 0.0, size=1.1, arm_lw=1.4, motor_size=10)
 
     ax_top.plot(target_hist[:, 0], target_hist[:, 1], "r--", lw=0.4, alpha=0.3)
     (tgt_top,) = ax_top.plot([], [], "r*", ms=10, zorder=10)

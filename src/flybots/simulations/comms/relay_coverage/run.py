@@ -31,6 +31,7 @@ import numpy as np
 from flybots.comms import GaussianLink, RelayCoverageController, hop_counts
 from flybots.logging import SimLogger
 from flybots.visualization import SimAnimator
+from flybots.visualization.vehicle_artists import draw_quadrotor_2d
 
 matplotlib.use("Agg")
 
@@ -193,8 +194,26 @@ def main() -> None:
 
         (base,) = ax_top.plot(p[0, 0], p[0, 1], "s", color="white", ms=11, mec="black", mew=1.4)
         artists.append(base)
-        (dots,) = ax_top.plot(p[1:, 0], p[1:, 1], "o", color="tab:blue", ms=5)
-        artists.append(dots)
+        # Draw the aircraft, headed the way they are actually flying, rather
+        # than marking them with dots.
+        # Heading over several steps, not one: a single step at low
+        # speed is mostly integrator wobble and the model spins.
+        prev = relay[max(step - 12, 0)]
+        for i in range(1, N_AGENTS):
+            d = p[i, :2] - prev[i, :2]
+            yaw = float(np.arctan2(d[1], d[0])) if np.linalg.norm(d) > 1e-9 else 0.0
+            artists.extend(
+                draw_quadrotor_2d(
+                    ax_top,
+                    p[i, :2],
+                    yaw,
+                    size=6.0,
+                    arm_colors=(c_rgb[i], c_rgb[i]),
+                    motor_color=c_rgb[i],
+                    arm_lw=1.2,
+                    motor_size=9,
+                )
+            )
 
         c_on.set_data(times[:step], cov_on[:step] * 100)
         c_naive.set_data(times[:step], naive_off[:step] * 100)

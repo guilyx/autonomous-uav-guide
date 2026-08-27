@@ -71,14 +71,23 @@ python -m flybots.simulations.safety.position_exchange
 
 ## Evidence
 
-| run | closest pair | goal error |
+| run | closest pair | worst leg error |
 |---|---|---|
-| unfiltered | 0.051 m | 0.000 m |
-| filtered | 1.790 m | 8.633 m |
+| unfiltered | **0.051 m** | 0.000 m |
+| filtered | 1.799 m | **13.803 m** |
 | filtered + swirl | 1.784 m | 0.000 m |
 
 Safe distance 1.800 m. The unfiltered run reaches every goal and passes
 through itself to do it; the filtered run never violates the barrier.
+
+The fleet swaps, swaps back, and repeats, so the crossing — the only part
+worth watching — recurs through the whole run instead of finishing in five
+seconds and leaving forty of frozen ring. That also turns the deadlock from
+an anecdote into a pattern: **without the swirl the outbound leg jams every
+single time**, while the return leg always completes, because returning is
+the direction the jam does not block. The figure quoted is therefore the
+worst leg, not the last sample — the run ends on a return leg, which hides
+it.
 
 ![Position Exchange](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/safety/position_exchange/position_exchange.gif)
 

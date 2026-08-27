@@ -25,6 +25,7 @@ from flybots.sensors.gimbal import Gimbal
 from flybots.sensors.gimbal_controller import PointTracker
 from flybots.visualization import SimAnimator
 from flybots.visualization.three_panel import ThreePanelViz
+from flybots.visualization.vehicle_artists import draw_quadrotor_2d, draw_quadrotor_3d
 
 matplotlib.use("Agg")
 
@@ -143,8 +144,12 @@ def main() -> None:
     viz.ax_top.add_patch(rect_top)
     viz.draw_path(coverage_path, color="blue", lw=0.8, alpha=0.3, label="Coverage Path")
 
-    viz.ax3d.scatter(*DRONE_POS, c="black", s=80, marker="D", zorder=10, label="Drone")
-    viz.ax_top.plot(DRONE_POS[0], DRONE_POS[1], "kD", ms=8, zorder=10)
+    # The aircraft carrying the gimbal is the subject of the scene, so
+    # draw it rather than marking its position with a diamond. It hovers,
+    # so this is drawn once outside the animation loop.
+    draw_quadrotor_3d(viz.ax3d, DRONE_POS, np.eye(3), size=1.1)
+    viz.ax3d.scatter(*DRONE_POS, c="black", s=1, label="Drone")
+    draw_quadrotor_2d(viz.ax_top, DRONE_POS[:2], 0.0, size=1.1, arm_lw=1.4, motor_size=10)
 
     (tgt_3d,) = viz.ax3d.plot([], [], [], "r*", ms=12, zorder=8, label="Look-at Target")
     (tgt_top,) = viz.ax_top.plot([], [], "r*", ms=10, zorder=8)

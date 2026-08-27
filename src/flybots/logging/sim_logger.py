@@ -131,4 +131,10 @@ class SimLogger:
         out_path = self._out_dir / f"{self._sim_name}_log.json"
         with out_path.open("w") as fh:
             json.dump(payload, fh, indent=2)
+            # Trailing newline: `json.dump` omits one, so every regenerated
+            # log arrived without it and the end-of-file pre-commit hook had
+            # to rewrite it. Locally that is invisible -- the hook fixes the
+            # file and reports success -- so it only surfaces in CI, where
+            # the hook runs with nothing allowed to change.
+            fh.write("\n")
         return out_path
