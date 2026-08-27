@@ -251,6 +251,14 @@ export default defineConfig({
           ],
         },
         {
+          text: 'Safety',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/simulations/safety/' },
+            { text: 'Position exchange', link: '/simulations/safety/position-exchange' },
+          ],
+        },
+        {
           text: 'Swarm',
           collapsed: true,
           items: [
