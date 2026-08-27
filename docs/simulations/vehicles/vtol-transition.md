@@ -23,6 +23,11 @@ with `\sigma` scheduled by airspeed, pitch, and altitude envelopes.
   a slow quadrotor. The interesting regime is the handover itself, which
   only happens when the rotors go the full 90° and lift authority actually
   migrates to the wing. In cruise here the wing carries 95 % of the weight.
+- **Draw the tilt, don't imply it.** This demo was previously rendered with
+  a fixed-geometry quadrotor, which hid the one thing it exists to show: the
+  rotors rotating through 90°. It now uses `draw_vtol_3d`, whose nacelles
+  sit at the aircraft's actual tilt angle, so hover, transition and cruise
+  are distinguishable from the picture alone.
 - **Let the mode machine own the schedule.** `VTOLController` switches on
   measured airspeed against the wing's stall margin, so the tilt ramp is a
   consequence of the aircraft being ready rather than an open-loop timer

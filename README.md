@@ -163,7 +163,11 @@ boundary rather than rewriting the equations. Full details in
 ## Development
 
 ```bash
-git clone https://github.com/guilyx/flybots.git
+# The simulation GIFs live in Git LFS and are ~150 MB. Skipping them clones
+# in a few seconds and leaves small pointer files in their place, which is
+# what you want unless you are regenerating the GIFs themselves. Drop the
+# prefix to fetch them, or run `git lfs pull` later.
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/guilyx/flybots.git
 cd flybots
 uv sync --all-groups
 

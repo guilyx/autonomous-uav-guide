@@ -58,7 +58,9 @@ pip install pytest ruff pre-commit
 
 ::: tip Git LFS
 The repository stores its preview GIFs in Git LFS. If you only want the
-code, `GIT_LFS_SKIP_SMUDGE=1 git clone ...` skips roughly 100 MB of media.
+code, `GIT_LFS_SKIP_SMUDGE=1 git clone ...` skips roughly 150 MB of media
+and clones in a few seconds instead of a few minutes. You get pointer files
+in place of the GIFs; `git lfs pull` fetches them later if you need them.
 :::
 
 ## Verify

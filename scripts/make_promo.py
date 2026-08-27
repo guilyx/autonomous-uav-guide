@@ -537,6 +537,96 @@ def simulate_trajectory():
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# Vehicle models
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Every scene used to mark the aircraft with a scatter dot at the head of
+# its trail. At reel resolution that reads as a moving point rather than as
+# a vehicle, which undersells the one thing the reel exists to show. Each
+# scene now draws the platform it is actually simulating, using the same
+# artists the simulations use, at the attitude the simulation produced.
+
+
+def _draw_platform(
+    axes,
+    position,
+    euler=None,
+    *,
+    kind="quadrotor",
+    size=0.5,
+    colour=AMBER,
+    tilt=0.0,
+    velocity=None,
+):
+    """Draw the simulated platform at *position*.
+
+    Attitude comes from *euler* when the simulation carried one. The swarm
+    scene stores positions only, so it passes *velocity* instead and the
+    heading and bank are inferred from the motion.
+
+    Args:
+        kind: ``"quadrotor"``, ``"fixed_wing"`` or ``"vtol"``.
+        size: Model size in the scene's world units. Each scene spans a
+            different extent -- metres for the multirotor, hundreds of
+            metres for the fixed wing -- so a single value cannot serve
+            them all.
+        tilt: Rotor tilt [rad], VTOL only.
+    """
+    from uav_sim.vehicles.multirotor import Quadrotor
+    from uav_sim.visualization.vehicle_artists import (
+        attitude_from_velocity,
+        draw_fixed_wing_3d,
+        draw_quadrotor_3d,
+        draw_vtol_3d,
+    )
+
+    if euler is not None:
+        rotation = Quadrotor.rotation_matrix(*euler)
+    elif velocity is not None:
+        rotation = attitude_from_velocity(np.asarray(velocity, dtype=float))
+    else:
+        rotation = np.eye(3)
+
+    if kind == "fixed_wing":
+        return draw_fixed_wing_3d(
+            axes,
+            position,
+            rotation,
+            fuselage_length=size * 1.4,
+            wingspan=size * 2.0,
+            body_color=colour,
+            wing_color=colour,
+            tail_color=MUTED,
+            lw=2.0,
+        )
+    if kind == "vtol":
+        return draw_vtol_3d(
+            axes,
+            position,
+            rotation,
+            tilt=tilt,
+            fuselage_length=size * 1.4,
+            wingspan=size * 2.0,
+            arm_length=size * 0.5,
+            body_color=colour,
+            wing_color=colour,
+            tail_color=MUTED,
+            rotor_color=SKY,
+            lw=2.0,
+        )
+    return draw_quadrotor_3d(
+        axes,
+        position,
+        rotation,
+        size=size,
+        arm_colors=(colour, colour),
+        center_color=colour,
+        motor_color=colour,
+        arm_lw=2.0,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # Scene painters
 # ══════════════════════════════════════════════════════════════════════════
 
@@ -663,7 +753,7 @@ def make_quadrotor_scene(states, reference):
             label="reference",
         )
         axes.plot(trail[:, 0], trail[:, 1], trail[:, 2], color=SKY, lw=2.0, label="flown")
-        axes.scatter(*trail[-1], color=AMBER, s=70, depthshade=False)
+        _draw_platform(axes, trail[-1], states[cursor - 1, 3:6], kind="quadrotor", size=0.72)
         legend = axes.legend(loc="upper left", fontsize=9, facecolor=PANEL, edgecolor=GRID)
         for text in legend.get_texts():
             text.set_color(TEXT)
@@ -687,18 +777,25 @@ def make_fixed_wing_scene(states, telemetry):
         axes = figure.add_axes([0.055, 0.30, 0.55, 0.53], projection="3d")
         cursor = max(2, int(progress * len(states)))
         trail = states[:cursor, :3]
+        # The aircraft flies a kilometre while being twelve metres across. A
+        # box around the whole route squashes it to a speck along x -- the
+        # axes are drawn to a cube, so a 1000 m span and an 80 m one get the
+        # same screen length -- so the view tracks the aircraft and the trail
+        # carries the travel, exactly as the swarm scene does.
+        centre = trail[-1]
+        half = 150.0
         _style_3d(
             axes,
             [
-                (states[:, 0].min() - 40, states[:, 0].max() + 40),
-                (states[:, 1].min() - 40, states[:, 1].max() + 40),
-                (100, 200),
+                (centre[0] - half, centre[0] + half),
+                (centre[1] - half, centre[1] + half),
+                (centre[2] - half * 0.55, centre[2] + half * 0.55),
             ],
             elev=24,
             azim=-64 + 24 * progress,
         )
         axes.plot(trail[:, 0], trail[:, 1], trail[:, 2], color=TEAL, lw=2.2)
-        axes.scatter(*trail[-1], color=AMBER, s=70, depthshade=False)
+        _draw_platform(axes, trail[-1], states[cursor - 1, 3:6], kind="fixed_wing", size=48.0)
 
         # Telemetry strip.
         times = np.arange(len(telemetry)) * 0.02
@@ -740,18 +837,31 @@ def make_vtol_scene(states, telemetry):
         cursor = max(2, int(progress * len(states)))
         axes = figure.add_axes([0.055, 0.30, 0.55, 0.53], projection="3d")
         trail = states[:cursor, :3]
+        # Same reasoning as the fixed-wing scene: the transition covers two
+        # kilometres, so a box around all of it leaves nothing to look at.
+        centre = trail[-1]
+        half = 62.0
         _style_3d(
             axes,
             [
-                (states[:, 0].min() - 30, states[:, 0].max() + 30),
-                (-40, 40),
-                (0, 45),
+                (centre[0] - half, centre[0] + half),
+                (centre[1] - half, centre[1] + half),
+                (max(0.0, centre[2] - half * 0.55), centre[2] + half * 0.55),
             ],
             elev=18,
             azim=-72 + 20 * progress,
         )
         axes.plot(trail[:, 0], trail[:, 1], trail[:, 2], color=VIOLET, lw=2.2)
-        axes.scatter(*trail[-1], color=AMBER, s=70, depthshade=False)
+        _draw_platform(
+            axes,
+            trail[-1],
+            states[cursor - 1, 3:6],
+            kind="vtol",
+            size=26.0,
+            colour=VIOLET,
+            # Telemetry carries the tilt in degrees; the artist wants radians.
+            tilt=float(np.radians(telemetry[cursor - 1, 0])),
+        )
 
         times = np.arange(len(telemetry)) * 0.02
         panels = [
@@ -814,7 +924,14 @@ def make_swarm_scene(history):
             colour = TRACE_COLOURS[agent % len(TRACE_COLOURS)]
             trail = history[tail:cursor, agent]
             axes.plot(trail[:, 0], trail[:, 1], trail[:, 2], color=colour, lw=1.3, alpha=0.75)
-            axes.scatter(*trail[-1], color=colour, s=44, depthshade=False)
+            _draw_platform(
+                axes,
+                trail[-1],
+                kind="quadrotor",
+                size=0.9,
+                colour=colour,
+                velocity=trail[-1] - trail[-2] if len(trail) > 1 else None,
+            )
 
         travelled = np.linalg.norm(history[cursor - 1].mean(axis=0) - history[0].mean(axis=0))
         scene.stats = [(str(history.shape[1]), "agents"), (f"{travelled:.0f} m", "travelled")]
@@ -863,7 +980,14 @@ def make_planner_scene(obstacles, path):
             cursor = max(2, int(progress * len(path)))
             axes.plot(path[:, 0], path[:, 1], path[:, 2], color=GRID, lw=1.0, ls=":")
             axes.plot(path[:cursor, 0], path[:cursor, 1], path[:cursor, 2], color=AMBER, lw=2.6)
-            axes.scatter(*path[cursor - 1], color=SKY, s=70, depthshade=False)
+            _draw_platform(
+                axes,
+                path[cursor - 1],
+                kind="quadrotor",
+                size=1.05,
+                colour=SKY,
+                velocity=path[cursor - 1] - path[cursor - 2] if cursor > 1 else None,
+            )
         scene.stats = [(str(len(path)), "waypoints"), ("3D", "A*")]
 
     scene = Scene(
@@ -980,7 +1104,14 @@ def make_perception_scene(track, grids, scan_at, obstacles):
                 )
         axes.plot(track[:cursor, 0], track[:cursor, 1], track[:cursor, 2], color=AMBER, lw=2.0)
         if cursor:
-            axes.scatter(*track[cursor - 1], color=SKY, s=70, depthshade=False)
+            _draw_platform(
+                axes,
+                track[cursor - 1],
+                kind="quadrotor",
+                size=1.05,
+                colour=SKY,
+                velocity=track[cursor - 1] - track[cursor - 2] if cursor > 1 else None,
+            )
         axes.set_title("lidar sweep", color=TEXT, fontsize=11, pad=2)
 
         panel = figure.add_axes([0.53, 0.19, 0.40, 0.64])
@@ -1039,7 +1170,14 @@ def make_trajectory_scene(waypoints, samples, speed):
             marker="D",
             depthshade=False,
         )
-        axes.scatter(*samples[cursor - 1], color=SKY, s=80, depthshade=False)
+        _draw_platform(
+            axes,
+            samples[cursor - 1],
+            kind="quadrotor",
+            size=1.0,
+            colour=SKY,
+            velocity=samples[cursor - 1] - samples[cursor - 2] if cursor > 1 else None,
+        )
         axes.set_title("minimum-snap through waypoints", color=TEXT, fontsize=11, pad=2)
 
         panel = figure.add_axes([0.56, 0.24, 0.39, 0.54])
