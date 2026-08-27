@@ -44,7 +44,7 @@ reduces exactly to the Kalman filter and there is nothing to show.
   random-walks by 0.32 m/s every 5 ms; the filter concludes its own
   prediction is worthless and degenerates into echoing the measurement.
   Build it from an acceleration noise density instead
-  (`uav_sim.estimation.constant_velocity_q`), and the tuning survives a
+  (`flybots.estimation.constant_velocity_q`), and the tuning survives a
   change of rate.
 - Sanity-check the reported 1σ against the actual error. A filter whose
   covariance is much tighter than its error has stopped listening.
@@ -58,12 +58,12 @@ reduces exactly to the Kalman filter and there is nothing to show.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.estimation.ukf
+python -m flybots.simulations.estimation.ukf
 ```
 
 ## Evidence
 
-![UKF](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/ukf/ukf.gif)
+![UKF](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/estimation/ukf/ukf.gif)
 
 ## References
 

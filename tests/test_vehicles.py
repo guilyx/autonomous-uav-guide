@@ -4,10 +4,10 @@
 import numpy as np
 import pytest
 
-from uav_sim.vehicles.base import UAVBase, UAVParams
-from uav_sim.vehicles.fixed_wing import FixedWing, FixedWingParams
-from uav_sim.vehicles.multirotor import Quadrotor
-from uav_sim.vehicles.vtol import Tiltrotor, TiltrotorParams
+from flybots.vehicles.base import UAVBase, UAVParams
+from flybots.vehicles.fixed_wing import FixedWing, FixedWingParams
+from flybots.vehicles.multirotor import Quadrotor
+from flybots.vehicles.vtol import Tiltrotor, TiltrotorParams
 
 
 class TestUAVBase:

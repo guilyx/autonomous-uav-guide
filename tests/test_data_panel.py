@@ -8,7 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from uav_sim.visualization.data_panel import (
+from flybots.visualization.data_panel import (
     setup_attitude_panel,
     setup_error_panel,
     setup_estimation_panel,

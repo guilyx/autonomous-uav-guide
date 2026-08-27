@@ -38,12 +38,12 @@ The system reduces to linear equations over coefficient vectors.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.trajectory_planning.polynomial_trajectory
+python -m flybots.simulations.trajectory_planning.polynomial_trajectory
 ```
 
 ## Evidence
 
-![Polynomial Trajectory](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif)
+![Polynomial Trajectory](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/trajectory_planning/polynomial_trajectory/polynomial_trajectory.gif)
 
 ## References
 

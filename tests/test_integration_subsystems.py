@@ -16,23 +16,23 @@ from __future__ import annotations
 
 import numpy as np
 
-from uav_sim.control import FlightMode, StateManager
-from uav_sim.path_tracking.flight_ops import fly_path
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
-from uav_sim.perception.bbox_tracker import (
+from flybots.control import FlightMode, StateManager
+from flybots.path_tracking.flight_ops import fly_path
+from flybots.path_tracking.pid_controller import CascadedPIDController
+from flybots.path_tracking.pure_pursuit_3d import PurePursuit3D
+from flybots.perception.bbox_tracker import (
     SimulatedDetector,
     VisualServoConfig,
     VisualServoController,
 )
-from uav_sim.sensors.gimbal import Gimbal
-from uav_sim.sensors.gimbal_controller import (
+from flybots.sensors.gimbal import Gimbal
+from flybots.sensors.gimbal_controller import (
     BBoxTracker,
     BBoxTrackerConfig,
     PointTracker,
     project_to_image,
 )
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 # ---------------------------------------------------------------------------
 # Gimbal + Detector pipeline
@@ -313,7 +313,7 @@ class TestSwarmConvergence:
     """Agents driven by swarm algorithms should converge toward formation."""
 
     def test_consensus_reduces_spread(self) -> None:
-        from uav_sim.swarm.consensus_formation import ConsensusFormation
+        from flybots.swarm.consensus_formation import ConsensusFormation
 
         n_agents = 4
         rng = np.random.default_rng(42)
@@ -344,7 +344,7 @@ class TestSwarmConvergence:
         )
 
     def test_reynolds_agents_dont_diverge(self) -> None:
-        from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
+        from flybots.swarm.reynolds_flocking import ReynoldsFlocking
 
         n_agents = 5
         rng = np.random.default_rng(123)

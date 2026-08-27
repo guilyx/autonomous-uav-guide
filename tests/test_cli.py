@@ -4,9 +4,9 @@
 import numpy as np
 import pytest
 
-from uav_sim.cli import catalogue
-from uav_sim.cli.console import PALETTE, heading, style, supports_colour, table
-from uav_sim.cli.main import build_parser, main, main_deprecated_alias
+from flybots.cli import catalogue
+from flybots.cli.console import PALETTE, heading, style, supports_colour, table
+from flybots.cli.main import build_parser, main, main_deprecated_alias
 
 
 class TestCatalogue:
@@ -21,8 +21,8 @@ class TestCatalogue:
 
     def test_entry_exposes_module_and_command(self):
         entry = catalogue.resolve("pid_hover")[0]
-        assert entry.module == "uav_sim.simulations.path_tracking.pid_hover.run"
-        assert entry.command.startswith("python -m uav_sim.simulations")
+        assert entry.module == "flybots.simulations.path_tracking.pid_hover.run"
+        assert entry.command.startswith("python -m flybots.simulations")
 
     def test_summary_comes_from_the_docstring(self):
         entry = catalogue.resolve("pid_hover")[0]
@@ -59,7 +59,7 @@ class TestConsole:
         assert style("hello", "sky") == "hello"
 
     def test_style_emits_codes_when_supported(self, monkeypatch):
-        monkeypatch.setattr("uav_sim.cli.console.supports_colour", lambda stream=None: True)
+        monkeypatch.setattr("flybots.cli.console.supports_colour", lambda stream=None: True)
         assert PALETTE["sky"] in style("hello", "sky")
 
     def test_no_color_env_disables_colour(self, monkeypatch):
@@ -146,14 +146,14 @@ class TestCommands:
     def test_info_prints_module_and_command(self, capsys):
         assert main(["info", "pid_hover"]) == 0
         output = capsys.readouterr().out
-        assert "uav_sim.simulations.path_tracking.pid_hover" in output
+        assert "flybots.simulations.path_tracking.pid_hover" in output
 
     def test_info_on_unknown_simulation_fails(self, capsys):
         assert main(["info", "nonexistent"]) == 1
         assert "No simulation matches" in capsys.readouterr().err
 
     def test_envs_lists_every_environment(self, capsys):
-        from uav_sim.gym import list_envs
+        from flybots.gym import list_envs
 
         assert main(["envs"]) == 0
         output = capsys.readouterr().out
@@ -205,7 +205,7 @@ class TestCommands:
         assert "mean return" in output
 
     def test_play_a_saved_policy(self, capsys, tmp_path):
-        from uav_sim.gym.policy import MLPPolicy
+        from flybots.gym.policy import MLPPolicy
 
         policy = MLPPolicy(18, 4, hidden_sizes=(), seed=0)
         policy.parameters = np.random.default_rng(0).normal(0, 0.05, policy.parameter_count)

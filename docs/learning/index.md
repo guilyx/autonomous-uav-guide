@@ -43,7 +43,7 @@ controller than hovering.
 Gymnasium's interface, without the Gymnasium dependency:
 
 ```python
-from uav_sim.gym import make
+from flybots.gym import make
 
 env = make("hover", seed=0)
 observation, info = env.reset()
@@ -60,9 +60,9 @@ and work with any standard RL library:
 
 ```python
 import gymnasium as gym
-import uav_sim.gym          # registers uav_sim/Hover-v0 and friends
+import flybots.gym          # registers flybots/Hover-v0 and friends
 
-env = gym.make("uav_sim/Hover-v0")
+env = gym.make("flybots/Hover-v0")
 ```
 
 ```bash
@@ -72,7 +72,7 @@ pip install "flybots[gym]"
 ## Training
 
 ```python
-from uav_sim.gym import train, evaluate
+from flybots.gym import train, evaluate
 
 result = train("hover", iterations=100, seed=0)
 print(result.best_return)

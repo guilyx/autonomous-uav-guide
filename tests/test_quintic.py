@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.trajectory_planning.quintic_polynomial import (
+from flybots.trajectory_planning.quintic_polynomial import (
     QuinticPolynomialPlanner,
     QuinticState,
 )

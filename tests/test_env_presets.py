@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from uav_sim.environment import (
+from flybots.environment import (
     EnvironmentPreset,
     city_world,
     create_environment,

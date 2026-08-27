@@ -56,12 +56,12 @@ Lloyd update moves each agent to its cell centroid.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.swarm.voronoi_coverage
+python -m flybots.simulations.swarm.voronoi_coverage
 ```
 
 ## Evidence
 
-![Voronoi Coverage](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/voronoi_coverage/voronoi_coverage.gif)
+![Voronoi Coverage](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/swarm/voronoi_coverage/voronoi_coverage.gif)
 
 ## References
 

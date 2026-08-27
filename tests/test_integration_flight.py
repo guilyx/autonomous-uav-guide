@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from uav_sim.path_tracking.flight_ops import fly_mission, fly_path, loiter, takeoff
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.path_tracking.flight_ops import fly_mission, fly_path, loiter, takeoff
+from flybots.path_tracking.pid_controller import CascadedPIDController
+from flybots.path_tracking.pure_pursuit_3d import PurePursuit3D
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 _GOAL_TOL = 2.5  # metres — acceptable distance to goal at end
 _MAX_VEL = 4.0  # m/s — drone should never exceed this in normal ops

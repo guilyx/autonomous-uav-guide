@@ -3,8 +3,8 @@
 
 import numpy as np
 
-from uav_sim.control import FlightMode, StateManager
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.control import FlightMode, StateManager
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 def _hover_sm() -> tuple[StateManager, Quadrotor]:

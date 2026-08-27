@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from uav_sim.comms import (
+from flybots.comms import (
     ConnectivityController,
     GaussianLink,
     PathLossLink,

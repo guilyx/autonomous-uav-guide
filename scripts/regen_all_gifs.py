@@ -10,13 +10,13 @@ import sys
 import traceback
 from pathlib import Path
 
-SIM_ROOT = Path(__file__).resolve().parent.parent / "src" / "uav_sim" / "simulations"
+SIM_ROOT = Path(__file__).resolve().parent.parent / "src" / "flybots" / "simulations"
 CONFIG_PATH = Path(__file__).resolve().parent / "regen_all_gifs.json"
 AVAILABLE_SIMS = sorted(str(p.parent.relative_to(SIM_ROOT)) for p in SIM_ROOT.rglob("run.py"))
 
 
 def _module_name(rel_path: str) -> str:
-    return "uav_sim.simulations." + rel_path.replace("/", ".") + ".run"
+    return "flybots.simulations." + rel_path.replace("/", ".") + ".run"
 
 
 def _expand_selector(selector: str) -> list[str]:

@@ -9,7 +9,7 @@ If you have not installed it yet, see [Installation](/guide/installation).
 
 ```python
 import numpy as np
-from uav_sim.vehicles.multirotor import Quadrotor
+from flybots.vehicles.multirotor import Quadrotor
 
 quad = Quadrotor()
 quad.reset(position=np.array([0.0, 0.0, 2.0]))
@@ -52,8 +52,8 @@ before you write a controller.
 
 ```python
 import numpy as np
-from uav_sim.vehicles.multirotor import Quadrotor
-from uav_sim.path_tracking.pid_controller import CascadedPIDController
+from flybots.vehicles.multirotor import Quadrotor
+from flybots.path_tracking.pid_controller import CascadedPIDController
 
 quad = Quadrotor()
 quad.reset(position=np.array([0.0, 0.0, 1.0]))
@@ -74,7 +74,7 @@ A wing cannot hover, so the interesting starting point is not "at rest" but
 equilibrium. The library solves for it:
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
 
 aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
 controls = aircraft.reset_trimmed(airspeed=18.0, altitude=120.0)
@@ -93,7 +93,7 @@ single statement that the aerodynamics are self-consistent. Add a
 controller to go somewhere:
 
 ```python
-from uav_sim.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
+from flybots.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
 
 pilot = FixedWingAutopilot(aircraft.fw_params)
 command = AutopilotCommand(altitude=160.0, airspeed=20.0, course=1.0)
@@ -119,7 +119,7 @@ flybots run astar_3d               # render the GIF
 Or as a module:
 
 ```bash
-python -m uav_sim.simulations.path_planning.astar_3d
+python -m flybots.simulations.path_planning.astar_3d
 ```
 
 Each writes its GIF next to its `run.py`, plus a JSON log of the run.

@@ -28,12 +28,12 @@ A new algorithm is not finished when it runs. It is finished when someone
 who has never seen it can understand what it does and trust the result.
 Concretely, a pull request adding one needs:
 
-1. **An implementation** in the matching `src/uav_sim/<area>/` package,
+1. **An implementation** in the matching `src/flybots/<area>/` package,
    written from scratch — no wrapping of an external solver.
 2. **A citation** in the module docstring: author, title, venue, year. If
    the parameters come from a published set, say which one.
 3. **A runnable simulation** at
-   `src/uav_sim/simulations/<area>/<name>/run.py` exposing `main()`, so
+   `src/flybots/simulations/<area>/<name>/run.py` exposing `main()`, so
    `flybots run <name>` works.
 4. **Tests** that pin the behaviour, not just the shape of the output.
 5. **A docs page** under `docs/` and a sidebar entry in
@@ -79,7 +79,7 @@ right and fly backwards.
 
 Aerodynamics texts use Forward-Right-Down instead. When porting textbook
 equations, convert at the boundary with
-`uav_sim.frames.transforms.flu_to_frd` rather than rewriting the
+`flybots.frames.transforms.flu_to_frd` rather than rewriting the
 equations — see `vehicles/fixed_wing/aerodynamics.py` for the pattern.
 
 ## Style

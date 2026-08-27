@@ -8,8 +8,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from uav_sim.environment import default_world
-from uav_sim.visualization.costmap_viz import (
+from flybots.environment import default_world
+from flybots.visualization.costmap_viz import (
     create_four_panel_figure,
     draw_costmap_heatmap,
     draw_costmap_surface,

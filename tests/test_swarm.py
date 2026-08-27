@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from uav_sim.swarm.consensus_formation import ConsensusFormation
-from uav_sim.swarm.coverage import CoverageController
-from uav_sim.swarm.leader_follower import LeaderFollower
-from uav_sim.swarm.potential_swarm import PotentialSwarm
-from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
-from uav_sim.swarm.virtual_structure import VirtualStructure
+from flybots.swarm.consensus_formation import ConsensusFormation
+from flybots.swarm.coverage import CoverageController
+from flybots.swarm.leader_follower import LeaderFollower
+from flybots.swarm.potential_swarm import PotentialSwarm
+from flybots.swarm.reynolds_flocking import ReynoldsFlocking
+from flybots.swarm.virtual_structure import VirtualStructure
 
 
 class TestReynoldsFlocking:

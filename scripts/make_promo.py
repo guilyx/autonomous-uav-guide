@@ -207,8 +207,8 @@ def simulate_quadrotor():
     correct behaviour, and not what a trajectory-tracking demo should be
     showing.
     """
-    from uav_sim.path_tracking.geometric_controller import GeometricController
-    from uav_sim.vehicles.multirotor import Quadrotor
+    from flybots.path_tracking.geometric_controller import GeometricController
+    from flybots.vehicles.multirotor import Quadrotor
 
     quad = Quadrotor()
     controller = GeometricController()
@@ -247,8 +247,8 @@ def simulate_quadrotor():
 
 def simulate_fixed_wing():
     """Autopilot climbing and turning onto a new course."""
-    from uav_sim.control.fixed_wing_autopilot import AutopilotCommand, FixedWingAutopilot
-    from uav_sim.vehicles.fixed_wing import FixedWingPreset, create_fixed_wing
+    from flybots.control.fixed_wing_autopilot import AutopilotCommand, FixedWingAutopilot
+    from flybots.vehicles.fixed_wing import FixedWingPreset, create_fixed_wing
 
     aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
     aircraft.reset_trimmed(altitude=120.0)
@@ -281,8 +281,8 @@ def simulate_fixed_wing():
 
 def simulate_vtol():
     """Hover, transition to wing-borne cruise, and back."""
-    from uav_sim.control.vtol_controller import VTOLCommand, VTOLController
-    from uav_sim.vehicles.vtol import Tiltrotor
+    from flybots.control.vtol_controller import VTOLCommand, VTOLController
+    from flybots.vehicles.vtol import Tiltrotor
 
     vtol = Tiltrotor()
     state = np.zeros(12)
@@ -308,7 +308,7 @@ def simulate_vtol():
 
 def simulate_swarm():
     """Reynolds flocking."""
-    from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
+    from flybots.swarm.reynolds_flocking import ReynoldsFlocking
 
     rng = np.random.default_rng(7)
     count = 14
@@ -342,8 +342,8 @@ def simulate_swarm():
 
 def simulate_planner():
     """A* through a field of buildings."""
-    from uav_sim.environment import default_world
-    from uav_sim.path_planning.plan_through_obstacles import plan_through_obstacles
+    from flybots.environment import default_world
+    from flybots.path_planning.plan_through_obstacles import plan_through_obstacles
 
     _, obstacles = default_world(world_size=30.0, n_buildings=7, seed=11)
     path = plan_through_obstacles(
@@ -363,10 +363,10 @@ def simulate_estimation():
     and the filter below both. That only happens when Q is built from a
     noise density rather than typed in as a dt-independent diagonal.
     """
-    from uav_sim.estimation.ekf import ExtendedKalmanFilter
-    from uav_sim.estimation.process_noise import constant_acceleration_input_q
-    from uav_sim.simulations.common import CRUISE_ALT
-    from uav_sim.simulations.standards import (
+    from flybots.estimation.ekf import ExtendedKalmanFilter
+    from flybots.estimation.process_noise import constant_acceleration_input_q
+    from flybots.simulations.common import CRUISE_ALT
+    from flybots.simulations.standards import (
         SimulationStandard,
         deterministic_truth_trajectory,
     )
@@ -451,12 +451,12 @@ def simulate_estimation():
 
 def simulate_perception():
     """Occupancy grid built from 2-D lidar while flying a lawnmower sweep."""
-    from uav_sim.environment import default_world
-    from uav_sim.path_tracking.pid_controller import CascadedPIDController
-    from uav_sim.sensors.lidar import Lidar2D
-    from uav_sim.simulations.mission_runner import run_standard_mission
-    from uav_sim.simulations.standards import SimulationStandard
-    from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+    from flybots.environment import default_world
+    from flybots.path_tracking.pid_controller import CascadedPIDController
+    from flybots.sensors.lidar import Lidar2D
+    from flybots.simulations.mission_runner import run_standard_mission
+    from flybots.simulations.standards import SimulationStandard
+    from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
     world, obstacles = default_world(world_size=30.0, n_buildings=6, seed=42)
 
@@ -509,7 +509,7 @@ def simulate_perception():
 
 def simulate_trajectory():
     """Minimum-snap polynomial through a handful of waypoints."""
-    from uav_sim.trajectory_planning.min_snap import MinSnapTrajectory
+    from flybots.trajectory_planning.min_snap import MinSnapTrajectory
 
     waypoints = np.array(
         [
@@ -572,8 +572,8 @@ def _draw_platform(
             them all.
         tilt: Rotor tilt [rad], VTOL only.
     """
-    from uav_sim.vehicles.multirotor import Quadrotor
-    from uav_sim.visualization.vehicle_artists import (
+    from flybots.vehicles.multirotor import Quadrotor
+    from flybots.visualization.vehicle_artists import (
         attitude_from_velocity,
         draw_fixed_wing_3d,
         draw_quadrotor_3d,
@@ -1272,7 +1272,7 @@ def load_atlas_tiles():
     """
     from PIL import Image, ImageSequence
 
-    from uav_sim.cli.catalogue import discover
+    from flybots.cli.catalogue import discover
 
     width, height = ATLAS_TILE
     tiles = []
@@ -1847,9 +1847,9 @@ def _learning_material(reuse_policy: bool):
     policy is reused unless ``--retrain`` is given. Re-rendering the video
     after a copy tweak should not cost an hour of CPU.
     """
-    from uav_sim.gym import make
-    from uav_sim.gym.policy import MLPPolicy
-    from uav_sim.gym.train import TrainConfig, rollout, train
+    from flybots.gym import make
+    from flybots.gym.policy import MLPPolicy
+    from flybots.gym.train import TrainConfig, rollout, train
 
     policy_path = Path("policies/hover.npz")
     env = make("hover", seed=0)

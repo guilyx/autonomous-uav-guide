@@ -79,12 +79,12 @@ while flying perfectly well.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_tracking.pure_pursuit
+python -m flybots.simulations.path_tracking.pure_pursuit
 ```
 
 ## Evidence
 
-![Pure Pursuit](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/pure_pursuit/pure_pursuit.gif)
+![Pure Pursuit](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_tracking/pure_pursuit/pure_pursuit.gif)
 
 ## References
 

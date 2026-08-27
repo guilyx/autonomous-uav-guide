@@ -14,7 +14,7 @@ around.
 ## Solving for it
 
 ```python
-from uav_sim.vehicles.fixed_wing import compute_trim, get_fixed_wing_params, FixedWingPreset
+from flybots.vehicles.fixed_wing import compute_trim, get_fixed_wing_params, FixedWingPreset
 
 params = get_fixed_wing_params(FixedWingPreset.AEROSONDE)
 trim = compute_trim(params, airspeed=35.0)
@@ -125,7 +125,7 @@ is a test asserting exactly that.
 answer that is not an equilibrium:
 
 ```python
-from uav_sim.vehicles.fixed_wing import TrimError
+from flybots.vehicles.fixed_wing import TrimError
 
 try:
     compute_trim(params, airspeed=5.0)      # well below stall

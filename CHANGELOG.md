@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 Nothing yet.
 
+## [2.0.0] - 2026-08-27
+
+### Changed
+
+**BREAKING: the import package is `flybots`**
+- `uav_sim` is now `flybots`, matching the distribution, the command and the
+  repository. The distribution was renamed in 1.0.0 and the import package
+  was deliberately left behind, because renaming it is a breaking change and
+  1.0.0 said it would get its own release. This is that release.
+
+  ```python
+  from uav_sim.vehicles.multirotor import Quadrotor   # 1.x
+  from flybots.vehicles.multirotor import Quadrotor   # 2.0
+  ```
+
+- **Gymnasium environment ids move with it**: `uav_sim/Hover-v0` is now
+  `flybots/Hover-v0`, and likewise for the other five. A saved script that
+  calls `gym.make("uav_sim/Hover-v0")` raises rather than silently getting a
+  different environment.
+- **There is no compatibility shim.** `import uav_sim` raises
+  `ModuleNotFoundError`. A shim that re-exported with a warning would let a
+  missed import survive into a training run and surface much later; the
+  package is four days old across three releases, so the cost of a clean
+  break is small and the cost of a silent one is not.
+- The `uav-sim` *command* is kept for one more release. It prints a
+  deprecation notice on stderr and forwards to `flybots`, so existing shell
+  scripts keep working. It is the last thing carrying the old name.
+- Preview URLs in the documentation follow the package: the 93 links to
+  `main/src/uav_sim/simulations/...` now point at `src/flybots/...`, and the
+  LFS tracking rule in `.gitattributes` moves with them.
+
+### Fixed
+
+- `gym.make("flybots/Hover-v0")` raised `TypeError: The environment must
+  inherit from the gymnasium.Env class`. The adapter was a plain class, and
+  Gymnasium type-checks the entry point, so every environment registered
+  successfully and then refused to be constructed -- the registration tests
+  passed throughout. It now subclasses `gymnasium.Env`, built lazily behind
+  the same import guard so Gymnasium stays an optional dependency. Predates
+  the rename; found while checking it.
+- The environments declared `float32` observation spaces and returned
+  `float64` arrays, which Gymnasium's passive checker reports as "obs is not
+  within the observation space". Anything trusting `observation_space.dtype`
+  -- a wrapper, a replay buffer -- got a silent widening every step. The
+  adapter now casts to the advertised dtype, and `reward`, `terminated` and
+  `truncated` are coerced to the scalar types the contract specifies.
+
 ## [1.1.0] - 2026-08-27
 
 ### Added
@@ -552,7 +599,8 @@ measurement:
 Initial release: quadrotor, fixed-wing and VTOL models, planners,
 estimators, perception, swarm algorithms and 40 runnable simulations.
 
-[Unreleased]: https://github.com/guilyx/flybots/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/guilyx/flybots/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/guilyx/flybots/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/guilyx/flybots/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guilyx/flybots/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/guilyx/flybots/compare/v0.1.0...v1.0.0

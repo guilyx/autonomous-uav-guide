@@ -40,12 +40,12 @@ $$
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.swarm.leader_follower
+python -m flybots.simulations.swarm.leader_follower
 ```
 
 ## Evidence
 
-![Leader Follower](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/leader_follower/leader_follower.gif)
+![Leader Follower](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/swarm/leader_follower/leader_follower.gif)
 
 ## References
 

@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from uav_sim.sensors.base import SensorMount
-from uav_sim.sensors.camera import Camera, CameraIntrinsics
-from uav_sim.sensors.gps import GPS
-from uav_sim.sensors.imu import IMU
-from uav_sim.sensors.lidar import Lidar2D, Lidar3D
-from uav_sim.sensors.range_finder import RangeFinder
+from flybots.sensors.base import SensorMount
+from flybots.sensors.camera import Camera, CameraIntrinsics
+from flybots.sensors.gps import GPS
+from flybots.sensors.imu import IMU
+from flybots.sensors.lidar import Lidar2D, Lidar3D
+from flybots.sensors.range_finder import RangeFinder
 
 
 class TestSensorMount:
@@ -99,8 +99,8 @@ class TestLidar3D:
         assert pc.shape == (0, 3)
 
     def test_to_point_cloud_with_obstacle(self):
-        from uav_sim.environment.obstacles import SphereObstacle
-        from uav_sim.environment.world import World
+        from flybots.environment.obstacles import SphereObstacle
+        from flybots.environment.world import World
 
         world = World(bounds_min=np.zeros(3), bounds_max=np.full(3, 20.0))
         world.add_obstacle(SphereObstacle(centre=np.array([5.0, 0.0, 0.0]), radius=1.0))
@@ -120,8 +120,8 @@ class TestLidar3D:
         the sky: this wall, 4 m below and 10 m ahead, went unseen at every
         one of the 1152 beams and the sensor reported clear air.
         """
-        from uav_sim.environment.obstacles import BoxObstacle
-        from uav_sim.environment.world import World
+        from flybots.environment.obstacles import BoxObstacle
+        from flybots.environment.world import World
 
         world = World(
             bounds_min=np.full(3, -50.0),
@@ -146,9 +146,9 @@ class TestLidar3D:
         frame convention — rather than by re-deriving the trigonometry the
         sensor uses, so the two are forced to agree.
         """
-        from uav_sim.environment.obstacles import SphereObstacle
-        from uav_sim.environment.world import World
-        from uav_sim.frames.transforms import euler_to_rotation
+        from flybots.environment.obstacles import SphereObstacle
+        from flybots.environment.world import World
+        from flybots.frames.transforms import euler_to_rotation
 
         state = np.zeros(12)
         state[:3] = [2.0, -1.0, 12.0]

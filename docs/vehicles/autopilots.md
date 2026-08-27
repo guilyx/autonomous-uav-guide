@@ -8,8 +8,8 @@ of nested loops.
 > Beard & McLain, *Small Unmanned Aircraft: Theory and Practice*, Chapter 6.
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
-from uav_sim.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.control.fixed_wing_autopilot import FixedWingAutopilot, AutopilotCommand
 
 aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
 aircraft.reset_trimmed(altitude=120.0)
@@ -164,7 +164,7 @@ unwind.
 ### Tuning
 
 ```python
-from uav_sim.control.fixed_wing_autopilot import AutopilotGains
+from flybots.control.fixed_wing_autopilot import AutopilotGains
 
 pilot = FixedWingAutopilot(params, AutopilotGains(
     max_roll_error=np.radians(8.0),     # tighter roll loop
@@ -186,7 +186,7 @@ feed-forward and cancellation of the wing's own pitching moment.
 
 ## Multirotor
 
-The cascaded stack in `uav_sim.control`:
+The cascaded stack in `flybots.control`:
 
 ```text
 PositionController -> VelocityController -> AttitudeController -> RateController
@@ -194,7 +194,7 @@ PositionController -> VelocityController -> AttitudeController -> RateController
 
 composed by `FlightController`, with `StateManager` running
 ARM → TAKEOFF → HOVER → TRACKING → LAND. Alternative multirotor tracking
-controllers live in `uav_sim.path_tracking`: PID, LQR, MPC, pure pursuit,
+controllers live in `flybots.path_tracking`: PID, LQR, MPC, pure pursuit,
 and a geometric SO(3) controller.
 
 ## See also

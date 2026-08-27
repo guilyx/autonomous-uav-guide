@@ -54,12 +54,12 @@ subject to waypoint and continuity constraints for position, velocity, accelerat
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.trajectory_planning.min_snap
+python -m flybots.simulations.trajectory_planning.min_snap
 ```
 
 ## Evidence
 
-![Minimum Snap](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_planning/min_snap/min_snap.gif)
+![Minimum Snap](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/trajectory_planning/min_snap/min_snap.gif)
 
 ## References
 

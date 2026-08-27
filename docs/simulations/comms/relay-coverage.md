@@ -47,7 +47,7 @@ at risk.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.comms.relay_coverage
+python -m flybots.simulations.comms.relay_coverage
 ```
 
 ## Evidence
@@ -61,7 +61,7 @@ The untethered run looks nearly twice as good if you count every agent's
 footprint regardless of whether it can report. That gap between the orange
 and red curves is the entire argument for connectivity-aware coverage.
 
-![Relay Coverage](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/comms/relay_coverage/relay_coverage.gif)
+![Relay Coverage](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/comms/relay_coverage/relay_coverage.gif)
 
 ## References
 

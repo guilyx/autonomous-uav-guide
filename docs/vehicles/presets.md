@@ -1,7 +1,7 @@
 # Airframe presets
 
 ```python
-from uav_sim.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
+from flybots.vehicles.fixed_wing import create_fixed_wing, FixedWingPreset
 
 aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8)
 aircraft = create_fixed_wing(FixedWingPreset.SKYWALKER_X8, mass=4.0)   # override
@@ -61,7 +61,7 @@ authority.
 
 ```python
 from dataclasses import replace
-from uav_sim.vehicles.fixed_wing import (
+from flybots.vehicles.fixed_wing import (
     AeroCoefficients, FixedWing, FixedWingParams, PropulsionParams,
 )
 import numpy as np
@@ -87,7 +87,7 @@ aircraft = create_fixed_wing(FixedWingPreset.CUSTOM, mass=2.0, wing_area=0.35)
 Check it trims before trusting it:
 
 ```python
-from uav_sim.vehicles.fixed_wing import compute_trim
+from flybots.vehicles.fixed_wing import compute_trim
 print(compute_trim(aircraft.fw_params, airspeed=16.0).residual)   # want < 1e-3
 ```
 
@@ -99,7 +99,7 @@ a coaxial `OCTO_X8`. See [Quadrotor](/vehicles/quadrotor) for the
 four-rotor platforms and [Multirotor](/vehicles/multirotor) for the rest.
 
 ```python
-from uav_sim.vehicles import VehiclePreset, create_multirotor
+from flybots.vehicles import VehiclePreset, create_multirotor
 
 craft = create_multirotor(VehiclePreset.HEX_S550)
 craft = create_multirotor(VehiclePreset.OCTO_X8, mass=5.2)   # override

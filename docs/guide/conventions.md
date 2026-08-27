@@ -13,11 +13,11 @@ it implements.
 | Body | **FLU** | `x` forward, `y` **left**, `z` **up** |
 
 Attitude is ZYX Euler `(roll φ, pitch θ, yaw ψ)`, and
-`uav_sim.frames.transforms.euler_to_rotation` returns the body → world
+`flybots.frames.transforms.euler_to_rotation` returns the body → world
 matrix.
 
 ```python
-from uav_sim.frames.transforms import euler_to_rotation
+from flybots.frames.transforms import euler_to_rotation
 
 R = euler_to_rotation(roll, pitch, yaw)
 velocity_world = R @ velocity_body
@@ -63,13 +63,13 @@ aircraft.pitch_up      # -0.15 — aerospace convention, nose-up positive
 ## Porting textbook equations
 
 The aerodynamic model in
-`uav_sim/vehicles/fixed_wing/aerodynamics.py` is written in **FRD**,
+`flybots/vehicles/fixed_wing/aerodynamics.py` is written in **FRD**,
 exactly as Beard & McLain state it. Rather than rewriting thirty
 coefficient equations with flipped signs — which is how transcription
 errors get in — the vehicle converts at the boundary:
 
 ```python
-from uav_sim.frames.transforms import flu_to_frd, frd_to_flu
+from flybots.frames.transforms import flu_to_frd, frd_to_flu
 
 wrench = aero_wrench(
     velocity_body_frd=flu_to_frd(velocity_flu),
@@ -157,7 +157,7 @@ nose-up has `alpha ≈ 10°` — not zero.
 World gravity is `[0, 0, -g]`. In the body frame:
 
 ```python
-from uav_sim.frames.transforms import gravity_in_body
+from flybots.frames.transforms import gravity_in_body
 
 gravity_in_body(roll, pitch)   # level flight -> [0, 0, -9.81]
 ```

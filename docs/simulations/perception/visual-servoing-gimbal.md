@@ -63,12 +63,12 @@ nominal means the drone is too high.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.perception.visual_servoing_gimbal
+python -m flybots.simulations.perception.visual_servoing_gimbal
 ```
 
 ## Evidence
 
-![Visual Servoing — Gimbal Camera](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/perception/visual_servoing_gimbal/visual_servoing_gimbal.gif)
+![Visual Servoing — Gimbal Camera](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/perception/visual_servoing_gimbal/visual_servoing_gimbal.gif)
 
 ## References
 

@@ -44,12 +44,12 @@ The command is mapped to attitude and thrust for the inner loop.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_tracking.pid_hover
+python -m flybots.simulations.path_tracking.pid_hover
 ```
 
 ## Evidence
 
-![PID Hover](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/pid_hover/pid_hover.gif)
+![PID Hover](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_tracking/pid_hover/pid_hover.gif)
 
 ## References
 

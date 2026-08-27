@@ -42,7 +42,7 @@ with `\sigma` scheduled by airspeed, pitch, and altitude envelopes.
 
 ## Evidence
 
-![VTOL Transition](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/vehicles/vtol_transition/vtol_transition.gif)
+![VTOL Transition](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/vehicles/vtol_transition/vtol_transition.gif)
 
 ## References
 

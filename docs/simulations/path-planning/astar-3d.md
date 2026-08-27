@@ -24,12 +24,12 @@ with path cost `g` and heuristic `h` to goal (typically Euclidean distance in 3D
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_planning.astar_3d
+python -m flybots.simulations.path_planning.astar_3d
 ```
 
 ## Evidence
 
-![Astar 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/astar_3d/astar_3d.gif)
+![Astar 3D](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_planning/astar_3d/astar_3d.gif)
 
 ## References
 

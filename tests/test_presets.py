@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from uav_sim.vehicles.presets import VehiclePreset, create_quadrotor, get_params
+from flybots.vehicles.presets import VehiclePreset, create_quadrotor, get_params
 
 
 class TestCreateQuadrotor:

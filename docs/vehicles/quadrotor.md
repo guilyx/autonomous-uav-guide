@@ -7,13 +7,13 @@ response.
 > Estimation and Control of Quadrotor", IEEE RAM, 2012.
 > [doi:10.1109/MRA.2012.2206474](https://doi.org/10.1109/MRA.2012.2206474)
 
-Source: [`uav_sim/vehicles/multirotor/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/multirotor)
+Source: [`flybots/vehicles/multirotor/`](https://github.com/guilyx/flybots/tree/main/src/flybots/vehicles/multirotor)
 
 ## Quick start
 
 ```python
 import numpy as np
-from uav_sim.vehicles.multirotor import Quadrotor
+from flybots.vehicles.multirotor import Quadrotor
 
 quad = Quadrotor()
 quad.reset(position=np.array([0.0, 0.0, 2.0]))
@@ -74,7 +74,7 @@ spinning `CCW, CW, CCW, CW`.
 ## Presets
 
 ```python
-from uav_sim.vehicles import VehiclePreset, create_quadrotor
+from flybots.vehicles import VehiclePreset, create_quadrotor
 
 quad = create_quadrotor(VehiclePreset.CRAZYFLIE)      # 27 g nano
 quad = create_quadrotor(VehiclePreset.DJI_MINI)       # 249 g
@@ -102,7 +102,7 @@ rather than a wall of NaN.
 
 ## Control stack
 
-The cascaded controllers in `uav_sim.control` layer over this model:
+The cascaded controllers in `flybots.control` layer over this model:
 
 ```text
 PositionController -> VelocityController -> AttitudeController -> RateController

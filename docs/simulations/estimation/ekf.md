@@ -44,7 +44,7 @@ $$
   survives a change of step size:
 
 ```python
-from uav_sim.estimation import constant_velocity_q
+from flybots.estimation import constant_velocity_q
 ekf.Q = constant_velocity_q(dt, psd=1.0)
 ```
 
@@ -68,12 +68,12 @@ ekf.Q = constant_velocity_q(dt, psd=1.0)
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.estimation.ekf
+python -m flybots.simulations.estimation.ekf
 ```
 
 ## Evidence
 
-![EKF](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/estimation/ekf/ekf.gif)
+![EKF](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/estimation/ekf/ekf.gif)
 
 ## References
 

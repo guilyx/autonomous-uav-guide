@@ -9,14 +9,14 @@ hexacopter; one whose ``step()`` returns twelve floats is not.
 import numpy as np
 import pytest
 
-from uav_sim.vehicles.components.allocation import Rotor, coaxial_layout, x_layout
-from uav_sim.vehicles.multirotor import (
+from flybots.vehicles.components.allocation import Rotor, coaxial_layout, x_layout
+from flybots.vehicles.multirotor import (
     Multirotor,
     MultirotorParams,
     Quadrotor,
     QuadrotorParams,
 )
-from uav_sim.vehicles.presets import (
+from flybots.vehicles.presets import (
     VehiclePreset,
     create_multirotor,
     create_quadrotor,

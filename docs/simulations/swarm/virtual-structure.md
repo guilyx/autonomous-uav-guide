@@ -39,12 +39,12 @@ where `p_{vs}, R_{vs}` define the structure pose and `r_i` is agent slot offset.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.swarm.virtual_structure
+python -m flybots.simulations.swarm.virtual_structure
 ```
 
 ## Evidence
 
-![Virtual Structure](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/swarm/virtual_structure/virtual_structure.gif)
+![Virtual Structure](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/swarm/virtual_structure/virtual_structure.gif)
 
 ## References
 

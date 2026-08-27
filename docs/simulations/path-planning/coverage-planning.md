@@ -24,12 +24,12 @@ subject to vehicle dynamics, footprint size, and mission-time constraints.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.path_planning.coverage_planning
+python -m flybots.simulations.path_planning.coverage_planning
 ```
 
 ## Evidence
 
-![Coverage Planning](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_planning/coverage_planning/coverage_planning.gif)
+![Coverage Planning](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_planning/coverage_planning/coverage_planning.gif)
 
 ## References
 

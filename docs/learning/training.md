@@ -34,7 +34,7 @@ episode 95% of the time.
 From Python:
 
 ```python
-from uav_sim.gym import train, evaluate
+from flybots.gym import train, evaluate
 
 result = train("hover", iterations=60, seed=0, save_path="policies/hover.npz")
 print(evaluate("hover", result.policy, episodes=25))
@@ -97,7 +97,7 @@ it is instructive and because it behaves differently on rugged landscapes.
 ## The policy
 
 ```python
-from uav_sim.gym.policy import MLPPolicy
+from flybots.gym.policy import MLPPolicy
 
 policy = MLPPolicy(observation_size=18, action_size=4, hidden_sizes=())
 policy.parameter_count      # 76
@@ -126,7 +126,7 @@ genuinely non-linear — trajectory tracking with a lead term, for instance.
 ## Hyperparameters
 
 ```python
-from uav_sim.gym.train import TrainConfig
+from flybots.gym.train import TrainConfig
 
 config = TrainConfig(
     optimizer="ars",
@@ -197,10 +197,10 @@ flybots play hover --policy policies/hover.npz --episodes 5 --gif hover.gif
 ```
 
 ```python
-from uav_sim.gym import make
-from uav_sim.gym.policy import MLPPolicy
-from uav_sim.gym.render import render_episode
-from uav_sim.gym.train import rollout
+from flybots.gym import make
+from flybots.gym.policy import MLPPolicy
+from flybots.gym.render import render_episode
+from flybots.gym.train import rollout
 
 env = make("hover", seed=0)
 policy = MLPPolicy.load("policies/hover.npz")
@@ -216,7 +216,7 @@ render_episode(env, trajectories, "hover.gif", title="learned hover")
 Learning curves:
 
 ```python
-from uav_sim.gym.render import render_learning_curve
+from flybots.gym.render import render_learning_curve
 render_learning_curve(result.history, "curve.png")
 ```
 
@@ -228,10 +228,10 @@ pip install "flybots[gym]" stable-baselines3
 
 ```python
 import gymnasium as gym
-import uav_sim.gym          # registers the environments on import
+import flybots.gym          # registers the environments on import
 from stable_baselines3 import PPO
 
-env = gym.make("uav_sim/Hover-v0")
+env = gym.make("flybots/Hover-v0")
 model = PPO("MlpPolicy", env, verbose=1).learn(500_000)
 ```
 

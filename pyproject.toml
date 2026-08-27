@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flybots"
-version = "1.1.0"
+version = "2.0.0"
 description = "From-scratch autonomous UAV algorithms: multirotor, fixed-wing and VTOL flight models, 47 runnable simulations and reinforcement-learning environments."
 readme = "README.md"
 license = "MIT"
@@ -50,17 +50,19 @@ Changelog = "https://github.com/guilyx/flybots/blob/main/CHANGELOG.md"
 Issues = "https://github.com/guilyx/flybots/issues"
 
 [project.scripts]
-flybots = "uav_sim.cli.main:main"
-# Kept while the import package is still `uav_sim`; see the deprecation
-# notice in `uav_sim.cli.main`. Removed when the package itself is renamed.
-uav-sim = "uav_sim.cli.main:main_deprecated_alias"
+flybots = "flybots.cli.main:main"
+# The old command, kept one more release so existing scripts do not break on
+# upgrade: it prints a deprecation notice and forwards. The import package it
+# was named after is gone as of 2.0.0, so this is the last thing carrying the
+# old name.
+uav-sim = "flybots.cli.main:main_deprecated_alias"
 
 [project.optional-dependencies]
 gym = ["gymnasium>=1.0"]
 video = ["imageio-ffmpeg>=0.5"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/uav_sim"]
+packages = ["src/flybots"]
 # The simulation GIFs sit next to the code that generates them, but they are
 # documentation: the README and the docs site link them from GitHub, and
 # nothing imports them at runtime. Shipping them put the 1.0.0 wheel at

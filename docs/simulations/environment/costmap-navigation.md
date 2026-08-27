@@ -32,12 +32,12 @@ Local planning repeatedly solves shortest-path queries on the evolving cost fiel
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.environment.costmap_navigation
+python -m flybots.simulations.environment.costmap_navigation
 ```
 
 ## Evidence
 
-![Costmap Navigation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/environment/costmap_navigation/costmap_navigation.gif)
+![Costmap Navigation](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/environment/costmap_navigation/costmap_navigation.gif)
 
 ## References
 

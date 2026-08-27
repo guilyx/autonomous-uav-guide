@@ -9,36 +9,36 @@ the rendered demo showed the wrong behaviour.
 import numpy as np
 import pytest
 
-from uav_sim.estimation.particle_filter import ParticleFilter
-from uav_sim.estimation.process_noise import (
+from flybots.estimation.particle_filter import ParticleFilter
+from flybots.estimation.process_noise import (
     constant_acceleration_input_q,
     constant_velocity_q,
 )
-from uav_sim.path_tracking.flight_ops import init_hover
-from uav_sim.path_tracking.geometric_controller import (
+from flybots.path_tracking.flight_ops import init_hover
+from flybots.path_tracking.geometric_controller import (
     GeometricController,
     GeometricControllerConfig,
 )
-from uav_sim.path_tracking.lqr_controller import LQRController
-from uav_sim.path_tracking.mpc_controller import MPCController
-from uav_sim.path_tracking.pure_pursuit_3d import PurePursuit3D
-from uav_sim.perception.bbox_tracker import (
+from flybots.path_tracking.lqr_controller import LQRController
+from flybots.path_tracking.mpc_controller import MPCController
+from flybots.path_tracking.pure_pursuit_3d import PurePursuit3D
+from flybots.perception.bbox_tracker import (
     Detection,
     VisualServoConfig,
     VisualServoController,
 )
-from uav_sim.sensors.gimbal import Gimbal
-from uav_sim.sensors.gimbal_controller import BBoxTracker, project_to_image
-from uav_sim.sensors.imu import IMU
-from uav_sim.simulations.standards import figure_8_reference
-from uav_sim.swarm.coverage import CoverageController
-from uav_sim.swarm.potential_swarm import PotentialSwarm
-from uav_sim.swarm.reynolds_flocking import ReynoldsFlocking
-from uav_sim.swarm.virtual_structure import VirtualStructure
-from uav_sim.trajectory_tracking.feedback_linearisation import FeedbackLinearisationTracker
-from uav_sim.trajectory_tracking.mppi import MPPITracker
-from uav_sim.trajectory_tracking.nmpc import NMPCTracker
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.sensors.gimbal import Gimbal
+from flybots.sensors.gimbal_controller import BBoxTracker, project_to_image
+from flybots.sensors.imu import IMU
+from flybots.simulations.standards import figure_8_reference
+from flybots.swarm.coverage import CoverageController
+from flybots.swarm.potential_swarm import PotentialSwarm
+from flybots.swarm.reynolds_flocking import ReynoldsFlocking
+from flybots.swarm.virtual_structure import VirtualStructure
+from flybots.trajectory_tracking.feedback_linearisation import FeedbackLinearisationTracker
+from flybots.trajectory_tracking.mppi import MPPITracker
+from flybots.trajectory_tracking.nmpc import NMPCTracker
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 class TestCameraFrameHandedness:

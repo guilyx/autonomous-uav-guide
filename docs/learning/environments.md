@@ -138,8 +138,8 @@ reversal. Capturing all four ends the episode successfully.
 ## Configuration
 
 ```python
-from uav_sim.gym import make
-from uav_sim.gym.quadrotor_envs import QuadrotorEnvConfig
+from flybots.gym import make
+from flybots.gym.quadrotor_envs import QuadrotorEnvConfig
 
 env = make("hover", config=QuadrotorEnvConfig(
     max_episode_seconds=20.0,
@@ -150,8 +150,8 @@ env = make("hover", config=QuadrotorEnvConfig(
 ```
 
 ```python
-from uav_sim.gym.fixed_wing_envs import FixedWingEnvConfig
-from uav_sim.vehicles.fixed_wing import FixedWingPreset
+from flybots.gym.fixed_wing_envs import FixedWingEnvConfig
+from flybots.vehicles.fixed_wing import FixedWingPreset
 
 env = make("fw-cruise", config=FixedWingEnvConfig(
     preset=FixedWingPreset.AEROSONDE,
@@ -167,8 +167,8 @@ bookkeeping, action clipping, substepped integration and seeding.
 
 ```python
 import numpy as np
-from uav_sim.gym.base import UAVEnv
-from uav_sim.gym.spaces import Box
+from flybots.gym.base import UAVEnv
+from flybots.gym.spaces import Box
 
 class CircleEnv(UAVEnv):
     @property
@@ -190,7 +190,7 @@ class CircleEnv(UAVEnv):
 Register it so the CLI can find it:
 
 ```python
-from uav_sim.gym.registry import ENV_SPECS, EnvSpec
+from flybots.gym.registry import ENV_SPECS, EnvSpec
 
 ENV_SPECS["circle"] = EnvSpec(
     "circle", lambda **kw: CircleEnv(**kw),

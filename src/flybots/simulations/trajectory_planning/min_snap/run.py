@@ -1,0 +1,178 @@
+# Erwin Lejeune - 2026-02-15
+"""Minimum-snap trajectory: 3-panel, two-phase visualisation.
+
+Phase 1 — Algorithm: A* plans obstacle-aware waypoints, then min-snap
+           generates smooth trajectory segments through them.
+Phase 2 — Platform: quadrotor takeoff -> pure-pursuit trajectory -> land.
+
+Reference: D. Mellinger, V. Kumar, "Minimum Snap Trajectory Generation and
+Control for Quadrotors," ICRA, 2011. DOI: 10.1109/ICRA.2011.5980409
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import matplotlib
+import numpy as np
+
+from flybots.environment import default_world
+from flybots.logging import SimLogger
+from flybots.path_planning.plan_through_obstacles import plan_through_obstacles
+from flybots.path_tracking.path_smoothing import rdp_simplify
+from flybots.path_tracking.pid_controller import CascadedPIDController
+from flybots.path_tracking.pure_pursuit_3d import PurePursuit3D
+from flybots.trajectory_planning.min_snap import MinSnapTrajectory
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.visualization import SimAnimator
+from flybots.visualization.three_panel import ThreePanelViz
+
+matplotlib.use("Agg")
+
+WORLD_SIZE = 30.0
+CRUISE_ALT = 12.0
+START = np.array([3.0, 3.0, CRUISE_ALT])
+GOAL = np.array([27.0, 27.0, CRUISE_ALT])
+
+
+def main() -> None:
+    world, buildings = default_world()
+
+    planned = plan_through_obstacles(buildings, START, GOAL, world_size=int(WORLD_SIZE))
+    if planned is None:
+        print("No path found!")
+        return
+
+    # Reduce waypoints for min-snap (it needs a small number of knot points)
+    wps = rdp_simplify(planned, epsilon=1.5)
+    if len(wps) < 3:
+        wps = planned[:: max(1, len(planned) // 8)]
+    # Ensure start and goal are exact
+    wps[0] = START.copy()
+    wps[-1] = GOAL.copy()
+
+    seg_lengths = np.array([np.linalg.norm(wps[i + 1] - wps[i]) for i in range(len(wps) - 1)])
+    seg_times = np.clip(seg_lengths / 2.0, 1.5, 6.0)
+
+    ms = MinSnapTrajectory()
+    coeffs = ms.generate(wps, seg_times)
+    _, traj_pts_dense = ms.evaluate(coeffs, seg_times, dt=0.05)
+
+    traj_pts = [traj_pts_dense[0]]
+    for p in traj_pts_dense[1:]:
+        if np.linalg.norm(p - traj_pts[-1]) >= 1.0:
+            traj_pts.append(p)
+    if np.linalg.norm(traj_pts[-1] - traj_pts_dense[-1]) > 0.1:
+        traj_pts.append(traj_pts_dense[-1])
+    traj_pts = np.array(traj_pts)
+
+    # Phase 2: fly
+    from flybots.path_tracking.flight_ops import fly_path, init_hover, landing, loiter, takeoff
+
+    quad = Quadrotor()
+    quad.reset(position=np.array([START[0], START[1], 0.0]))
+    ctrl = CascadedPIDController()
+    pursuit = PurePursuit3D(lookahead=4.0, waypoint_threshold=2.0, adaptive=True)
+    init_hover(quad)
+    states: list[np.ndarray] = []
+    takeoff(quad, ctrl, target_alt=CRUISE_ALT, dt=0.005, duration=3.0, states=states)
+    fly_path(quad, ctrl, traj_pts, dt=0.005, pursuit=pursuit, timeout=90.0, states=states)
+    loiter(quad, ctrl, traj_pts[-1], dt=0.005, duration=0.5, states=states)
+    landing(quad, ctrl, dt=0.005, duration=2.5, states=states)
+    flight_states = np.array(states) if states else np.zeros((1, 12))
+    flight_pos = flight_states[:, :3]
+
+    flight_speed = np.linalg.norm(flight_states[:, 6:9], axis=1)
+    logger = SimLogger("min_snap", out_dir=Path(__file__).parent, downsample=5)
+    logger.log_metadata("algorithm", "Min-Snap")
+    logger.log_metadata("n_waypoints", len(wps))
+    logger.log_metadata("n_segments", len(seg_times))
+    logger.log_metadata("traj_points", len(traj_pts_dense))
+    flight_times = np.arange(len(flight_states)) * 0.005
+    for i in range(len(flight_states)):
+        logger.log_step(
+            t=flight_times[i],
+            position=flight_pos[i],
+            velocity=flight_states[i, 6:9],
+            speed=flight_speed[i],
+        )
+    logger.log_summary("mean_speed_mps", float(flight_speed.mean()))
+    logger.log_summary(
+        "traj_length_m", float(np.sum(np.linalg.norm(np.diff(traj_pts_dense, axis=0), axis=1)))
+    )
+    goal_xy_err = float(np.linalg.norm(flight_pos[-1, :2] - GOAL[:2]))
+    logger.log_summary("final_dist_to_goal_xy_m", goal_xy_err)
+    logger.save()
+
+    # ── Animation ─────────────────────────────────────────────────────
+    n_traj = len(traj_pts_dense)
+    traj_step = max(1, n_traj // 80)
+    traj_frames = list(range(0, n_traj, traj_step))
+    fly_step = max(1, len(flight_pos) // 100)
+    fly_frames = list(range(0, len(flight_pos), fly_step))
+    n_tf = len(traj_frames)
+    n_ff = len(fly_frames)
+    total = n_tf + n_ff
+
+    viz = ThreePanelViz(title="Minimum-Snap Trajectory", world_size=WORLD_SIZE)
+    viz.draw_buildings(buildings)
+    viz.mark_start_goal(START, GOAL)
+
+    viz.ax3d.scatter(wps[:, 0], wps[:, 1], wps[:, 2], c="red", s=80, marker="D", zorder=5)
+    for i, wp in enumerate(wps):
+        viz.ax3d.text(wp[0], wp[1], wp[2] + 1.0, f"WP{i}", fontsize=7, ha="center")
+        viz.ax_top.plot(wp[0], wp[1], "rD", ms=5)
+        viz.ax_side.plot(wp[0], wp[2], "rD", ms=5)
+
+    (traj_3d,) = viz.ax3d.plot([], [], [], "b-", lw=2, alpha=0.7, label="Min-Snap")
+    (traj_dot_3d,) = viz.ax3d.plot([], [], [], "bo", ms=5)
+    (traj_top,) = viz.ax_top.plot([], [], "b-", lw=1.5, alpha=0.7)
+    (traj_side,) = viz.ax_side.plot([], [], "b-", lw=1.5, alpha=0.7)
+
+    # Tracking error of the flown path against the planned trajectory, plus
+    # the flight speed. The data panel was left empty before.
+    to_traj = flight_pos[:, None, :] - traj_pts_dense[None, :, :]
+    track_err = np.min(np.linalg.norm(to_traj, axis=2), axis=1)
+
+    ax_d = viz.setup_data_axes(ylabel="[m] / [m/s]", title="Tracking Error & Speed")
+    ax_d.set_xlim(0, max(1.0, float(flight_times[-1])))
+    ax_d.set_ylim(0, max(1.0, float(max(track_err.max(), flight_speed.max())) * 1.2))
+    (l_err,) = ax_d.plot([], [], "r-", lw=0.9, label="Distance to trajectory")
+    (l_spd,) = ax_d.plot([], [], "b-", lw=0.7, alpha=0.7, label="Speed")
+    ax_d.legend(fontsize=6, loc="upper right")
+
+    fly_trail = viz.create_trail_artists()
+    viz.ax3d.legend(fontsize=7, loc="upper left")
+    title = viz.ax3d.set_title("Phase 1: Trajectory Generation")
+
+    anim = SimAnimator("min_snap", out_dir=Path(__file__).parent)
+    anim._fig = viz.fig
+
+    def update(f: int) -> None:
+        if f < n_tf:
+            k = traj_frames[f]
+            traj_3d.set_data(traj_pts_dense[: k + 1, 0], traj_pts_dense[: k + 1, 1])
+            traj_3d.set_3d_properties(traj_pts_dense[: k + 1, 2])
+            traj_dot_3d.set_data([traj_pts_dense[k, 0]], [traj_pts_dense[k, 1]])
+            traj_dot_3d.set_3d_properties([traj_pts_dense[k, 2]])
+            traj_top.set_data(traj_pts_dense[: k + 1, 0], traj_pts_dense[: k + 1, 1])
+            traj_side.set_data(traj_pts_dense[: k + 1, 0], traj_pts_dense[: k + 1, 2])
+            seg = min(int(k / (n_traj / len(seg_times))), len(seg_times) - 1)
+            title.set_text(f"Phase 1: Min-Snap — segment {seg + 1}/{len(seg_times)}")
+        else:
+            traj_dot_3d.set_data([], [])
+            traj_dot_3d.set_3d_properties([])
+            fi = f - n_tf
+            k = fly_frames[min(fi, len(fly_frames) - 1)]
+            viz.update_trail(fly_trail, flight_pos, k)
+            viz.update_vehicle(flight_pos[k], flight_states[k, 3:6])
+            l_err.set_data(flight_times[:k], track_err[:k])
+            l_spd.set_data(flight_times[:k], flight_speed[:k])
+            title.set_text("Phase 2: Quadrotor Flying Min-Snap Trajectory")
+
+    anim.animate(update, total)
+    anim.save()
+
+
+if __name__ == "__main__":
+    main()

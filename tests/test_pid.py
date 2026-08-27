@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from uav_sim.path_tracking.pid_controller import (
+from flybots.path_tracking.pid_controller import (
     CascadedPIDController,
     PIDAxis,
     PIDGains,
 )
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 class TestPIDAxis:

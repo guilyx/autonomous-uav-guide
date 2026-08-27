@@ -106,12 +106,12 @@ everything in between onto the zero line.
 ```bash
 flybots run fixed_wing_mission
 # or
-python -m uav_sim.simulations.path_tracking.fixed_wing_mission
+python -m flybots.simulations.path_tracking.fixed_wing_mission
 ```
 
 ## Result
 
-![Fixed-Wing Mission](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/path_tracking/fixed_wing_mission/fixed_wing_mission.gif)
+![Fixed-Wing Mission](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/path_tracking/fixed_wing_mission/fixed_wing_mission.gif)
 
 ## Reference
 

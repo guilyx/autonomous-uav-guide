@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from uav_sim.visualization import (
+from flybots.visualization import (
     attitude_from_velocity,
     attitude_series_from_positions,
     clear_vehicle_artists,

@@ -5,14 +5,14 @@ horizontal (cruise). The interesting part is not either end — it is the
 **transition**, where lift authority migrates from the rotors to the wing
 while the aircraft has to keep flying.
 
-Source: [`uav_sim/vehicles/vtol/`](https://github.com/guilyx/flybots/tree/main/src/uav_sim/vehicles/vtol)
+Source: [`flybots/vehicles/vtol/`](https://github.com/guilyx/flybots/tree/main/src/flybots/vehicles/vtol)
 
 ## Quick start
 
 ```python
 import numpy as np
-from uav_sim.vehicles.vtol import Tiltrotor
-from uav_sim.control.vtol_controller import VTOLController, VTOLCommand
+from flybots.vehicles.vtol import Tiltrotor
+from flybots.control.vtol_controller import VTOLController, VTOLCommand
 
 vtol = Tiltrotor()
 state = np.zeros(12)

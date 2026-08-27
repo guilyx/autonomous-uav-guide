@@ -9,12 +9,12 @@ existence of a genuine flight equilibrium.
 import numpy as np
 import pytest
 
-from uav_sim.control.fixed_wing_autopilot import (
+from flybots.control.fixed_wing_autopilot import (
     AutopilotCommand,
     AutopilotGains,
     FixedWingAutopilot,
 )
-from uav_sim.vehicles.fixed_wing import (
+from flybots.vehicles.fixed_wing import (
     AeroCoefficients,
     FixedWing,
     FixedWingParams,
@@ -24,7 +24,7 @@ from uav_sim.vehicles.fixed_wing import (
     create_fixed_wing,
     get_fixed_wing_params,
 )
-from uav_sim.vehicles.fixed_wing.aerodynamics import (
+from flybots.vehicles.fixed_wing.aerodynamics import (
     PropulsionParams,
     airframe_wrench,
     drag_coefficient,

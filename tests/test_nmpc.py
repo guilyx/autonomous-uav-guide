@@ -3,8 +3,8 @@
 
 import numpy as np
 
-from uav_sim.trajectory_tracking.nmpc import NMPCTracker
-from uav_sim.vehicles.multirotor.quadrotor import Quadrotor
+from flybots.trajectory_tracking.nmpc import NMPCTracker
+from flybots.vehicles.multirotor.quadrotor import Quadrotor
 
 
 class TestNMPCTracker:

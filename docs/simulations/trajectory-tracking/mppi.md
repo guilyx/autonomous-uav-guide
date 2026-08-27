@@ -56,12 +56,12 @@ receives.
 ## Implementation and Execution
 
 ```bash
-python -m uav_sim.simulations.trajectory_tracking.mppi
+python -m flybots.simulations.trajectory_tracking.mppi
 ```
 
 ## Evidence
 
-![MPPI](https://media.githubusercontent.com/media/guilyx/flybots/main/src/uav_sim/simulations/trajectory_tracking/mppi/mppi.gif)
+![MPPI](https://media.githubusercontent.com/media/guilyx/flybots/main/src/flybots/simulations/trajectory_tracking/mppi/mppi.gif)
 
 ## References
 

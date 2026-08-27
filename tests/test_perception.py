@@ -3,8 +3,8 @@
 
 import numpy as np
 
-from uav_sim.perception.obstacle_detection import RangeObstacleDetector
-from uav_sim.perception.point_cloud import (
+from flybots.perception.obstacle_detection import RangeObstacleDetector
+from flybots.perception.point_cloud import (
     ranges_to_point_cloud,
     remove_ground,
     voxel_downsample,

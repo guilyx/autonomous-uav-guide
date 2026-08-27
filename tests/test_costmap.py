@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from uav_sim.costmap.costmap import LayeredCostmap
-from uav_sim.costmap.inflation_layer import InflationLayer
-from uav_sim.costmap.occupancy_grid import OccupancyGrid
-from uav_sim.costmap.social_layer import SocialLayer
-from uav_sim.environment.obstacles import SphereObstacle
-from uav_sim.environment.world import DynamicAgent, World
+from flybots.costmap.costmap import LayeredCostmap
+from flybots.costmap.inflation_layer import InflationLayer
+from flybots.costmap.occupancy_grid import OccupancyGrid
+from flybots.costmap.social_layer import SocialLayer
+from flybots.environment.obstacles import SphereObstacle
+from flybots.environment.world import DynamicAgent, World
 
 
 class TestOccupancyGrid:
