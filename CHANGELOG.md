@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 Nothing yet.
 
+## [1.1.0] - 2026-08-27
+
+### Added
+
+**Vehicles are drawn as vehicles**
+- `draw_vtol_3d` renders a tilt-rotor with its nacelles at the aircraft's
+  actual tilt. There was no VTOL artist before, despite `Tiltrotor` existing,
+  so the transition demo -- whose entire subject is the rotors rotating
+  through 90 degrees -- was illustrated with a fixed-geometry quadrotor.
+- `attitude_from_velocity` and `attitude_series_from_positions` derive a
+  display attitude from motion a simulation already produces. Several
+  simulations passed `rotation_matrix(0, 0, 0)`, leaving the vehicle rigidly
+  axis-aligned while it flew a curve.
+- `ThreePanelViz.update_vehicle` takes a `platform`, because a simulation of
+  a wing should not be illustrated with a quadrotor, and sizes the model
+  from the world extent. Every one of the 28 call sites passed a hardcoded
+  `size=1.5` -- a twentieth of a 30 m world and a sixtieth of a 100 m one --
+  which is why the aircraft read as a moving dot.
+
+**One reference path for the swarm chapter**
+- `swarm_figure_8_ref`, `swarm_figure_8_path` and `swarm_figure_8_reference`
+  (the last with analytic acceleration). The six group-motion simulations
+  each invented their own path, so comparing the algorithms meant first
+  accounting for the fact that they were not doing the same thing.
+- `CoverageController.recenter`, `empty_cells` and `region_center` support
+  covering a region that travels rather than a static box.
+
+### Fixed
+
+- An agent whose Voronoi cell contains no grid points got a centroid equal
+  to its own position from Lloyd's algorithm, so its force was exactly zero
+  and it was stranded permanently. Invisible while the region covered the
+  whole workspace; constant once the region moves. `compute_forces` recalls
+  such agents, and `recall_outside=False` keeps textbook-pure Lloyd.
+- `virtual_structure` drove its body yaw rate from a constant matching the
+  old circular orbit. On a figure-8 that reverses sign at the crossing, so
+  the structure yawed the wrong way through half the path.
+- The promo reel drew every aircraft as a scatter dot. `scripts/make_promo.py`
+  is a separate renderer that re-simulates at render time and imported none
+  of the vehicle artists, so it never picked up the work above.
+- The sdist packaged `docs/node_modules` -- 6259 files and 21 MB of
+  JavaScript -- for anyone who had run `npm ci` to build the docs.
+  `node_modules/` is ignored through `docs/.gitignore`, and hatchling reads
+  only the root `.gitignore`, so git excluded it and the build did not. The
+  docs build artefacts are now named explicitly and the sdist is 680 KB.
+
+### Changed
+
+- All 44 simulation GIFs and the promo reel are regenerated.
+- The swarm simulations fly the shared figure-8. A circle lets a formation
+  settle into one steady bank and hold it forever, so it never shows whether
+  the group can be pulled through a reversal and put back together.
+
 ## [1.0.1] - 2026-08-26
 
 ### Fixed
@@ -499,7 +552,8 @@ measurement:
 Initial release: quadrotor, fixed-wing and VTOL models, planners,
 estimators, perception, swarm algorithms and 40 runnable simulations.
 
-[Unreleased]: https://github.com/guilyx/flybots/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/guilyx/flybots/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/guilyx/flybots/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guilyx/flybots/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/guilyx/flybots/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/guilyx/flybots/releases/tag/v0.1.0

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flybots"
-version = "1.0.1"
+version = "1.1.0"
 description = "From-scratch autonomous UAV algorithms: multirotor, fixed-wing and VTOL flight models, 44 runnable simulations and reinforcement-learning environments."
 readme = "README.md"
 license = "MIT"
@@ -69,7 +69,19 @@ exclude = ["**/*.gif"]
 
 [tool.hatch.build.targets.sdist]
 # Same reasoning, plus the promo reel under docs/public/media.
-exclude = ["**/*.gif", "**/*.mp4"]
+#
+# The docs build artefacts have to be named explicitly. `node_modules/` is
+# ignored via `docs/.gitignore`, and hatchling reads only the root
+# `.gitignore`, so anyone who has run `npm ci` to build the docs would
+# otherwise ship 21 MB of JavaScript to PyPI -- 6259 files, against a
+# 664 KB sdist without them.
+exclude = [
+    "**/*.gif",
+    "**/*.mp4",
+    "docs/node_modules",
+    "docs/.vitepress/dist",
+    "docs/.vitepress/cache",
+]
 
 [dependency-groups]
 dev = [
